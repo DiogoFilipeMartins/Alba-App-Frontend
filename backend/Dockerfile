@@ -4,7 +4,8 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm ci --only=production
+# Use npm install to avoid requiring a package-lock.json during docker build
+RUN npm install --production
 
 COPY . .
 

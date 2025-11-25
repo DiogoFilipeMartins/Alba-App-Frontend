@@ -3,12 +3,13 @@ import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Home({ navigation }) {
+  const { signOut } = useAuth();
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       navigation.replace('Login');
     } catch (e) {
       console.error('Erro ao fazer logout:', e);
@@ -32,7 +33,7 @@ export default function Home({ navigation }) {
           <Ionicons name="checkmark-circle" size={40} color="white" />
         </LinearGradient>
         <Text style={tw`text-3xl font-bold text-white text-center`}>Bem-vindo ao CarePlus! 🎉</Text>
-        <Text style={tw`text-gray-300 text-center`}>Autenticação com Supabase funcionando perfeitamente</Text>
+        <Text style={tw`text-gray-300 text-center`}>Autenticação com backend local funcionando</Text>
         
         <Pressable 
           onPress={handleLogout}
