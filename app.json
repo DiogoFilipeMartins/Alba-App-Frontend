@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "scheme": "alba",
+    "name": "alba-app",
+    "slug": "alba-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "assetBundlePatterns": ["**/*"],
+    "userInterfaceStyle": "automatic",
+    "web": { "bundler": "metro" }
+  }
+}
