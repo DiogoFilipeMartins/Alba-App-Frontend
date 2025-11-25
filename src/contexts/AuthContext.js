@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext(null);
-const BACKEND_URL = 'http://localhost:3000';
+// Use your machine LAN IP so physical devices can reach the backend from the same Wi‑Fi
+const BACKEND_URL = 'http://10.120.19.103:3000';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
