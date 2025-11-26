@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login({ navigation }) {
-  const { signIn, resendConfirmation } = useAuth();
+  const { signIn, resetPassword } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -49,22 +49,22 @@ export default function Login({ navigation }) {
     }
   }, [email, password, navigation, signIn]);
 
-  const handleResendConfirmation = useCallback(async () => {
+  const handleResetPassword = useCallback(async () => {
     if (!validateEmail(email)) {
       Alert.alert('Escreve um email válido primeiro.');
       return;
     }
     try {
       setResendLoading(true);
-      await resendConfirmation(email);
-      Alert.alert('Email de confirmação reenviado', 'Verifica a tua caixa de entrada.');
+      await resetPassword(email);
+      Alert.alert('Email enviado', 'Verifica a tua caixa de entrada para repor a palavra-passe.');
     } catch (e) {
-      console.log('resend exception', e);
-      Alert.alert('Erro', 'Não foi possível reenviar o email. Tenta novamente mais tarde.');
+      console.log('reset exception', e);
+      Alert.alert('Erro', 'Não foi possível enviar o email. Tenta novamente mais tarde.');
     } finally {
       setResendLoading(false);
     }
-  }, [email, resendConfirmation]);
+  }, [email, resetPassword]);
 
   return (
     <LinearGradient colors={['#111827', '#0f172a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={tw`flex-1 p-6 justify-center`}>
@@ -108,8 +108,8 @@ export default function Login({ navigation }) {
 
         {error && error.toLowerCase().includes('confirm') ? (
           <View style={tw`mt-2`}>
-            <Pressable onPress={handleResendConfirmation} disabled={resendLoading} style={tw`items-center`}>
-              <Text style={tw`text-yellow-300 underline`}>{resendLoading ? 'Enviando...' : 'Reenviar confirmação'}</Text>
+            <Pressable onPress={handleResetPassword} disabled={resendLoading} style={tw`items-center`}>
+              <Text style={tw`text-yellow-300 underline`}>{resendLoading ? 'Enviando...' : 'Reenviar email de confirmação'}</Text>
             </Pressable>
           </View>
         ) : null}

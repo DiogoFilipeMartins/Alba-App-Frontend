@@ -32,8 +32,8 @@ export default function Home({ navigation }) {
         >
           <Ionicons name="checkmark-circle" size={40} color="white" />
         </LinearGradient>
-        <Text style={tw`text-3xl font-bold text-white text-center`}>Bem-vindo ao CarePlus! 🎉</Text>
-        <Text style={tw`text-gray-300 text-center`}>Autenticação com backend local funcionando</Text>
+        <Text style={tw`text-3xl font-bold text-white text-center`}>Bem-vindo ao Alba! 🎉</Text>
+        <Text style={tw`text-gray-300 text-center`}>Autenticação com Supabase funcionando</Text>
         
         <Pressable 
           onPress={handleLogout}

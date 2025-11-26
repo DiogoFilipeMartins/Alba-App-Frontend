@@ -44,19 +44,8 @@ export default function Register({ navigation }) {
 
     try {
       setLoading(true);
-      const res = await signUp({ email, password, username });
-      console.log('signUp res', res);
-
-      if (res?.error) {
-        setError(res.error.message || 'Erro ao criar conta.');
-        return;
-      }
-
-      // Backend envia email de confirmação — informa o utilizador
+      await signUp({ email, password, username });
       Alert.alert('Conta criada', 'Verifica a tua caixa de entrada para confirmar o email antes de iniciar sessão.');
-      if (res?.previewUrl) {
-        Alert.alert('Ethereal Preview', `Link de preview do email: ${res.previewUrl}`);
-      }
       navigation.replace('Login');
     } catch (e) {
       console.log('handleRegister exception', e);
