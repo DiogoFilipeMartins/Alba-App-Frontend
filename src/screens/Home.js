@@ -29,8 +29,12 @@ export default function Home({ navigation }) {
 
   const handleMenuPress = (screen) => {
     setMenuOpen(false);
-    // TODO: Navegar para o ecrã quando implementado
-    console.log(`Navegar para: ${screen}`);
+    if (screen === 'Map') {
+      navigation.navigate('Map');
+    } else {
+      // TODO: Navegar para os outros ecrãs quando implementados
+      console.log(`Navegar para: ${screen}`);
+    }
   };
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Utilizador';

@@ -5,8 +5,36 @@
     "slug": "alba-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "userInterfaceStyle": "automatic",
-    "web": { "bundler": "metro" }
+    "web": {
+      "bundler": "metro"
+    },
+    "ios": {
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "A Alba precisa da tua localização para mostrar profissionais de saúde próximos de ti."
+      }
+    },
+    "android": {
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        }
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "A Alba precisa da tua localização para mostrar profissionais de saúde próximos de ti."
+        }
+      ]
+    ]
   }
 }
