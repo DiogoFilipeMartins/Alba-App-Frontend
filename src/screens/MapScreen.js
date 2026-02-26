@@ -1,68 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import tw from 'twrnc';
-
-// Dados mock de profissionais e instituições em Portugal
-const MOCK_LOCATIONS = [
-    {
-        id: 1,
-        type: 'professional',
-        name: 'Dr. João Silva',
-        specialty: 'Psicólogo Clínico',
-        phone: '+351 912 345 678',
-        coordinate: { latitude: 38.7223, longitude: -9.1393 }, // Lisboa
-    },
-    {
-        id: 2,
-        type: 'institution',
-        name: 'APPDA Lisboa',
-        description: 'Associação Portuguesa para as Perturbações do Desenvolvimento e Autismo',
-        phone: '+351 213 513 120',
-        coordinate: { latitude: 38.7150, longitude: -9.1500 },
-    },
-    {
-        id: 3,
-        type: 'professional',
-        name: 'Dra. Maria Santos',
-        specialty: 'Terapeuta Ocupacional',
-        phone: '+351 918 765 432',
-        coordinate: { latitude: 41.1579, longitude: -8.6291 }, // Porto
-    },
-    {
-        id: 4,
-        type: 'institution',
-        name: 'Centro de Desenvolvimento Infantil',
-        description: 'Centro especializado em intervenção precoce',
-        phone: '+351 225 123 456',
-        coordinate: { latitude: 41.1496, longitude: -8.6109 }, // Porto
-    },
-    {
-        id: 5,
-        type: 'diagnostic',
-        name: 'Clínica de Diagnóstico PEA',
-        specialty: 'Diagnóstico e Avaliação',
-        phone: '+351 239 123 456',
-        coordinate: { latitude: 40.2033, longitude: -8.4103 }, // Coimbra
-    },
-    {
-        id: 6,
-        type: 'professional',
-        name: 'Dr. Pedro Costa',
-        specialty: 'Pedopsiquiatra',
-        phone: '+351 914 567 890',
-        coordinate: { latitude: 38.5245, longitude: -8.8926 }, // Setúbal
-    },
-];
+import { supabase } from '../lib/supabase';
 
 // Cores para cada tipo de localização
 const MARKER_COLORS = {
     professional: '#3b82f6', // Azul
     institution: '#22c55e',  // Verde
-    diagnostic: '#8b5cf6',   // Roxo
+};
+
+// Ícones para cada tipo
+const getMarkerIcon = (type) => {
+    switch (type) {
+        case 'professional': return 'person';
+        case 'institution': return 'business';
+        default: return 'location';
+    }
+};
+
+// Converte geography(point) do PostGIS para { latitude, longitude }
+const parseLocation = (geoPoint) => {
+    if (!geoPoint) return null;
+    // O Supabase retorna geography como GeoJSON { type: 'Point', coordinates: [lng, lat] }
+    if (geoPoint.coordinates) {
+        return {
+            longitude: geoPoint.coordinates[0],
+            latitude: geoPoint.coordinates[1],
+        };
+    }
+    return null;
 };
 
 export default function MapScreen({ navigation }) {
@@ -74,35 +44,72 @@ export default function MapScreen({ navigation }) {
     });
     const [userLocation, setUserLocation] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [selectedMarker, setSelectedMarker] = useState(null);
+    const [places, setPlaces] = useState([]);
+    const [filter, setFilter] = useState('all'); // 'all' | 'professional' | 'institution'
 
     useEffect(() => {
         requestLocationPermission();
+        fetchPlaces();
     }, []);
 
     const requestLocationPermission = async () => {
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
-
             if (status !== 'granted') {
                 Alert.alert(
                     'Permissão Negada',
                     'A Alba precisa de acesso à localização para mostrar profissionais próximos.',
                     [{ text: 'OK' }]
                 );
-                setLoading(false);
                 return;
             }
-
             const location = await Location.getCurrentPositionAsync({});
             setUserLocation({
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
             });
-
-            setLoading(false);
         } catch (error) {
             console.error('Erro ao obter localização:', error);
+        }
+    };
+
+    const fetchPlaces = async () => {
+        try {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('places')
+                .select(`
+                    id,
+                    type,
+                    name,
+                    description,
+                    phone,
+                    email,
+                    website,
+                    address_line,
+                    city,
+                    location,
+                    opening_hours,
+                    place_accessibility (
+                        wheelchair_accessible,
+                        noise_level,
+                        sensory_friendly
+                    ),
+                    place_categories (
+                        service_categories ( name )
+                    )
+                `)
+                .eq('is_active', true);
+
+            if (error) throw error;
+
+            // Filtra apenas lugares com coordenadas válidas
+            const withCoords = (data || []).filter(p => parseLocation(p.location));
+            setPlaces(withCoords);
+        } catch (error) {
+            console.error('Erro ao carregar lugares:', error);
+            Alert.alert('Erro', 'Não foi possível carregar os lugares. Verifica a tua ligação.');
+        } finally {
             setLoading(false);
         }
     };
@@ -115,28 +122,18 @@ export default function MapScreen({ navigation }) {
                 longitudeDelta: 0.1,
             });
         } else {
-            Alert.alert(
-                'Localização Indisponível',
-                'Não foi possível obter a tua localização.',
-                [{ text: 'OK' }]
-            );
+            Alert.alert('Localização Indisponível', 'Não foi possível obter a tua localização.');
         }
     };
 
     const getMarkerColor = (type) => MARKER_COLORS[type] || '#6b7280';
 
-    const getMarkerIcon = (type) => {
-        switch (type) {
-            case 'professional':
-                return 'person';
-            case 'institution':
-                return 'business';
-            case 'diagnostic':
-                return 'medical';
-            default:
-                return 'location';
-        }
-    };
+    const filteredPlaces = filter === 'all'
+        ? places
+        : places.filter(p => p.type === filter);
+
+    const categories = (place) =>
+        place.place_categories?.map(pc => pc.service_categories?.name).filter(Boolean).join(', ');
 
     return (
         <View style={tw`flex-1`}>
@@ -149,33 +146,44 @@ export default function MapScreen({ navigation }) {
                 showsUserLocation={true}
                 showsMyLocationButton={false}
             >
-                {MOCK_LOCATIONS.map((location) => (
-                    <Marker
-                        key={location.id}
-                        coordinate={location.coordinate}
-                        pinColor={getMarkerColor(location.type)}
-                        onPress={() => setSelectedMarker(location)}
-                    >
-                        <View style={[tw`w-10 h-10 rounded-full items-center justify-center`, { backgroundColor: getMarkerColor(location.type) }]}>
-                            <Ionicons name={getMarkerIcon(location.type)} size={20} color="white" />
-                        </View>
-
-                        <Callout>
-                            <View style={tw`p-2 w-64`}>
-                                <Text style={tw`font-bold text-base mb-1`}>{location.name}</Text>
-                                <Text style={tw`text-gray-600 text-sm mb-2`}>
-                                    {location.specialty || location.description}
-                                </Text>
-                                {location.phone && (
-                                    <View style={tw`flex-row items-center`}>
-                                        <Ionicons name="call" size={14} color="#3b82f6" />
-                                        <Text style={tw`text-blue-600 text-sm ml-1`}>{location.phone}</Text>
-                                    </View>
-                                )}
+                {filteredPlaces.map((place) => {
+                    const coord = parseLocation(place.location);
+                    return (
+                        <Marker
+                            key={place.id}
+                            coordinate={coord}
+                            pinColor={getMarkerColor(place.type)}
+                        >
+                            <View style={[tw`w-10 h-10 rounded-full items-center justify-center`, { backgroundColor: getMarkerColor(place.type) }]}>
+                                <Ionicons name={getMarkerIcon(place.type)} size={20} color="white" />
                             </View>
-                        </Callout>
-                    </Marker>
-                ))}
+
+                            <Callout>
+                                <View style={tw`p-2 w-64`}>
+                                    <Text style={tw`font-bold text-base mb-1`}>{place.name}</Text>
+                                    {place.description ? (
+                                        <Text style={tw`text-gray-600 text-sm mb-1`}>{place.description}</Text>
+                                    ) : null}
+                                    {place.city ? (
+                                        <Text style={tw`text-gray-500 text-xs mb-1`}>📍 {place.city}</Text>
+                                    ) : null}
+                                    {categories(place) ? (
+                                        <Text style={tw`text-blue-500 text-xs mb-1`}>🏷️ {categories(place)}</Text>
+                                    ) : null}
+                                    {place.phone ? (
+                                        <View style={tw`flex-row items-center mt-1`}>
+                                            <Ionicons name="call" size={14} color="#3b82f6" />
+                                            <Text style={tw`text-blue-600 text-sm ml-1`}>{place.phone}</Text>
+                                        </View>
+                                    ) : null}
+                                    {place.place_accessibility?.[0]?.wheelchair_accessible ? (
+                                        <Text style={tw`text-green-600 text-xs mt-1`}>♿ Acessível</Text>
+                                    ) : null}
+                                </View>
+                            </Callout>
+                        </Marker>
+                    );
+                })}
             </MapView>
 
             {/* Header */}
@@ -188,8 +196,30 @@ export default function MapScreen({ navigation }) {
                         <Ionicons name="arrow-back" size={24} color="white" />
                     </Pressable>
                     <Text style={tw`text-white text-lg font-bold`}>Mapa de Apoio</Text>
-                    <View style={tw`w-10`} />
+                    <Pressable onPress={fetchPlaces} style={tw`p-2`}>
+                        <Ionicons name="refresh" size={22} color="white" />
+                    </Pressable>
                 </LinearGradient>
+            </View>
+
+            {/* Filter Buttons */}
+            <View style={tw`absolute top-32 left-5 right-5 flex-row justify-center`}>
+                {[
+                    { key: 'all', label: 'Todos' },
+                    { key: 'professional', label: 'Profissionais' },
+                    { key: 'institution', label: 'Instituições' },
+                ].map(f => (
+                    <Pressable
+                        key={f.key}
+                        onPress={() => setFilter(f.key)}
+                        style={[
+                            tw`mr-2 px-3 py-1 rounded-full`,
+                            { backgroundColor: filter === f.key ? '#3b82f6' : 'rgba(17,24,39,0.85)' }
+                        ]}
+                    >
+                        <Text style={tw`text-white text-xs font-semibold`}>{f.label}</Text>
+                    </Pressable>
+                ))}
             </View>
 
             {/* My Location Button */}
@@ -206,19 +236,18 @@ export default function MapScreen({ navigation }) {
                     colors={['rgba(17, 24, 39, 0.95)', 'rgba(17, 24, 39, 0.8)']}
                     style={tw`rounded-2xl p-4`}
                 >
-                    <Text style={tw`text-white font-semibold mb-3`}>Legenda</Text>
+                    <View style={tw`flex-row items-center justify-between mb-2`}>
+                        <Text style={tw`text-white font-semibold`}>Legenda</Text>
+                        <Text style={tw`text-gray-400 text-xs`}>{filteredPlaces.length} lugar(es)</Text>
+                    </View>
                     <View style={tw`flex-row flex-wrap`}>
-                        <View style={tw`flex-row items-center mr-4 mb-2`}>
+                        <View style={tw`flex-row items-center mr-4 mb-1`}>
                             <View style={[tw`w-3 h-3 rounded-full mr-2`, { backgroundColor: MARKER_COLORS.professional }]} />
                             <Text style={tw`text-white text-xs`}>Profissionais</Text>
                         </View>
-                        <View style={tw`flex-row items-center mr-4 mb-2`}>
+                        <View style={tw`flex-row items-center mb-1`}>
                             <View style={[tw`w-3 h-3 rounded-full mr-2`, { backgroundColor: MARKER_COLORS.institution }]} />
                             <Text style={tw`text-white text-xs`}>Instituições</Text>
-                        </View>
-                        <View style={tw`flex-row items-center mb-2`}>
-                            <View style={[tw`w-3 h-3 rounded-full mr-2`, { backgroundColor: MARKER_COLORS.diagnostic }]} />
-                            <Text style={tw`text-white text-xs`}>Diagnóstico</Text>
                         </View>
                     </View>
                 </LinearGradient>
@@ -228,7 +257,7 @@ export default function MapScreen({ navigation }) {
             {loading && (
                 <View style={tw`absolute inset-0 bg-black/50 items-center justify-center`}>
                     <ActivityIndicator size="large" color="#3b82f6" />
-                    <Text style={tw`text-white mt-4`}>A obter localização...</Text>
+                    <Text style={tw`text-white mt-4`}>A carregar lugares...</Text>
                 </View>
             )}
         </View>
