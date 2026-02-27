@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -20,7 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 const FIELD_STYLE = tw`bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white text-sm mb-3`;
 const LABEL_STYLE = tw`text-gray-400 text-xs mb-1`;
 
-export default function SuggestPlaceScreen({ navigation }) {
+export default function SuggestPlaceScreen({ navigation, route }) {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
     const [locLoading, setLocLoading] = useState(false);
@@ -40,6 +40,18 @@ export default function SuggestPlaceScreen({ navigation }) {
     });
 
     const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
+
+    // Receber coordenadas vindas do MapPickerScreen
+    useEffect(() => {
+        const coords = route.params?.pickedCoords;
+        if (coords) {
+            setForm((f) => ({
+                ...f,
+                lat: String(coords.lat),
+                lng: String(coords.lng),
+            }));
+        }
+    }, [route.params?.pickedCoords]);
 
     const useMyLocation = async () => {
         try {
@@ -193,28 +205,62 @@ export default function SuggestPlaceScreen({ navigation }) {
                     </View>
 
                     {/* Coordenadas */}
-                    <Text style={tw`text-white font-semibold mb-2 mt-1`}>Coordenadas *</Text>
+                    <Text style={tw`text-white font-semibold mb-2 mt-1`}>Localização *</Text>
+
+                    {/* Botão: escolher no mapa */}
                     <Pressable
-                        onPress={useMyLocation}
+                        onPress={() => navigation.navigate('MapPicker', {
+                            initialCoords: form.lat && form.lng
+                                ? { lat: parseFloat(form.lat), lng: parseFloat(form.lng) }
+                                : null,
+                        })}
                         style={tw`flex-row items-center justify-center bg-blue-600/20 border border-blue-500 rounded-xl py-3 mb-3`}
                     >
+                        <Ionicons name="map" size={18} color="#3b82f6" />
+                        <Text style={tw`text-blue-400 font-medium ml-2`}>Escolher no mapa</Text>
+                    </Pressable>
+
+                    {/* Botão: usar GPS */}
+                    <Pressable
+                        onPress={useMyLocation}
+                        style={tw`flex-row items-center justify-center bg-gray-700/60 border border-gray-600 rounded-xl py-3 mb-3`}
+                    >
                         {locLoading ? (
-                            <ActivityIndicator size="small" color="#3b82f6" />
+                            <ActivityIndicator size="small" color="#9ca3af" />
                         ) : (
                             <>
-                                <Ionicons name="locate" size={18} color="#3b82f6" />
-                                <Text style={tw`text-blue-400 font-medium ml-2`}>Usar a minha localização</Text>
+                                <Ionicons name="locate" size={18} color="#9ca3af" />
+                                <Text style={tw`text-gray-400 font-medium ml-2`}>Usar a minha localização (GPS)</Text>
                             </>
                         )}
                     </Pressable>
 
+                    {/* Status das coordenadas */}
+                    {form.lat && form.lng ? (
+                        <View style={tw`flex-row items-center bg-green-600/15 border border-green-700 rounded-xl px-4 py-3 mb-3`}>
+                            <Ionicons name="checkmark-circle" size={18} color="#22c55e" />
+                            <Text style={tw`text-green-400 text-xs ml-2 flex-1`} numberOfLines={1}>
+                                {parseFloat(form.lat).toFixed(6)}, {parseFloat(form.lng).toFixed(6)}
+                            </Text>
+                            <Pressable onPress={() => setForm(f => ({ ...f, lat: '', lng: '' }))} style={tw`ml-2`}>
+                                <Ionicons name="close-circle" size={18} color="#6b7280" />
+                            </Pressable>
+                        </View>
+                    ) : (
+                        <View style={tw`flex-row items-center bg-gray-700/40 border border-gray-600 rounded-xl px-4 py-3 mb-3`}>
+                            <Ionicons name="location-outline" size={18} color="#6b7280" />
+                            <Text style={tw`text-gray-500 text-xs ml-2`}>Nenhuma localização definida</Text>
+                        </View>
+                    )}
+
+                    {/* Campos manuais (colapsáveis) */}
                     <View style={tw`flex-row`}>
                         <View style={tw`flex-1 mr-2`}>
-                            <Text style={LABEL_STYLE}>Latitude</Text>
+                            <Text style={LABEL_STYLE}>Latitude (manual)</Text>
                             <TextInput style={FIELD_STYLE} placeholder="38.7169" placeholderTextColor="#6b7280" value={form.lat} onChangeText={set('lat')} keyboardType="decimal-pad" />
                         </View>
                         <View style={tw`flex-1`}>
-                            <Text style={LABEL_STYLE}>Longitude</Text>
+                            <Text style={LABEL_STYLE}>Longitude (manual)</Text>
                             <TextInput style={FIELD_STYLE} placeholder="-9.1399" placeholderTextColor="#6b7280" value={form.lng} onChangeText={set('lng')} keyboardType="decimal-pad" />
                         </View>
                     </View>

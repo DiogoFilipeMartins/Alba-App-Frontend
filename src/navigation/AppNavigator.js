@@ -7,6 +7,7 @@ import Home from '../screens/Home';
 import MapScreen from '../screens/MapScreen';
 import SuggestPlaceScreen from '../screens/SuggestPlaceScreen';
 import AdminScreen from '../screens/AdminScreen';
+import MapPickerScreen from '../screens/MapPickerScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +27,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Map" component={MapScreen} />
         <Stack.Screen name="SuggestPlace" component={SuggestPlaceScreen} />
         <Stack.Screen name="Admin" component={AdminScreen} />
+        <Stack.Screen name="MapPicker" component={MapPickerScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
