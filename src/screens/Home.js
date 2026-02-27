@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const menuItems = [
   { icon: 'map', label: 'Mapa', screen: 'Map', color: '#3b82f6' },
+  { icon: 'add-circle', label: 'Sugerir Local', screen: 'SuggestPlace', color: '#22d3ee' },
   { icon: 'calendar', label: 'Calendário', screen: 'Calendar', color: '#22c55e' },
   { icon: 'heart', label: 'Doações', screen: 'Donations', color: '#ef4444' },
   { icon: 'chatbubbles', label: 'Chatbot', screen: 'Chatbot', color: '#8b5cf6' },
@@ -15,8 +17,43 @@ const menuItems = [
 ];
 
 export default function Home({ navigation }) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
+  const [pendingCount, setPendingCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const fetchPendingCount = async () => {
+      const { count, error } = await supabase
+        .from('places')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error('Error fetching pending places count:', error);
+      } else {
+        setPendingCount(count ?? 0);
+      }
+    };
+
+    fetchPendingCount();
+
+    // Optional: Set up a real-time subscription for pending places if needed
+    // const subscription = supabase
+    //   .from('places')
+    //   .on('*', payload => {
+    //     if (payload.new.status === 'pending' || payload.old.status === 'pending') {
+    //       fetchPendingCount();
+    //     }
+    //   })
+    //   .subscribe();
+
+    // return () => {
+    //   supabase.removeSubscription(subscription);
+    // };
+
+  }, [isAdmin]);
 
   const handleLogout = async () => {
     try {
@@ -29,8 +66,8 @@ export default function Home({ navigation }) {
 
   const handleMenuPress = (screen) => {
     setMenuOpen(false);
-    if (screen === 'Map') {
-      navigation.navigate('Map');
+    if (screen === 'Map' || screen === 'SuggestPlace' || screen === 'Admin') {
+      navigation.navigate(screen);
     } else {
       // TODO: Navegar para os outros ecrãs quando implementados
       console.log(`Navegar para: ${screen}`);
@@ -102,6 +139,28 @@ export default function Home({ navigation }) {
               </LinearGradient>
             </Pressable>
           ))}
+          {isAdmin && (
+            <Pressable
+              key="Admin"
+              onPress={() => handleMenuPress('Admin')}
+              style={tw`w-[48%] mb-4`}
+            >
+              <LinearGradient
+                colors={['#1f2937', '#111827']}
+                style={tw`rounded-2xl p-5 border border-yellow-700/50 items-center`}
+              >
+                <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-3`, { backgroundColor: '#f59e0b20' }]}>
+                  <Ionicons name="shield-checkmark" size={24} color="#f59e0b" />
+                  {pendingCount > 0 && (
+                    <View style={tw`absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 items-center justify-center`}>
+                      <Text style={tw`text-white text-xs font-bold`}>{pendingCount}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={tw`text-yellow-400 font-medium text-center`}>Painel Admin</Text>
+              </LinearGradient>
+            </Pressable>
+          )}
         </View>
 
         {/* Status Card */}
@@ -111,10 +170,30 @@ export default function Home({ navigation }) {
             <Text style={tw`text-cyan-400 font-semibold ml-2`}>Estado da App</Text>
           </View>
           <Text style={tw`text-gray-400 text-sm leading-5`}>
-            Funcionalidades em desenvolvimento: Mapa, Calendário, Doações e Chatbot.
+            Funcionalidades em desenvolvimento: Calendário, Doações e Chatbot.
             Em breve terás acesso a todas as ferramentas!
           </Text>
         </View>
+
+        {/* Admin Panel shortcut — only for admins */}
+        {isAdmin && (
+          <Pressable onPress={() => handleMenuPress('Admin')} style={tw`mb-6`}>
+            <LinearGradient
+              colors={['#7c3aed', '#4f46e5']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={tw`rounded-2xl p-5 flex-row items-center`}
+            >
+              <View style={tw`w-12 h-12 rounded-full bg-white/10 items-center justify-center mr-4`}>
+                <Ionicons name="shield-checkmark" size={24} color="white" />
+              </View>
+              <View style={tw`flex-1`}>
+                <Text style={tw`text-white font-bold text-base`}>Painel Admin</Text>
+                <Text style={tw`text-purple-200 text-xs`}>Gerir sugestões de locais</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
+            </LinearGradient>
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* Sidebar Menu Modal */}
@@ -162,6 +241,22 @@ export default function Home({ navigation }) {
                   <Text style={tw`text-white font-medium`}>{item.label}</Text>
                 </Pressable>
               ))}
+              {isAdmin && (
+                <Pressable
+                  onPress={() => handleMenuPress('Admin')}
+                  style={tw`flex-row items-center py-4 border-b border-gray-700`}
+                >
+                  <View style={tw`w-10 h-10 rounded-full items-center justify-center mr-4 bg-yellow-500/20`}>
+                    <Ionicons name="shield-checkmark" size={20} color="#f59e0b" />
+                  </View>
+                  <Text style={tw`text-yellow-400 font-medium flex-1`}>Painel Admin</Text>
+                  {pendingCount > 0 && (
+                    <View style={tw`bg-red-500 rounded-full px-2 py-0.5`}>
+                      <Text style={tw`text-white text-xs font-bold`}>{pendingCount}</Text>
+                    </View>
+                  )}
+                </Pressable>
+              )}
 
               {/* Logout */}
               <Pressable

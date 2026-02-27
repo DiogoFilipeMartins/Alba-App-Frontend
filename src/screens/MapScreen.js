@@ -99,6 +99,7 @@ export default function MapScreen({ navigation }) {
                         service_categories ( name )
                     )
                 `)
+                .eq('status', 'approved')
                 .eq('is_active', true);
 
             if (error) throw error;

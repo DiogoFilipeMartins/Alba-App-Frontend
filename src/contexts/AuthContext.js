@@ -5,7 +5,25 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Fetch profile from public.profiles
+  const fetchProfile = async (userId) => {
+    if (!userId) { setProfile(null); return; }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .eq('id', userId)
+        .single();
+      if (!error) setProfile(data);
+      setProfile(data ?? null);
+    } catch (e) {
+      console.warn('fetchProfile error', e);
+      setProfile(null);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -13,7 +31,11 @@ export function AuthProvider({ children }) {
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        if (mounted) setUser(data?.session?.user ?? null);
+        const sessionUser = data?.session?.user ?? null;
+        if (mounted) {
+          setUser(sessionUser);
+          await fetchProfile(sessionUser?.id);
+        }
       } catch (e) {
         console.warn('AuthProvider getSession error', e);
       } finally {
@@ -21,8 +43,10 @@ export function AuthProvider({ children }) {
       }
     })();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const sessionUser = session?.user ?? null;
+      setUser(sessionUser);
+      await fetchProfile(sessionUser?.id);
     });
 
     return () => {
@@ -57,8 +81,10 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   };
 
+  const isAdmin = profile?.role === 'admin';
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin, loading, signIn, signUp, signOut, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
