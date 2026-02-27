@@ -32,7 +32,6 @@ export default function Login({ navigation }) {
     try {
       setLoading(true);
       await signIn(email, password);
-      Alert.alert('Login efetuado com sucesso!');
       navigation.replace('Home');
     } catch (e) {
       console.log('handleLogin exception', e);
