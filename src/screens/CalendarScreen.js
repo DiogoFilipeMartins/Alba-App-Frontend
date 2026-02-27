@@ -185,7 +185,7 @@ export default function CalendarScreen({ navigation }) {
                         <Ionicons name="menu" size={24} color="#e2e8f0" />
                     </Pressable>
                     <Pressable onPress={next} style={tw`flex-row items-center`}>
-                        <Text style={styles.headerMonth}>{MONTHS[month].slice(0, 4)}...</Text>
+                        <Text style={styles.headerMonth}>{MONTHS[month].slice(0, 4)}... {year}</Text>
                         <Ionicons name="chevron-down" size={16} color="#94a3b8" style={tw`ml-0.5`} />
                     </Pressable>
                 </View>
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     bottomLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '500' },
 
     // FAB
-    fab: { position: 'absolute', bottom: 90, right: 20, zIndex: 10, borderRadius: 18, overflow: 'hidden', shadowColor: '#6366f1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 10 },
+    fab: { position: 'absolute', bottom: 128, right: 20, zIndex: 10, borderRadius: 18, overflow: 'hidden', shadowColor: '#6366f1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 10 },
     fabGrad: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
 
     // Modals
