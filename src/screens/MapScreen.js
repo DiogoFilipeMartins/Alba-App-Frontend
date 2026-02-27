@@ -296,7 +296,7 @@ export default function MapScreen({ navigation }) {
             <View style={styles.bottomBar}>
                 <BottomBtn icon="map" label="Mapa" color="#6366f1" active={activeTab === 'map'} onPress={() => setActiveTab('map')} />
                 <BottomBtn icon="add-circle" label="Sugerir" color="#22c55e" active={activeTab === 'suggest'} onPress={() => { setActiveTab('suggest'); navigation.navigate('SuggestPlace'); }} />
-                <BottomBtn icon="heart" label="Doações" color="#f43f5e" active={activeTab === 'donate'} onPress={() => setActiveTab('donate')} />
+                <BottomBtn icon="calendar" label="Agenda" color="#0ea5e9" active={activeTab === 'calendar'} onPress={() => { setActiveTab('calendar'); navigation.navigate('Calendar'); }} />
                 <BottomBtn icon="chatbubbles" label="Comunidade" color="#8b5cf6" active={activeTab === 'community'} onPress={() => setActiveTab('community')} />
             </View>
 
@@ -325,7 +325,7 @@ export default function MapScreen({ navigation }) {
                             <DrawerItem icon="chatbubbles" label="Comunidade" color="#8b5cf6" onPress={closeDrawer} />
 
                             <Text style={[styles.drawerSection, { marginTop: 12 }]}>Mais</Text>
-                            <DrawerItem icon="calendar" label="Agenda" color="#0ea5e9" onPress={closeDrawer} />
+                            <DrawerItem icon="calendar" label="Agenda" color="#0ea5e9" onPress={() => goTo('Calendar')} />
                             <DrawerItem icon="star" label="Favoritos" color="#f59e0b" onPress={closeDrawer} />
 
                             {isAdmin && (
