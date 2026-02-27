@@ -32,7 +32,7 @@ export default function Login({ navigation }) {
     try {
       setLoading(true);
       await signIn(email, password);
-      navigation.replace('Home');
+      navigation.replace('Map');
     } catch (e) {
       console.log('handleLogin exception', e);
       const errMsg = e?.message || 'Ocorreu um erro inesperado. Tenta novamente.';
