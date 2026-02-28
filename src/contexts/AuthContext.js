@@ -17,8 +17,12 @@ export function AuthProvider({ children }) {
         .select('id, full_name, email, role')
         .eq('id', userId)
         .single();
-      if (!error) setProfile(data);
-      setProfile(data ?? null);
+      if (error) {
+        console.warn('fetchProfile error', error);
+        setProfile(null);
+      } else {
+        setProfile(data ?? null);
+      }
     } catch (e) {
       console.warn('fetchProfile error', e);
       setProfile(null);
@@ -47,6 +51,7 @@ export function AuthProvider({ children }) {
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
       await fetchProfile(sessionUser?.id);
+      if (mounted) setLoading(false);
     });
 
     return () => {
