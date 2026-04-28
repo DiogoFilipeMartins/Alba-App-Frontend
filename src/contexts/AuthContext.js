@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { apiService } from '../services/apiService';
 
 const AuthContext = createContext(null);
 
@@ -12,17 +13,8 @@ export function AuthProvider({ children }) {
   const fetchProfile = async (userId) => {
     if (!userId) { setProfile(null); return; }
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role')
-        .eq('id', userId)
-        .single();
-      if (error) {
-        console.warn('fetchProfile error', error);
-        setProfile(null);
-      } else {
-        setProfile(data ?? null);
-      }
+      const data = await apiService.getProfile(userId);
+      setProfile(data ?? null);
     } catch (e) {
       console.warn('fetchProfile error', e);
       setProfile(null);

@@ -10,7 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
-import { supabase } from '../lib/supabase';
+import { apiService } from '../services/apiService';
 
 const STATUS_TABS = [
     { key: 'pending', label: 'Pendentes' },
@@ -30,12 +30,7 @@ export default function AdminScreen({ navigation }) {
     const fetchPlaces = useCallback(async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('places')
-                .select('id, name, type, city, status, created_at, created_by')
-                .eq('status', tab)
-                .order('created_at', { ascending: false });
-            if (error) throw error;
+            const data = await apiService.getPlaces({ status: tab });
             setPlaces(data ?? []);
         } catch (e) {
             console.error('AdminScreen fetchPlaces:', e);
@@ -46,10 +41,7 @@ export default function AdminScreen({ navigation }) {
     }, [tab]);
 
     const fetchPendingCount = async () => {
-        const { count } = await supabase
-            .from('places')
-            .select('id', { count: 'exact', head: true })
-            .eq('status', 'pending');
+        const { count } = await apiService.getPendingPlacesCount();
         setPendingCount(count ?? 0);
     };
 
@@ -60,8 +52,7 @@ export default function AdminScreen({ navigation }) {
 
     const updateStatus = async (id, newStatus) => {
         try {
-            const { error } = await supabase.from('places').update({ status: newStatus }).eq('id', id);
-            if (error) throw error;
+            await apiService.updatePlaceStatus(id, newStatus);
             setPlaces((prev) => prev.filter((p) => p.id !== id));
             if (tab === 'pending') setPendingCount((c) => Math.max(0, c - 1));
         } catch (e) {

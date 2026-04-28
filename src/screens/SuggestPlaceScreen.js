@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import tw from 'twrnc';
-import { supabase } from '../lib/supabase';
+import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 
 const FIELD_STYLE = tw`bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white text-sm mb-3`;
@@ -88,7 +88,7 @@ export default function SuggestPlaceScreen({ navigation, route }) {
 
         try {
             setLoading(true);
-            const { error } = await supabase.from('places').insert({
+            await apiService.createPlace({
                 name: form.name.trim(),
                 type: form.type,
                 description: form.description.trim() || null,
@@ -98,9 +98,8 @@ export default function SuggestPlaceScreen({ navigation, route }) {
                 address_line: form.address_line.trim() || null,
                 city: form.city.trim() || null,
                 postal_code: form.postal_code.trim() || null,
-                location: `POINT(${lng} ${lat})`,
-                status: 'pending',
-                is_active: true,
+                latitude: lat,
+                longitude: lng,
                 created_by: user?.id ?? null,
             });
 

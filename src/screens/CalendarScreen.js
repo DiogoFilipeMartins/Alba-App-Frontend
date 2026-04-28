@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import tw from 'twrnc';
-import { supabase } from '../lib/supabase';
+import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -99,14 +99,7 @@ export default function CalendarScreen({ navigation }) {
             const from = `${year}-${String(month + 1).padStart(2, '0')}-01T00:00:00+00:00`;
             const last = daysInMonth(year, month);
             const to = `${year}-${String(month + 1).padStart(2, '0')}-${last}T23:59:59+00:00`;
-            const { data, error } = await supabase
-                .from('calendar_events')
-                .select('id,title,description,starts_at,ends_at,all_day')
-                .eq('user_id', userId)
-                .gte('starts_at', from)
-                .lte('starts_at', to)
-                .order('starts_at');
-            if (error) throw error;
+            const data = await apiService.getCalendarEvents(userId, from, to);
             setEvents(data ?? []);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -138,7 +131,7 @@ export default function CalendarScreen({ navigation }) {
         try {
             const starts = form.allDay ? buildTS(modalDate, '00:00') : buildTS(modalDate, form.startTime);
             const ends = form.allDay ? buildTS(modalDate, '23:59') : (form.endTime ? buildTS(modalDate, form.endTime) : null);
-            const { error } = await supabase.from('calendar_events').insert({
+            await apiService.createCalendarEvent({
                 user_id: userId,
                 title: form.title.trim(),
                 description: form.description.trim() || null,
@@ -146,7 +139,6 @@ export default function CalendarScreen({ navigation }) {
                 ends_at: ends,
                 all_day: form.allDay,
             });
-            if (error) throw error;
             setShowModal(false);
             resetForm();
             await fetchEvents();
@@ -159,7 +151,7 @@ export default function CalendarScreen({ navigation }) {
             { text: 'Cancelar', style: 'cancel' },
             {
                 text: 'Eliminar', style: 'destructive', onPress: async () => {
-                    await supabase.from('calendar_events').delete().eq('id', id);
+                    await apiService.deleteCalendarEvent(id);
                     setEvents(p => p.filter(e => e.id !== id));
                 }
             },

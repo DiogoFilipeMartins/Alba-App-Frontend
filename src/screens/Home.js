@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { apiService } from '../services/apiService';
 
 const menuItems = [
   { icon: 'map', label: 'Mapa', screen: 'Map', color: '#3b82f6' },
@@ -25,15 +25,11 @@ export default function Home({ navigation }) {
     if (!isAdmin) return;
 
     const fetchPendingCount = async () => {
-      const { count, error } = await supabase
-        .from('places')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending');
-
-      if (error) {
-        console.error('Error fetching pending places count:', error);
-      } else {
+      try {
+        const { count } = await apiService.getPendingPlacesCount();
         setPendingCount(count ?? 0);
+      } catch (error) {
+        console.error('Error fetching pending places count:', error);
       }
     };
 

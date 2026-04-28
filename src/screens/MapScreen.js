@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import tw from 'twrnc';
-import { supabase } from '../lib/supabase';
+import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -118,10 +118,7 @@ export default function MapScreen({ navigation }) {
 
     useEffect(() => {
         if (isAdmin) {
-            supabase
-                .from('places')
-                .select('id', { count: 'exact', head: true })
-                .eq('status', 'pending')
+            apiService.getPendingPlacesCount()
                 .then(({ count }) => setPendingCount(count ?? 0));
         }
     }, [isAdmin]);
@@ -151,14 +148,7 @@ export default function MapScreen({ navigation }) {
     const fetchPlaces = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('places')
-                .select(`id, type, name, description, phone, email, website, address_line, city, location,
-                    place_accessibility (wheelchair_accessible),
-                    place_categories (service_categories (name))`)
-                .eq('status', 'approved')
-                .eq('is_active', true);
-            if (error) throw error;
+            const data = await apiService.getPlaces({ status: 'approved' });
             setPlaces((data || []).filter(p => parseLocation(p.location)));
         } catch (e) {
             Alert.alert('Erro', 'Não foi possível carregar os lugares.');
