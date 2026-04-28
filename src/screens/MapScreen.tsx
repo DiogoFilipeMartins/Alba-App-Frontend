@@ -86,7 +86,7 @@ export default function MapScreen() {
         // Mapa simplificado para reduzir distração visual
         customMapStyle={minimalistMapStyle}
       >
-        {professionals.map((prof) => (
+        {professionals.map((prof: Professional) => (
           prof.latitude && prof.longitude ? (
             <Marker
               key={prof.id}
