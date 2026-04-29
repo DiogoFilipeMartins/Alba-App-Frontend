@@ -10,15 +10,21 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import tw from 'twrnc';
 import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CompositeScreenProps } from '@react-navigation/native';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'SuggestPlace'>;
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'SuggestPlace'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
 
 
 const FIELD_STYLE = tw`bg-[#1a1a1a] border border-[#058c42]/20 rounded-xl px-4 py-3 text-white text-sm mb-3`;
@@ -137,9 +143,9 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
     );
 
     return (
-        <View style={tw`flex-1 bg-[#020202]`}>
+        <SafeAreaView style={tw`flex-1 bg-[#020202]`} edges={['top']}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={tw`flex-1`}>
-                <View style={tw`flex-row items-center px-5 pt-12 pb-4`}>
+                <View style={tw`flex-row items-center px-5 pt-4 pb-4`}>
                     <Text style={tw`text-white text-xl font-bold`}>Sugerir Local</Text>
                 </View>
 
@@ -262,6 +268,6 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                     </Pressable>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </View>
+        </SafeAreaView>
     );
 }

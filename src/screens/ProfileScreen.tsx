@@ -8,6 +8,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/types';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 type Props = BottomTabScreenProps<MainTabParamList, 'Profile'>;
 
 export default function ProfileScreen({ navigation }: Props) {
@@ -48,7 +50,7 @@ export default function ProfileScreen({ navigation }: Props) {
     }
 
     return (
-        <View style={[s.root, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[s.root, { backgroundColor: colors.background }]} edges={['top']}>
             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
                 <View style={s.header}>
                     <View style={[s.avatar, { backgroundColor: colors.primary }]}>
@@ -104,7 +106,7 @@ export default function ProfileScreen({ navigation }: Props) {
                     <Text style={s.logoutTxt}>Terminar Sessão</Text>
                 </TouchableOpacity>
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 }
 

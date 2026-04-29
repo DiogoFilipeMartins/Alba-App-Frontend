@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { useAuth } from '../contexts/AuthContext';
@@ -59,8 +60,10 @@ export default function RegisterScreen({ navigation }: Props) {
     }
   }, [username, email, password, confirmPassword, navigation, signUp]);
 
+
   return (
-    <View style={tw`flex-1 bg-[#020202] p-8`}>
+    <SafeAreaView style={tw`flex-1 bg-[#020202]`} edges={['top']}>
+      <View style={tw`flex-1 p-8`}>
       <ScrollView contentContainerStyle={tw`justify-center min-h-full`} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={tw`items-center mb-8`}>
@@ -123,6 +126,7 @@ export default function RegisterScreen({ navigation }: Props) {
           </View>
         </View>
       </ScrollView>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }

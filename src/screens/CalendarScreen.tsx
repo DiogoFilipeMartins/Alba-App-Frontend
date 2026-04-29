@@ -14,6 +14,7 @@ import {
     Dimensions,
     ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { apiService, CalendarEvent } from '../services/apiService';
@@ -135,7 +136,7 @@ export default function CalendarScreen({ navigation }: Props) {
     const today = todayStr();
 
     return (
-        <View style={styles.root}>
+        <SafeAreaView style={styles.root} edges={['top']}>
             <View style={styles.header}>
                 <View style={tw`flex-row items-center`}>
                     <Pressable onPress={next} style={tw`flex-row items-center`}>
@@ -323,13 +324,13 @@ export default function CalendarScreen({ navigation }: Props) {
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: '#020202' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#058c4220' },
+    root: { flex: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#058c4220' },
     headerMonth: { fontSize: 20, fontWeight: '700', color: '#e2e8f0' },
     headerBtn: { padding: 8 },
     weekRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#058c4220' },
