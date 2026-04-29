@@ -163,9 +163,7 @@ export default function Login({ navigation }) {
           <View style={styles.content}>
             <View style={styles.header}>
               {step === 'details' && !isSignUp && (
-                 <View style={styles.logoWrapper}>
-                    <Ionicons name="leaf" size={80} color={colors.primary} />
-                 </View>
+                 <View style={styles.logoPlaceholder} />
               )}
               {isSignUp && step !== 'details' && (
                 <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -360,7 +358,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center' },
   content: { padding: 40 },
   header: { marginBottom: 48 },
-  logoWrapper: { alignItems: 'center', marginBottom: 28 },
+  logoPlaceholder: { height: 20 },
   backButton: { marginBottom: 16, alignSelf: 'flex-start' },
   backText: { fontSize: 14, fontWeight: '800' },
   title: { fontSize: 32, fontWeight: '900', marginBottom: 12, letterSpacing: -0.5 },
