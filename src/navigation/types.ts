@@ -10,5 +10,5 @@ export type MainTabParamList = {
   Map: undefined;
   SuggestPlace: { pickedCoords?: { lat: number; lng: number } };
   Calendar: undefined;
-  Community: undefined;
+  Profile: undefined;
 };

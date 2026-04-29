@@ -12,18 +12,13 @@ import SuggestPlaceScreen from '../screens/SuggestPlaceScreen';
 import AdminScreen from '../screens/AdminScreen';
 import MapPickerScreen from '../screens/MapPickerScreen';
 import CalendarScreen from '../screens/CalendarScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-function PlaceholderScreen({ name }: { name: string }) {
-  return (
-    <View style={{ flex: 1, backgroundColor: '#020202', justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ color: 'white' }}>{name} Screen (Coming Soon)</Text>
-    </View>
-  );
-}
+
 
 function MainTabs() {
   return (
@@ -45,7 +40,7 @@ function MainTabs() {
           if (route.name === 'Map') iconName = 'map';
           else if (route.name === 'SuggestPlace') iconName = 'add-circle';
           else if (route.name === 'Calendar') iconName = 'calendar';
-          else if (route.name === 'Community') iconName = 'people';
+          else if (route.name === 'Profile') iconName = 'person';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
@@ -53,7 +48,7 @@ function MainTabs() {
       <Tab.Screen name="Map" component={MapScreen} options={{ tabBarLabel: 'Mapa' }} />
       <Tab.Screen name="SuggestPlace" component={SuggestPlaceScreen} options={{ tabBarLabel: 'Sugerir' }} />
       <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarLabel: 'Agenda' }} />
-      <Tab.Screen name="Community" component={() => <PlaceholderScreen name="Community" />} options={{ tabBarLabel: 'Comunidade' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Perfil' }} />
     </Tab.Navigator>
   );
 }
