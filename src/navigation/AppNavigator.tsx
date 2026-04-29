@@ -3,8 +3,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 
 import Login from '../screens/LoginScreen';
 import Register from '../screens/RegisterScreen';
@@ -65,6 +67,15 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const { colors } = useTheme();
+  const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -75,11 +86,18 @@ export default function AppNavigator() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="SignUp" component={Register} />
-        <Stack.Screen name="Main" component={MainTabs} />
-        <Stack.Screen name="Admin" component={AdminScreen} />
-        <Stack.Screen name="MapPicker" component={MapPickerScreen} />
+        {!isAuthenticated ? (
+          <>
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="SignUp" component={Register} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="Admin" component={AdminScreen} />
+            <Stack.Screen name="MapPicker" component={MapPickerScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
