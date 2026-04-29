@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, Modal } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 const menuItems = [
-  { icon: 'map', label: 'Mapa', screen: 'Map', color: '#16db65' },
-  { icon: 'add-circle', label: 'Sugerir Local', screen: 'SuggestPlace', color: '#058c42' },
-  { icon: 'calendar', label: 'Calendário', screen: 'Calendar', color: '#16db65' },
-  { icon: 'heart', label: 'Doações', screen: 'Donations', color: '#058c42' },
-  { icon: 'chatbubbles', label: 'Chatbot', screen: 'Chatbot', color: '#16db65' },
-  { icon: 'people', label: 'Comunidade', screen: 'Community', color: '#058c42' },
-  { icon: 'star', label: 'Favoritos', screen: 'Favorites', color: '#16db65' },
+  { icon: 'map' as const, label: 'Mapa', screen: 'Map' as const, color: '#16db65' },
+  { icon: 'add-circle' as const, label: 'Sugerir Local', screen: 'SuggestPlace' as const, color: '#058c42' },
+  { icon: 'calendar' as const, label: 'Calendário', screen: 'Calendar' as const, color: '#16db65' },
+  { icon: 'heart' as const, label: 'Doações', screen: 'Donations' as const, color: '#058c42' },
+  { icon: 'chatbubbles' as const, label: 'Chatbot', screen: 'Chatbot' as const, color: '#16db65' },
+  { icon: 'people' as const, label: 'Comunidade', screen: 'Community' as const, color: '#058c42' },
+  { icon: 'star' as const, label: 'Favoritos', screen: 'Favorites' as const, color: '#16db65' },
 ];
 
-export default function Home({ navigation }) {
+export default function HomeScreen({ navigation }: Props) {
   const { user, signOut, isAdmin } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,21 +37,6 @@ export default function Home({ navigation }) {
     };
 
     fetchPendingCount();
-
-    // Optional: Set up a real-time subscription for pending places if needed
-    // const subscription = supabase
-    //   .from('places')
-    //   .on('*', payload => {
-    //     if (payload.new.status === 'pending' || payload.old.status === 'pending') {
-    //       fetchPendingCount();
-    //     }
-    //   })
-    //   .subscribe();
-
-    // return () => {
-    //   supabase.removeSubscription(subscription);
-    // };
-
   }, [isAdmin]);
 
   const handleLogout = async () => {
@@ -60,12 +48,11 @@ export default function Home({ navigation }) {
     }
   };
 
-  const handleMenuPress = (screen) => {
+  const handleMenuPress = (screen: any) => {
     setMenuOpen(false);
-    if (screen === 'Map' || screen === 'SuggestPlace' || screen === 'Admin') {
+    if (screen === 'Map' || screen === 'SuggestPlace' || screen === 'Admin' || screen === 'Calendar') {
       navigation.navigate(screen);
     } else {
-      // TODO: Navegar para os outros ecrãs quando implementados
       console.log(`Navegar para: ${screen}`);
     }
   };
@@ -100,7 +87,7 @@ export default function Home({ navigation }) {
               <Text style={tw`text-white text-xl font-bold`}>{username}</Text>
             </View>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Quick Actions Grid */}
         <Text style={tw`text-white text-lg font-semibold mb-4`}>Acesso Rápido</Text>
@@ -161,7 +148,7 @@ export default function Home({ navigation }) {
               </View>
               <View style={tw`flex-1`}>
                 <Text style={tw`text-white font-bold text-base`}>Painel Admin</Text>
-                <Text style={tw`text-purple-200 text-xs`}>Gerir sugestões de locais</Text>
+                <Text style={tw`text-green-200 text-xs`}>Gerir sugestões de locais</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
             </View>
@@ -203,7 +190,7 @@ export default function Home({ navigation }) {
                   style={tw`flex-row items-center py-4 border-b border-[#058c42]/20`}
                 >
                   <View style={[tw`w-10 h-10 rounded-full items-center justify-center mr-4`, { backgroundColor: item.color + '20' }]}>
-                    <Ionicons name={item.icon} size={20} color={item.color} />
+                    <Ionicons name={item.icon as any} size={20} color={item.color} />
                   </View>
                   <Text style={tw`text-white font-medium`}>{item.label}</Text>
                 </Pressable>

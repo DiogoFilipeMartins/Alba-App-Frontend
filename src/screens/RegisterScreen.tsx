@@ -2,10 +2,13 @@ import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
 
-export default function Register({ navigation }) {
+type Props = NativeStackScreenProps<RootStackParamList, 'SignUp'>;
+
+export default function RegisterScreen({ navigation }: Props) {
   const { signUp } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -14,14 +17,14 @@ export default function Register({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const emailRef = useRef(null);
-  const passwordRef = useRef(null);
-  const confirmPasswordRef = useRef(null);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
 
-  const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
   const handleRegister = useCallback(async () => {
     setError(null);
@@ -47,7 +50,7 @@ export default function Register({ navigation }) {
       await signUp({ email, password, username });
       Alert.alert('Conta criada', 'Verifica a tua caixa de entrada para confirmar o email antes de iniciar sessão.');
       navigation.replace('Login');
-    } catch (e) {
+    } catch (e: any) {
       console.log('handleRegister exception', e);
       const errMsg = e?.message || 'Ocorreu um erro inesperado. Tenta novamente.';
       setError(errMsg);
@@ -65,29 +68,27 @@ export default function Register({ navigation }) {
           <Text style={tw`text-[#16db65] text-lg`}>Crie sua conta e comece hoje</Text>
         </View>
 
-        {/* Card com scroll interno */}
+        {/* Form */}
         <View style={tw`bg-transparent p-0 mb-8`}>
-
-
           <View style={tw`mb-4`}>
             <View style={tw`flex-row items-center rounded-2xl bg-[#1a1a1a] px-4 py-4`}>
               <Ionicons name="person" size={20} color="#9CA3AF" style={{ marginRight: 12 }} />
-              <TextInput value={username} onChangeText={setUsername} placeholder="Nome de utilizador" placeholderTextColor="#4a4a4a" style={tw`flex-1 text-white text-lg`} autoCapitalize="none" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} accessibilityLabel="Campo de nome de utilizador" />
+              <TextInput value={username} onChangeText={setUsername} placeholder="Nome de utilizador" placeholderTextColor="#4a4a4a" style={tw`flex-1 text-white text-lg`} autoCapitalize="none" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} />
             </View>
           </View>
 
           <View style={tw`mb-4`}>
             <View style={tw`flex-row items-center rounded-2xl bg-[#1a1a1a] px-4 py-4`}>
               <Ionicons name="mail" size={20} color="#9CA3AF" style={{ marginRight: 12 }} />
-              <TextInput ref={emailRef} value={email} onChangeText={setEmail} placeholder="Endereço de email" placeholderTextColor="#4a4a4a" style={tw`flex-1 text-white text-lg`} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} accessibilityLabel="Campo de email" />
+              <TextInput ref={emailRef} value={email} onChangeText={setEmail} placeholder="Endereço de email" placeholderTextColor="#4a4a4a" style={tw`flex-1 text-white text-lg`} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} />
             </View>
           </View>
 
           <View style={tw`mb-4`}>
             <View style={tw`flex-row items-center rounded-2xl bg-[#1a1a1a] px-4 py-4`}>
               <Ionicons name="lock-closed" size={20} color="#9CA3AF" style={{ marginRight: 12 }} />
-              <TextInput ref={passwordRef} value={password} onChangeText={setPassword} placeholder="Palavra-passe" placeholderTextColor="#4a4a4a" secureTextEntry={!showPassword} style={tw`flex-1 text-white text-lg`} autoCapitalize="none" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => confirmPasswordRef.current?.focus()} accessibilityLabel="Campo de palavra-passe" />
-              <Pressable onPress={() => setShowPassword((s) => !s)} style={{ padding: 6, marginLeft: 8 }} accessibilityRole="button">
+              <TextInput ref={passwordRef} value={password} onChangeText={setPassword} placeholder="Palavra-passe" placeholderTextColor="#4a4a4a" secureTextEntry={!showPassword} style={tw`flex-1 text-white text-lg`} autoCapitalize="none" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => confirmPasswordRef.current?.focus()} />
+              <Pressable onPress={() => setShowPassword((s) => !s)} style={{ padding: 6, marginLeft: 8 }}>
                 <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#9CA3AF" />
               </Pressable>
             </View>
@@ -96,8 +97,8 @@ export default function Register({ navigation }) {
           <View style={tw`mb-6`}>
             <View style={tw`flex-row items-center rounded-2xl bg-[#1a1a1a] px-4 py-4`}>
               <Ionicons name="lock-closed" size={20} color="#9CA3AF" style={{ marginRight: 12 }} />
-              <TextInput ref={confirmPasswordRef} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Confirmar palavra-passe" placeholderTextColor="#4a4a4a" secureTextEntry={!showConfirmPassword} style={tw`flex-1 text-white text-lg`} autoCapitalize="none" autoCorrect={false} returnKeyType="done" onSubmitEditing={handleRegister} accessibilityLabel="Campo de confirmação de palavra-passe" />
-              <Pressable onPress={() => setShowConfirmPassword((s) => !s)} style={{ padding: 6, marginLeft: 8 }} accessibilityRole="button">
+              <TextInput ref={confirmPasswordRef} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Confirmar palavra-passe" placeholderTextColor="#4a4a4a" secureTextEntry={!showConfirmPassword} style={tw`flex-1 text-white text-lg`} autoCapitalize="none" autoCorrect={false} returnKeyType="done" onSubmitEditing={handleRegister} />
+              <Pressable onPress={() => setShowConfirmPassword((s) => !s)} style={{ padding: 6, marginLeft: 8 }}>
                 <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#9CA3AF" />
               </Pressable>
             </View>
@@ -105,7 +106,7 @@ export default function Register({ navigation }) {
 
           {error ? <Text style={tw`text-red-400 text-center mb-3 text-sm mt-2`}>{error}</Text> : null}
 
-          <Pressable onPress={handleRegister} disabled={loading} style={[tw`rounded-2xl items-center mb-6`, loading && tw`opacity-70`]} accessibilityRole="button">
+          <Pressable onPress={handleRegister} disabled={loading} style={[tw`rounded-2xl items-center mb-6`, loading && tw`opacity-70`]}>
             <View style={tw`w-full rounded-2xl py-4 items-center bg-[#058c42]`}>
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={tw`text-white text-lg font-bold`}>Continuar</Text>}
             </View>

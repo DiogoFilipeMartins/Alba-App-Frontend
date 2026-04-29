@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -7,29 +7,30 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
-  Image,
-  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Text,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import tw from 'twrnc';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const PROFILE_OPTIONS = [
   { value: 'inquilino', label: 'Inquilino', description: 'Aceder ao prédio ou fração' },
   { value: 'proprietario', label: 'Proprietário', description: 'Gerir imóveis e contratos' },
   { value: 'tecnico', label: 'Técnico', description: 'Receber e acompanhar intervenções' },
-];
+] as const;
 
 const MANAGEMENT_OPTIONS = [
   { value: 'arrendamento', label: 'Arrendamento', description: 'Gestão de arrendamento habitacional' },
   { value: 'alojamento_local', label: 'Alojamento Local', description: 'Operação de reservas e estadias' },
   { value: 'condominio', label: 'Condomínio', description: 'Gestão de prédio e condóminos' },
-];
+] as const;
 
-// Cores do tema (extraídas da lógica do utilizador)
 const colors = {
   background: '#020202',
   primary: '#058c42',
@@ -40,15 +41,15 @@ const colors = {
   textMuted: '#4B5563',
 };
 
-export default function Login({ navigation }) {
+export default function LoginScreen({ navigation }: Props) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); // Alba-App usa password, não OTP por defeito
-  const [step, setStep] = useState('details');
-  const [selectedProfile, setSelectedProfile] = useState(null);
-  const [selectedManagementType, setSelectedManagementType] = useState(null);
+  const [password, setPassword] = useState('');
+  const [step, setStep] = useState<'details' | 'nif_step' | 'profile' | 'management' | 'property_data'>('details');
+  const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+  const [selectedManagementType, setSelectedManagementType] = useState<string | null>(null);
   const [nif, setNif] = useState('');
   const [propertyData, setPropertyData] = useState({
     name: '',
@@ -58,7 +59,7 @@ export default function Login({ navigation }) {
     country: 'Portugal',
   });
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp } = useAuth();
 
   useEffect(() => {
     const onBackPress = () => {
@@ -121,7 +122,7 @@ export default function Login({ navigation }) {
     try {
       await signIn(email.trim(), password);
       navigation.replace('Home');
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert('Erro', error.message || 'Falha ao entrar.');
     } finally {
       setLoading(false);
@@ -131,17 +132,14 @@ export default function Login({ navigation }) {
   const handleFinalize = async () => {
     setLoading(true);
     try {
-      // No Alba-App, fazemos o signUp com os metadados
       await signUp({
         email: email.trim(),
         password,
         username: name.trim(),
       });
-      // Nota: No mundo real, aqui salvaríamos NIF e Perfil no Postgres
-      // Mas para manter a "cópia literal" do UI sem quebrar o backend:
       Alert.alert('Sucesso', 'Conta criada com sucesso!');
       navigation.replace('Home');
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert('Erro', error.message || 'Falha ao criar conta.');
     } finally {
       setLoading(false);
