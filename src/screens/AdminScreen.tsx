@@ -9,20 +9,26 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
-import { apiService } from '../services/apiService';
+import { apiService, Place } from '../services/apiService';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Admin'>;
 
 const STATUS_TABS = [
     { key: 'pending', label: 'Pendentes' },
     { key: 'approved', label: 'Aprovados' },
     { key: 'rejected', label: 'Rejeitados' },
-];
+] as const;
+
+type StatusKey = typeof STATUS_TABS[number]['key'];
 
 const TYPE_LABEL = { professional: 'Profissional', institution: 'Instituição' };
 const TYPE_COLOR = { professional: '#3b82f6', institution: '#22c55e' };
 
-export default function AdminScreen({ navigation }) {
-    const [tab, setTab] = useState('pending');
-    const [places, setPlaces] = useState([]);
+export default function AdminScreen({ navigation }: Props) {
+    const [tab, setTab] = useState<StatusKey>('pending');
+    const [places, setPlaces] = useState<Place[]>([]);
     const [loading, setLoading] = useState(true);
     const [pendingCount, setPendingCount] = useState(0);
 
@@ -40,8 +46,12 @@ export default function AdminScreen({ navigation }) {
     }, [tab]);
 
     const fetchPendingCount = async () => {
-        const { count } = await apiService.getPendingPlacesCount();
-        setPendingCount(count ?? 0);
+        try {
+            const { count } = await apiService.getPendingPlacesCount();
+            setPendingCount(count ?? 0);
+        } catch (e) {
+            console.warn('Error fetching pending count:', e);
+        }
     };
 
     useEffect(() => {
@@ -49,17 +59,17 @@ export default function AdminScreen({ navigation }) {
         fetchPendingCount();
     }, [fetchPlaces]);
 
-    const updateStatus = async (id, newStatus) => {
+    const updateStatus = async (id: string, newStatus: string) => {
         try {
             await apiService.updatePlaceStatus(id, newStatus);
             setPlaces((prev) => prev.filter((p) => p.id !== id));
             if (tab === 'pending') setPendingCount((c) => Math.max(0, c - 1));
-        } catch (e) {
+        } catch (e: any) {
             Alert.alert('Erro', e.message || 'Não foi possível atualizar o estado.');
         }
     };
 
-    const confirmAction = (id, newStatus, name) => {
+    const confirmAction = (id: string, newStatus: string, name: string) => {
         const verb = newStatus === 'approved' ? 'aprovar' : 'rejeitar';
         Alert.alert(`Confirmar ${verb}`, `Tens a certeza que queres ${verb} "${name}"?`, [
             { text: 'Cancelar', style: 'cancel' },
@@ -67,7 +77,7 @@ export default function AdminScreen({ navigation }) {
         ]);
     };
 
-    const renderItem = ({ item }) => {
+    const renderItem = ({ item }: { item: Place }) => {
         const color = TYPE_COLOR[item.type] ?? '#6b7280';
         const date = new Date(item.created_at).toLocaleDateString('pt-PT');
 

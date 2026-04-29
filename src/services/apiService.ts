@@ -29,11 +29,12 @@ export interface Place {
 
 export interface CalendarEvent {
     id: string;
-    userId: string;
+    user_id: string;
     title: string;
     description?: string;
-    start: string;
-    end: string;
+    starts_at: string;
+    ends_at: string | null;
+    all_day: boolean;
     color?: string;
 }
 

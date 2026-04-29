@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { apiService } from '../services/apiService'; // Assuming this exists from previous steps
+import { apiService } from '../services/apiService';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Map'>;
 
 interface Professional {
   id: string;
@@ -12,7 +16,7 @@ interface Professional {
   longitude: number | null;
 }
 
-export default function MapScreen() {
+export default function MapScreen({ navigation }: Props) {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +25,6 @@ export default function MapScreen() {
   useEffect(() => {
     (async () => {
       try {
-        // Obter localização do utilizador
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setErrorMsg('Permissão de acesso à localização negada.');
@@ -32,12 +35,7 @@ export default function MapScreen() {
         let loc = await Location.getCurrentPositionAsync({});
         setLocation(loc);
 
-        // Fetch de profissionais do backend
-        // Nota: Adaptar rota conforme a API
-        // const data = await apiService.getPlaces({ type: 'professional' }); 
-        // setProfessionals(data);
-
-        // Placeholder para exemplo (Substituir pela chamada à API real quando pronta)
+        // Placeholder para exemplo
         setProfessionals([
           { id: '1', name: 'Dr. João', specialty: 'Terapia da Fala', latitude: loc.coords.latitude + 0.01, longitude: loc.coords.longitude + 0.01 },
           { id: '2', name: 'Dra. Maria', specialty: 'Psicologia', latitude: loc.coords.latitude - 0.01, longitude: loc.coords.longitude - 0.01 }
@@ -55,7 +53,6 @@ export default function MapScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        {/* Alto contraste para acessibilidade */}
         <ActivityIndicator size="large" color="#16db65" />
         <Text style={styles.loadingText}>A carregar o mapa...</Text>
       </View>
@@ -76,14 +73,13 @@ export default function MapScreen() {
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={{
-          latitude: location?.coords.latitude || 39.3999, // Centro de Portugal (fallback)
+          latitude: location?.coords.latitude || 39.3999,
           longitude: location?.coords.longitude || -8.2245,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
         showsUserLocation={true}
         showsMyLocationButton={true}
-        // Mapa simplificado para reduzir distração visual
         customMapStyle={minimalistMapStyle}
       >
         {professionals.map((prof: Professional) => (
@@ -93,7 +89,6 @@ export default function MapScreen() {
               coordinate={{ latitude: prof.latitude, longitude: prof.longitude }}
               title={prof.name}
               description={prof.specialty}
-              // Marcador de alto contraste
               pinColor="#16db65"
             />
           ) : null
@@ -106,93 +101,23 @@ export default function MapScreen() {
   );
 }
 
-// Estilo de mapa minimalista e de alto contraste focado em utilizadores com sensibilidade sensorial
 const minimalistMapStyle = [
-  {
-    "elementType": "geometry",
-    "stylers": [{ "color": "#020202" }]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#16db65" }]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#000000" }]
-  },
-  {
-    "featureType": "administrative",
-    "elementType": "geometry.stroke",
-    "stylers": [{ "color": "#058c42" }]
-  },
-  {
-    "featureType": "landscape",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#020202" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#0d2818" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry.stroke",
-    "stylers": [{ "color": "#058c42" }]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#0d2818" }]
-  }
+  { "elementType": "geometry", "stylers": [{ "color": "#020202" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#16db65" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#000000" }] },
+  { "featureType": "administrative", "elementType": "geometry.stroke", "stylers": [{ "color": "#058c42" }] },
+  { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#020202" }] },
+  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#0d2818" }] },
+  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#058c42" }] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#0d2818" }] }
 ];
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#020202',
-  },
-  map: {
-    width: '100%',
-    height: '100%',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#020202',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 18,
-    color: '#16db65',
-    fontWeight: 'bold',
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#D8000C', // Vermelho escuro de erro com bom contraste no fundo branco
-    fontWeight: 'bold',
-    textAlign: 'center',
-    padding: 20,
-  },
-  header: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: '#058c42', // Barra verde sólida
-    padding: 15,
-    borderRadius: 12,
-    elevation: 5, // Sombra para separar do mapa
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  headerText: {
-    color: '#FFFFFF', // Texto branco sobre preto (máximo contraste)
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  }
+  container: { flex: 1, backgroundColor: '#020202' },
+  map: { width: '100%', height: '100%' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#020202' },
+  loadingText: { marginTop: 10, fontSize: 18, color: '#16db65', fontWeight: 'bold' },
+  errorText: { fontSize: 18, color: '#D8000C', fontWeight: 'bold', textAlign: 'center', padding: 20 },
+  header: { position: 'absolute', top: 50, left: 20, right: 20, backgroundColor: '#058c42', padding: 15, borderRadius: 12, elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+  headerText: { color: '#FFFFFF', fontSize: 20, fontWeight: 'bold', textAlign: 'center' }
 });

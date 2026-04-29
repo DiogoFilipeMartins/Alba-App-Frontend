@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -15,12 +15,15 @@ import {
     ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import tw from 'twrnc';
-import { apiService } from '../services/apiService';
+import { apiService, CalendarEvent } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>;
+
+const { width: SCREEN_W } = Dimensions.get('window');
 const CELL_W = SCREEN_W / 7;
 
 const WEEK_DAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
@@ -28,19 +31,18 @@ const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Jul
 
 const EVENT_COLORS = ['#2563eb', '#16a34a', '#9333ea', '#dc2626', '#d97706', '#0891b2', '#db2777'];
 
-function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
-function firstDOW(y, m) { return new Date(y, m, 1).getDay(); }
+function daysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
+function firstDOW(y: number, m: number) { return new Date(y, m, 1).getDay(); }
 const todayStr = () => new Date().toISOString().slice(0, 10);
-const dayISO = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-const eventDay = (ts) => ts?.slice(0, 10) ?? '';
-const fmtTime = (ts) => ts?.slice(11, 16) ?? '';
-const buildTS = (date, time) =>
+const dayISO = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+const eventDay = (ts: string | undefined) => ts?.slice(0, 10) ?? '';
+const fmtTime = (ts: string | undefined) => ts?.slice(11, 16) ?? '';
+const buildTS = (date: string, time: string) =>
     time && /^\d{1,2}:\d{2}$/.test(time)
         ? `${date}T${time.padStart(5, '0')}:00+00:00`
         : `${date}T00:00:00+00:00`;
 
-// ── Bottom bar (igual ao MapScreen) ───────────────────────────────────────────
-function BottomBar({ navigation }) {
+function BottomBar({ navigation }: { navigation: any }) {
     return (
         <View style={styles.bottomBar}>
             <Pressable style={styles.bottomBtn} onPress={() => navigation.navigate('Map')}>
@@ -71,27 +73,23 @@ function BottomBar({ navigation }) {
     );
 }
 
-// ── Ecrã principal ─────────────────────────────────────────────────────────────
-export default function CalendarScreen({ navigation }) {
+export default function CalendarScreen({ navigation }: Props) {
     const { profile } = useAuth();
     const userId = profile?.id;
 
     const now = new Date();
     const [year, setYear] = useState(now.getFullYear());
     const [month, setMonth] = useState(now.getMonth());
-    const [events, setEvents] = useState([]);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Modal criar evento
     const [showModal, setShowModal] = useState(false);
     const [modalDate, setModalDate] = useState(todayStr());
     const [form, setForm] = useState({ title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0 });
     const [saving, setSaving] = useState(false);
 
-    // Modal ver eventos do dia
-    const [dayModal, setDayModal] = useState(null); // null | 'YYYY-MM-DD'
+    const [dayModal, setDayModal] = useState<string | null>(null);
 
-    // ── Fetch ──────────────────────────────────────────────────────────────────
     const fetchEvents = useCallback(async () => {
         if (!userId) return;
         setLoading(true);
@@ -107,23 +105,19 @@ export default function CalendarScreen({ navigation }) {
 
     useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
-    // ── Nav ────────────────────────────────────────────────────────────────────
     const prev = () => { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); };
     const next = () => { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); };
     const goToday = () => { setYear(now.getFullYear()); setMonth(now.getMonth()); };
 
-    // ── Grid ───────────────────────────────────────────────────────────────────
     const total = daysInMonth(year, month);
     const first = firstDOW(year, month);
     const cells = [...Array(first).fill(null), ...Array.from({ length: total }, (_, i) => i + 1)];
-    // pad to full weeks
     while (cells.length % 7 !== 0) cells.push(null);
-    const weeks = [];
+    const weeks: (number | null)[][] = [];
     for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
-    const eventsForDay = (iso) => events.filter(e => eventDay(e.starts_at) === iso);
+    const eventsForDay = (iso: string) => events.filter(e => eventDay(e.starts_at) === iso);
 
-    // ── Guardar evento ─────────────────────────────────────────────────────────
     const handleSave = async () => {
         if (!form.title.trim()) { Alert.alert('Título obrigatório'); return; }
         if (!userId) return;
@@ -142,11 +136,11 @@ export default function CalendarScreen({ navigation }) {
             setShowModal(false);
             resetForm();
             await fetchEvents();
-        } catch (e) { Alert.alert('Erro', e.message); }
+        } catch (e: any) { Alert.alert('Erro', e.message); }
         finally { setSaving(false); }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: string) => {
         Alert.alert('Eliminar evento', 'Tens a certeza?', [
             { text: 'Cancelar', style: 'cancel' },
             {
@@ -160,7 +154,7 @@ export default function CalendarScreen({ navigation }) {
 
     const resetForm = () => setForm({ title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0 });
 
-    const openNew = (iso) => {
+    const openNew = (iso: string) => {
         setModalDate(iso || todayStr());
         resetForm();
         setShowModal(true);
@@ -170,10 +164,9 @@ export default function CalendarScreen({ navigation }) {
 
     return (
         <View style={styles.root}>
-            {/* ── Header ── */}
             <View style={styles.header}>
                 <View style={tw`flex-row items-center`}>
-                    <Pressable onPress={() => navigation.goBack()} style={tw`p-2 mr-1`}>
+                    <Pressable onPress={() => {}} style={tw`p-2 mr-1`}>
                         <Ionicons name="menu" size={24} color="#e2e8f0" />
                     </Pressable>
                     <Pressable onPress={next} style={tw`flex-row items-center`}>
@@ -191,14 +184,12 @@ export default function CalendarScreen({ navigation }) {
                 </View>
             </View>
 
-            {/* ── Dias da semana ── */}
             <View style={styles.weekRow}>
                 {WEEK_DAYS.map(d => (
                     <Text key={d} style={styles.weekLabel}>{d}</Text>
                 ))}
             </View>
 
-            {/* ── Grid do mês ── */}
             <View style={tw`flex-1 bg-[#020202]`}>
                 {weeks.map((week, wi) => (
                     <View key={wi} style={[styles.weekLine, { flex: 1 }]}>
@@ -213,14 +204,12 @@ export default function CalendarScreen({ navigation }) {
                                     onPress={() => { if (iso) { setDayModal(iso); } }}
                                     onLongPress={() => { if (iso) openNew(iso); }}
                                 >
-                                    {/* Número do dia */}
                                     {day ? (
                                         <View style={[styles.dayNumWrap, isTd && styles.dayNumToday]}>
                                             <Text style={[styles.dayNum, isTd && styles.dayNumTodayText]}>{day}</Text>
                                         </View>
                                     ) : null}
 
-                                    {/* Pills de eventos (max 2 + overflow) */}
                                     {dayEvs.slice(0, 2).map((ev, ei) => (
                                         <View key={ev.id} style={[styles.pill, { backgroundColor: EVENT_COLORS[ei % EVENT_COLORS.length] }]}>
                                             <Text style={styles.pillText} numberOfLines={1}>{ev.title}</Text>
@@ -236,7 +225,6 @@ export default function CalendarScreen({ navigation }) {
                 ))}
             </View>
 
-            {/* ── Bottom bar com FAB ── */}
             <BottomBar navigation={navigation} />
             <Pressable style={styles.fab} onPress={() => openNew(today)}>
                 <View style={[styles.fabGrad, { backgroundColor: '#058c42' }]}>
@@ -250,7 +238,6 @@ export default function CalendarScreen({ navigation }) {
                 </View>
             )}
 
-            {/* ── Modal: ver eventos do dia ── */}
             {dayModal && (
                 <Modal transparent animationType="slide" onRequestClose={() => setDayModal(null)}>
                     <Pressable style={styles.overlay} onPress={() => setDayModal(null)} />
@@ -272,28 +259,29 @@ export default function CalendarScreen({ navigation }) {
                                 <Text style={tw`text-gray-400 mt-2`}>Sem eventos</Text>
                             </View>
                         ) : (
-                            eventsForDay(dayModal).map((ev, i) => (
-                                <View key={ev.id} style={[styles.evCard, { borderLeftColor: EVENT_COLORS[i % EVENT_COLORS.length] }]}>
-                                    <View style={tw`flex-1`}>
-                                        <Text style={tw`font-semibold text-gray-800`}>{ev.title}</Text>
-                                        {ev.all_day
-                                            ? <Text style={tw`text-xs text-gray-400 mt-0.5`}>Dia inteiro</Text>
-                                            : <Text style={tw`text-xs text-gray-400 mt-0.5`}>
-                                                {fmtTime(ev.starts_at)}{ev.ends_at ? ` – ${fmtTime(ev.ends_at)}` : ''}
-                                            </Text>}
-                                        {ev.description ? <Text style={tw`text-xs text-gray-400 mt-1`}>{ev.description}</Text> : null}
+                            <ScrollView>
+                                {eventsForDay(dayModal).map((ev, i) => (
+                                    <View key={ev.id} style={[styles.evCard, { borderLeftColor: EVENT_COLORS[i % EVENT_COLORS.length] }]}>
+                                        <View style={tw`flex-1`}>
+                                            <Text style={tw`font-semibold text-gray-800`}>{ev.title}</Text>
+                                            {ev.all_day
+                                                ? <Text style={tw`text-xs text-gray-400 mt-0.5`}>Dia inteiro</Text>
+                                                : <Text style={tw`text-xs text-gray-400 mt-0.5`}>
+                                                    {fmtTime(ev.starts_at)}{ev.ends_at ? ` – ${fmtTime(ev.ends_at)}` : ''}
+                                                </Text>}
+                                            {ev.description ? <Text style={tw`text-xs text-gray-400 mt-1`}>{ev.description}</Text> : null}
+                                        </View>
+                                        <Pressable onPress={() => handleDelete(ev.id)} style={tw`p-2`}>
+                                            <Ionicons name="trash-outline" size={18} color="#94a3b8" />
+                                        </Pressable>
                                     </View>
-                                    <Pressable onPress={() => handleDelete(ev.id)} style={tw`p-2`}>
-                                        <Ionicons name="trash-outline" size={18} color="#94a3b8" />
-                                    </Pressable>
-                                </View>
-                            ))
+                                ))}
+                            </ScrollView>
                         )}
                     </View>
                 </Modal>
             )}
 
-            {/* ── Modal: criar evento ── */}
             <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={tw`flex-1`}>
                     <Pressable style={styles.overlay} onPress={() => setShowModal(false)} />
@@ -358,16 +346,11 @@ export default function CalendarScreen({ navigation }) {
     );
 }
 
-// ── Estilos ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: '#020202' },
-
-    // Header
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#058c4220' },
     headerMonth: { fontSize: 20, fontWeight: '700', color: '#e2e8f0' },
     headerBtn: { padding: 8 },
-
-    // Grid
     weekRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#058c4220' },
     weekLabel: { width: CELL_W, textAlign: 'center', fontSize: 11, color: '#64748b', fontWeight: '600', paddingVertical: 6, textTransform: 'uppercase' },
     weekLine: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#058c4220' },
@@ -376,23 +359,15 @@ const styles = StyleSheet.create({
     dayNumToday: { backgroundColor: '#058c42' },
     dayNum: { fontSize: 13, color: '#cbd5e1' },
     dayNumTodayText: { color: 'white', fontWeight: '700' },
-
-    // Event pills
     pill: { marginHorizontal: 3, marginTop: 2, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 },
     pillText: { fontSize: 10, color: 'white', fontWeight: '600' },
     overflow: { fontSize: 10, color: '#64748b', marginLeft: 4, marginTop: 1 },
-
-    // Bottom bar
     bottomBar: { backgroundColor: '#020202', flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, paddingBottom: 22, borderTopWidth: 1, borderTopColor: '#058c4220' },
     bottomBtn: { alignItems: 'center', flex: 1 },
     bottomIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 3 },
     bottomLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '500' },
-
-    // FAB
     fab: { position: 'absolute', bottom: 128, right: 20, zIndex: 10, borderRadius: 18, overflow: 'hidden', shadowColor: '#6366f1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 10 },
     fabGrad: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
-
-    // Modals
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
     sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
     handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e2e8f0', alignSelf: 'center', marginBottom: 20 },

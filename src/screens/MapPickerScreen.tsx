@@ -7,29 +7,30 @@ import {
     ActivityIndicator,
     Alert,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, Region, MapPressEvent } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { LinearGradient } from 'expo-linear-gradient';
 import tw from 'twrnc';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
 
-export default function MapPickerScreen({ navigation, route }) {
-    // Coordenadas iniciais vindas do SuggestPlaceScreen (se já tinham sido escolhidas)
+type Props = NativeStackScreenProps<RootStackParamList, 'MapPicker'>;
+
+export default function MapPickerScreen({ navigation, route }: Props) {
     const initial = route.params?.initialCoords ?? null;
 
-    const [marker, setMarker] = useState(
+    const [marker, setMarker] = useState<{ latitude: number; longitude: number } | null>(
         initial ? { latitude: initial.lat, longitude: initial.lng } : null
     );
-    const [region, setRegion] = useState({
+    const [region, setRegion] = useState<Region>({
         latitude: initial?.lat ?? 39.5,
         longitude: initial?.lng ?? -8.0,
         latitudeDelta: initial ? 0.05 : 3.5,
         longitudeDelta: initial ? 0.05 : 3.5,
     });
     const [locLoading, setLocLoading] = useState(false);
-    const mapRef = useRef(null);
+    const mapRef = useRef<MapView>(null);
 
-    // Centralizar no utilizador se não houver coordenadas iniciais
     useEffect(() => {
         if (initial) return;
         (async () => {
@@ -49,7 +50,7 @@ export default function MapPickerScreen({ navigation, route }) {
         })();
     }, []);
 
-    const handleMapPress = (e) => {
+    const handleMapPress = (e: MapPressEvent) => {
         setMarker(e.nativeEvent.coordinate);
     };
 
@@ -82,7 +83,6 @@ export default function MapPickerScreen({ navigation, route }) {
             Alert.alert('Nenhum ponto selecionado', 'Toca no mapa para escolher a localização.');
             return;
         }
-        // Devolver coordenadas ao ecrã anterior
         navigation.navigate('SuggestPlace', {
             pickedCoords: { lat: marker.latitude, lng: marker.longitude },
         });
@@ -90,7 +90,6 @@ export default function MapPickerScreen({ navigation, route }) {
 
     return (
         <View style={tw`flex-1`}>
-            {/* Mapa */}
             <MapView
                 ref={mapRef}
                 provider={PROVIDER_GOOGLE}
@@ -106,7 +105,6 @@ export default function MapPickerScreen({ navigation, route }) {
                 )}
             </MapView>
 
-            {/* Header */}
             <View style={tw`absolute top-0 left-0 right-0 pt-12 px-5`}>
                 <View style={[tw`rounded-2xl flex-row items-center px-4 py-3`, { backgroundColor: 'rgba(17,24,39,0.97)' }]}>
                     <Pressable onPress={() => navigation.goBack()} style={tw`p-2 mr-2`}>
@@ -119,7 +117,6 @@ export default function MapPickerScreen({ navigation, route }) {
                 </View>
             </View>
 
-            {/* Hint central (quando ainda não há pin) */}
             {!marker && (
                 <View style={tw`absolute inset-0 items-center justify-center pointer-events-none`}>
                     <View style={tw`bg-black/60 rounded-2xl px-5 py-3 items-center`}>
@@ -129,7 +126,6 @@ export default function MapPickerScreen({ navigation, route }) {
                 </View>
             )}
 
-            {/* Botão: centrar em mim */}
             <Pressable
                 onPress={centerOnUser}
                 style={tw`absolute bottom-32 right-5 bg-white rounded-full p-4 shadow-lg`}
@@ -141,7 +137,6 @@ export default function MapPickerScreen({ navigation, route }) {
                 )}
             </Pressable>
 
-            {/* Coordenadas do pin selecionado */}
             {marker && (
                 <View style={tw`absolute bottom-24 left-5 right-5`}>
                     <View style={[tw`rounded-2xl px-4 py-3 flex-row items-center`, { backgroundColor: 'rgba(17,24,39,0.97)' }]}>
@@ -156,7 +151,6 @@ export default function MapPickerScreen({ navigation, route }) {
                 </View>
             )}
 
-            {/* Botão Confirmar */}
             <View style={tw`absolute bottom-5 left-5 right-5`}>
                 <Pressable onPress={handleConfirm} disabled={!marker}>
                     <View style={[tw`rounded-2xl py-4 items-center flex-row justify-center`, { backgroundColor: marker ? '#058c42' : '#374151' }]}>

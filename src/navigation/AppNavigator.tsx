@@ -17,6 +17,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        id={undefined}
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: '#020202' },
