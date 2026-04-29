@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { supabase } from '../lib/supabase';
 import { apiService } from '../services/apiService';
 import { User } from '@supabase/supabase-js';
+import { useDispatch } from 'react-redux';
+import { setAuth, clearAuth, setLoading as setReduxLoading } from '../store/slices/authSlice';
 
 interface AuthContextType {
   user: User | null;
@@ -20,16 +22,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
 
   // Fetch profile from public.profiles
   const fetchProfile = async (userId: string | undefined) => {
-    if (!userId) { setProfile(null); return; }
+    if (!userId) { 
+      setProfile(null); 
+      dispatch(setAuth({ user: null, profile: null }));
+      return; 
+    }
     try {
       const data = await apiService.getProfile(userId);
       setProfile(data ?? null);
+      return data;
     } catch (e) {
       console.warn('fetchProfile error', e);
       setProfile(null);
+      return null;
     }
   };
 
@@ -42,20 +51,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const sessionUser = data?.session?.user ?? null;
         if (mounted) {
           setUser(sessionUser);
-          if (sessionUser) await fetchProfile(sessionUser.id);
+          if (sessionUser) {
+            const p = await fetchProfile(sessionUser.id);
+            dispatch(setAuth({ user: sessionUser, profile: p }));
+          } else {
+            dispatch(clearAuth());
+          }
         }
       } catch (e) {
         console.warn('AuthProvider getSession error', e);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          dispatch(setReduxLoading(false));
+        }
       }
     })();
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const sessionUser = session?.user ?? null;
-      setUser(sessionUser);
-      if (sessionUser) await fetchProfile(sessionUser.id);
-      if (mounted) setLoading(false);
+      if (mounted) {
+        setUser(sessionUser);
+        if (sessionUser) {
+          const p = await fetchProfile(sessionUser.id);
+          dispatch(setAuth({ user: sessionUser, profile: p }));
+        } else {
+          setProfile(null);
+          dispatch(clearAuth());
+        }
+        setLoading(false);
+        dispatch(setReduxLoading(false));
+      }
     });
 
     return () => {
@@ -82,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
+    dispatch(clearAuth());
     if (error) throw error;
   };
 
