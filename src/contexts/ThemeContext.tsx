@@ -6,6 +6,7 @@ type ThemeColors = {
   background: string;
   card: string;
   textPrimary: string;
+  textSecondary: string;
   textMuted: string;
   primary: string;
   accent: string;
@@ -17,7 +18,8 @@ const darkColors: ThemeColors = {
   background: '#020202',
   card: '#1a1a1a',
   textPrimary: '#e2e8f0',
-  textMuted: '#94a3b8',
+  textSecondary: '#94a3b8',
+  textMuted: '#64748b',
   primary: '#058c42',
   accent: '#16db65',
   border: '#058c4220',
@@ -28,7 +30,8 @@ const lightColors: ThemeColors = {
   background: '#f8fafc',
   card: '#ffffff',
   textPrimary: '#0f172a',
-  textMuted: '#64748b',
+  textSecondary: '#64748b',
+  textMuted: '#94a3b8',
   primary: '#058c42',
   accent: '#16db65',
   border: '#e2e8f0',

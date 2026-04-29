@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { apiService, CalendarEvent } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 
@@ -43,11 +44,10 @@ const buildTS = (date: string, time: string) =>
         ? `${date}T${time.padStart(5, '0')}:00+00:00`
         : `${date}T00:00:00+00:00`;
 
-
-
 export default function CalendarScreen({ navigation }: Props) {
     const { profile } = useAuth();
     const userId = profile?.id;
+    const { colors, isDark } = useTheme();
 
     const now = new Date();
     const [year, setYear] = useState(now.getFullYear());
@@ -136,70 +136,60 @@ export default function CalendarScreen({ navigation }: Props) {
     const today = todayStr();
 
     return (
-        <SafeAreaView style={styles.root} edges={['top']}>
-            <View style={styles.header}>
-                <View style={tw`flex-row items-center`}>
+        <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top']}>
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                <View style={tw`flex-1 flex-row items-center`}>
                     <Pressable onPress={next} style={tw`flex-row items-center`}>
-                        <Text style={styles.headerMonth}>{MONTHS[month].slice(0, 4)}... {year}</Text>
-                        <Ionicons name="chevron-down" size={16} color="#94a3b8" style={tw`ml-0.5`} />
+                        <Text numberOfLines={1} style={[styles.headerMonth, { color: colors.textPrimary }]}>{MONTHS[month]} {year}</Text>
+                        <Ionicons name="chevron-down" size={16} color={colors.textSecondary} style={tw`ml-1`} />
                     </Pressable>
                 </View>
                 <View style={tw`flex-row items-center`}>
                     <Pressable onPress={goToday} style={styles.headerBtn}>
-                        <Ionicons name="today-outline" size={22} color="#e2e8f0" />
+                        <Ionicons name="today-outline" size={22} color={colors.textPrimary} />
                     </Pressable>
                     <Pressable onPress={fetchEvents} style={styles.headerBtn}>
-                        <Ionicons name="refresh" size={22} color="#e2e8f0" />
+                        <Ionicons name="refresh" size={22} color={colors.textPrimary} />
                     </Pressable>
                 </View>
             </View>
 
-            <View style={styles.weekRow}>
+            <View style={[styles.weekRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
                 {WEEK_DAYS.map(d => (
-                    <Text key={d} style={styles.weekLabel}>{d}</Text>
+                    <Text key={d} style={[styles.weekLabel, { color: colors.textSecondary }]}>{d}</Text>
                 ))}
             </View>
 
-            <View 
-                style={tw`flex-1 bg-[#020202]`}
-                onTouchStart={e => {
-                    touchXRef.current = e.nativeEvent.pageX;
-                }}
+            <View
+                style={tw`flex-1`}
+                onTouchStart={e => touchXRef.current = e.nativeEvent.pageX}
                 onTouchEnd={e => {
-                    const deltaX = e.nativeEvent.pageX - touchXRef.current;
-                    if (Math.abs(deltaX) > 50) {
-                        if (deltaX > 0) prev();
-                        else next();
+                    const diff = e.nativeEvent.pageX - touchXRef.current;
+                    if (Math.abs(diff) > 50) {
+                        if (diff > 0) prev(); else next();
                     }
                 }}
             >
-                {weeks.map((week, wi) => (
-                    <View key={wi} style={[styles.weekLine, { flex: 1 }]}>
-                        {week.map((day, di) => {
-                            const iso = day ? dayISO(year, month, day) : null;
-                            const isTd = iso === today;
-                            const dayEvs = iso ? eventsForDay(iso) : [];
-                            return (
-                                <Pressable
-                                    key={di}
-                                    style={styles.dayCell}
-                                    onPress={() => { if (iso) { setDayModal(iso); } }}
-                                    onLongPress={() => { if (iso) openNew(iso); }}
-                                >
-                                    {day ? (
-                                        <View style={[styles.dayNumWrap, isTd && styles.dayNumToday]}>
-                                            <Text style={[styles.dayNum, isTd && styles.dayNumTodayText]}>{day}</Text>
-                                        </View>
-                                    ) : null}
+                {weeks.map((w, wi) => (
+                    <View key={wi} style={[styles.weekLine, { flex: 1, borderBottomColor: colors.border }]}>
+                        {w.map((d, di) => {
+                            const iso = d ? dayISO(year, month, d) : '';
+                            const isToday = iso === today;
+                            const dayEvents = eventsForDay(iso);
 
-                                    {dayEvs.slice(0, 2).map((ev, ei) => (
-                                        <View key={ev.id} style={[styles.pill, { backgroundColor: EVENT_COLORS[ei % EVENT_COLORS.length] }]}>
-                                            <Text style={styles.pillText} numberOfLines={1}>{ev.title}</Text>
-                                        </View>
-                                    ))}
-                                    {dayEvs.length > 2 && (
-                                        <Text style={styles.overflow}>+{dayEvs.length - 2}</Text>
-                                    )}
+                            return (
+                                <Pressable key={di} style={[styles.dayCell, { borderRightColor: colors.border }]} onPress={() => iso && setDayModal(iso)}>
+                                    <View style={[styles.dayNumWrap, isToday && { backgroundColor: colors.accent }]}>
+                                        <Text style={[styles.dayNum, { color: d ? colors.textPrimary : 'transparent' }, isToday && styles.dayNumTodayText]}>{d}</Text>
+                                    </View>
+                                    <View style={tw`flex-1`}>
+                                        {dayEvents.slice(0, 2).map(e => (
+                                            <View key={e.id} style={[styles.pill, { backgroundColor: colors.accent + '30' }]}>
+                                                <Text numberOfLines={1} style={[styles.pillText, { color: colors.textPrimary }]}>{e.title}</Text>
+                                            </View>
+                                        ))}
+                                        {dayEvents.length > 2 && <Text style={[styles.overflow, { color: colors.textSecondary }]}>+{dayEvents.length - 2}</Text>}
+                                    </View>
                                 </Pressable>
                             );
                         })}
@@ -207,120 +197,131 @@ export default function CalendarScreen({ navigation }: Props) {
                 ))}
             </View>
 
-
             <Pressable style={styles.fab} onPress={() => openNew(today)}>
-                <View style={[styles.fabGrad, { backgroundColor: '#058c42' }]}>
-                    <Ionicons name="add" size={28} color="white" />
+                <View style={[styles.fabGrad, { backgroundColor: colors.accent }]}>
+                    <Ionicons name="add" size={32} color="white" />
                 </View>
             </Pressable>
 
-            {loading && (
-                <View style={tw`absolute top-24 left-0 right-0 items-center`}>
-                    <ActivityIndicator color="#16db65" />
-                </View>
-            )}
+            {/* Day Events Modal */}
+            <Modal visible={!!dayModal} transparent animationType="fade" onRequestClose={() => setDayModal(null)}>
+                <Pressable style={styles.overlay} onPress={() => setDayModal(null)}>
+                    <View style={[styles.sheet, { backgroundColor: colors.card, marginTop: 'auto' }]}>
+                        <View style={[styles.handle, { backgroundColor: colors.border }]} />
+                        <Text style={[styles.lbl, { color: colors.textSecondary }]}>Eventos de {dayModal}</Text>
 
-            {dayModal && (
-                <Modal transparent animationType="slide" onRequestClose={() => setDayModal(null)}>
-                    <Pressable style={styles.overlay} onPress={() => setDayModal(null)} />
-                    <View style={styles.sheet}>
-                        <View style={styles.handle} />
-                        <View style={tw`flex-row items-center justify-between mb-4`}>
-                            <Text style={tw`text-gray-800 font-bold text-base`}>
-                                {new Date(dayModal + 'T12:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
-                            </Text>
-                            <Pressable onPress={() => { setDayModal(null); openNew(dayModal); }}
-                                style={tw`bg-[#058c42] rounded-xl px-3 py-2 flex-row items-center`}>
-                                <Ionicons name="add" size={16} color="white" />
-                                <Text style={tw`text-white font-semibold ml-1 text-sm`}>Novo</Text>
-                            </Pressable>
-                        </View>
-                        {eventsForDay(dayModal).length === 0 ? (
-                            <View style={tw`items-center py-8`}>
-                                <Ionicons name="calendar-outline" size={42} color="#94a3b8" />
-                                <Text style={tw`text-gray-400 mt-2`}>Sem eventos</Text>
-                            </View>
-                        ) : (
-                            <ScrollView>
-                                {eventsForDay(dayModal).map((ev, i) => (
-                                    <View key={ev.id} style={[styles.evCard, { borderLeftColor: EVENT_COLORS[i % EVENT_COLORS.length] }]}>
+                        <ScrollView style={tw`max-h-80`}>
+                            {dayModal && eventsForDay(dayModal).length > 0 ? (
+                                eventsForDay(dayModal).map(e => (
+                                    <View key={e.id} style={[styles.evCard, { backgroundColor: colors.background, borderLeftColor: colors.accent }]}>
                                         <View style={tw`flex-1`}>
-                                            <Text style={tw`font-semibold text-gray-800`}>{ev.title}</Text>
-                                            {ev.all_day
-                                                ? <Text style={tw`text-xs text-gray-400 mt-0.5`}>Dia inteiro</Text>
-                                                : <Text style={tw`text-xs text-gray-400 mt-0.5`}>
-                                                    {fmtTime(ev.starts_at)}{ev.ends_at ? ` – ${fmtTime(ev.ends_at)}` : ''}
-                                                </Text>}
-                                            {ev.description ? <Text style={tw`text-xs text-gray-400 mt-1`}>{ev.description}</Text> : null}
+                                            <Text style={[tw`font-bold text-base`, { color: colors.textPrimary }]}>{e.title}</Text>
+                                            <Text style={[tw`text-xs`, { color: colors.textSecondary }]}>
+                                                {e.all_day ? 'Todo o dia' : `${fmtTime(e.starts_at)} - ${fmtTime(e.ends_at)}`}
+                                            </Text>
+                                            {e.description && <Text style={[tw`mt-1 text-sm`, { color: colors.textSecondary }]}>{e.description}</Text>}
                                         </View>
-                                        <Pressable onPress={() => handleDelete(ev.id)} style={tw`p-2`}>
-                                            <Ionicons name="trash-outline" size={18} color="#94a3b8" />
+                                        <Pressable onPress={() => handleDelete(e.id)} style={tw`p-2`}>
+                                            <Ionicons name="trash-outline" size={20} color="#ef4444" />
                                         </Pressable>
                                     </View>
-                                ))}
-                            </ScrollView>
-                        )}
-                    </View>
-                </Modal>
-            )}
+                                ))
+                            ) : (
+                                <Text style={[tw`text-center py-8`, { color: colors.textSecondary }]}>Nenhum evento para este dia.</Text>
+                            )}
+                        </ScrollView>
 
-            <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={tw`flex-1`}>
-                    <Pressable style={styles.overlay} onPress={() => setShowModal(false)} />
-                    <View style={styles.sheet}>
-                        <View style={styles.handle} />
-                        <Text style={tw`text-gray-800 font-bold text-lg mb-1`}>Novo Evento</Text>
-                        <Text style={tw`text-gray-400 text-xs mb-4`}>
-                            📅 {new Date(modalDate + 'T12:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                        </Text>
-
-                        <Text style={styles.lbl}>Título *</Text>
-                        <TextInput style={styles.inp} placeholder="Nome do evento" placeholderTextColor="#9ca3af"
-                            value={form.title} onChangeText={t => setForm(f => ({ ...f, title: t }))} />
-
-                        <View style={tw`flex-row items-center justify-between mb-4`}>
-                            <Text style={tw`text-gray-600 font-semibold text-sm`}>Dia inteiro</Text>
-                            <Switch value={form.allDay} onValueChange={v => setForm(f => ({ ...f, allDay: v }))}
-                                trackColor={{ false: '#1a1a1a', true: '#058c42' }} thumbColor="white" />
-                        </View>
-
-                        {!form.allDay && (
-                            <View style={tw`flex-row mb-1`}>
-                                <View style={tw`flex-1 mr-3`}>
-                                    <Text style={styles.lbl}>Início</Text>
-                                    <TextInput style={styles.inp} placeholder="09:00" placeholderTextColor="#9ca3af"
-                                        value={form.startTime} onChangeText={t => setForm(f => ({ ...f, startTime: t }))}
-                                        keyboardType="numbers-and-punctuation" />
-                                </View>
-                                <View style={tw`flex-1`}>
-                                    <Text style={styles.lbl}>Fim</Text>
-                                    <TextInput style={styles.inp} placeholder="10:00" placeholderTextColor="#9ca3af"
-                                        value={form.endTime} onChangeText={t => setForm(f => ({ ...f, endTime: t }))}
-                                        keyboardType="numbers-and-punctuation" />
-                                </View>
-                            </View>
-                        )}
-
-                        <Text style={styles.lbl}>Cor</Text>
-                        <View style={tw`flex-row mb-4`}>
-                            {EVENT_COLORS.map((c, i) => (
-                                <Pressable key={c} onPress={() => setForm(f => ({ ...f, colorIdx: i }))}
-                                    style={[styles.colorDot, { backgroundColor: c }, form.colorIdx === i && styles.colorDotActive]} />
-                            ))}
-                        </View>
-
-                        <Text style={styles.lbl}>Notas</Text>
-                        <TextInput style={[styles.inp, { height: 64, textAlignVertical: 'top' }]}
-                            placeholder="Descrição..." placeholderTextColor="#9ca3af"
-                            value={form.description} onChangeText={t => setForm(f => ({ ...f, description: t }))} multiline />
-
-                        <Pressable onPress={handleSave} disabled={saving} style={tw`mt-2`}>
-                            <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: saving ? '#374151' : '#058c42' }]}>
-                                {saving
-                                    ? <ActivityIndicator color="white" />
-                                    : <Text style={tw`text-white font-bold text-base`}>Guardar</Text>}
+                        <Pressable
+                            onPress={() => {
+                                const d = dayModal;
+                                setDayModal(null);
+                                if (d) openNew(d);
+                            }}
+                            style={tw`mt-4`}
+                        >
+                            <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: colors.accent }]}>
+                                <Text style={tw`text-white font-bold`}>Adicionar Novo Evento</Text>
                             </View>
                         </Pressable>
+                    </View>
+                </Pressable>
+            </Modal>
+
+            {/* New Event Modal */}
+            <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                    <View style={[styles.overlay, { justifyContent: 'flex-end' }]}>
+                        <View style={[styles.sheet, { backgroundColor: colors.card }]}>
+                            <View style={[styles.handle, { backgroundColor: colors.border }]} />
+
+                            <Text style={[styles.lbl, { color: colors.textSecondary }]}>Novo Evento - {modalDate}</Text>
+                            <TextInput
+                                style={[styles.inp, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                                placeholder="Título do evento"
+                                placeholderTextColor={colors.textMuted}
+                                value={form.title}
+                                onChangeText={t => setForm(f => ({ ...f, title: t }))}
+                            />
+
+                            <TextInput
+                                style={[styles.inp, tw`h-24`, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                                placeholder="Descrição (opcional)"
+                                placeholderTextColor={colors.textMuted}
+                                multiline
+                                value={form.description}
+                                onChangeText={t => setForm(f => ({ ...f, description: t }))}
+                            />
+
+                            <View style={tw`flex-row items-center justify-between mb-4`}>
+                                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Todo o dia</Text>
+                                <Switch
+                                    value={form.allDay}
+                                    onValueChange={v => setForm(f => ({ ...f, allDay: v }))}
+                                    trackColor={{ false: '#767577', true: colors.accent + '80' }}
+                                    thumbColor={form.allDay ? colors.accent : '#f4f3f4'}
+                                />
+                            </View>
+
+                            {!form.allDay && (
+                                <View style={tw`flex-row gap-4 mb-4`}>
+                                    <View style={tw`flex-1`}>
+                                        <Text style={[styles.lbl, { color: colors.textSecondary }]}>Início (HH:MM)</Text>
+                                        <TextInput
+                                            style={[styles.inp, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                                            placeholder="09:00"
+                                            placeholderTextColor={colors.textMuted}
+                                            value={form.startTime}
+                                            onChangeText={t => setForm(f => ({ ...f, startTime: t }))}
+                                        />
+                                    </View>
+                                    <View style={tw`flex-1`}>
+                                        <Text style={[styles.lbl, { color: colors.textSecondary }]}>Fim (HH:MM)</Text>
+                                        <TextInput
+                                            style={[styles.inp, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                                            placeholder="10:00"
+                                            placeholderTextColor={colors.textMuted}
+                                            value={form.endTime}
+                                            onChangeText={t => setForm(f => ({ ...f, endTime: t }))}
+                                        />
+                                    </View>
+                                </View>
+                            )}
+
+                            <View style={tw`flex-row gap-3 mt-2`}>
+                                <Pressable style={tw`flex-1`} onPress={() => setShowModal(false)}>
+                                    <View style={[tw`rounded-xl py-4 items-center border`, { borderColor: colors.border }]}>
+                                        <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Cancelar</Text>
+                                    </View>
+                                </Pressable>
+                                <Pressable style={tw`flex-1`} onPress={handleSave} disabled={saving}>
+                                    <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: colors.accent }]}>
+                                        {saving
+                                            ? <ActivityIndicator color="white" />
+                                            : <Text style={tw`text-white font-bold text-base`}>Guardar</Text>}
+                                    </View>
+                                </Pressable>
+                            </View>
+                        </View>
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
@@ -330,28 +331,27 @@ export default function CalendarScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
     root: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#058c4220' },
-    headerMonth: { fontSize: 20, fontWeight: '700', color: '#e2e8f0' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 8, paddingHorizontal: 16, borderBottomWidth: 1 },
+    headerMonth: { fontSize: 20, fontWeight: '700' },
     headerBtn: { padding: 8 },
-    weekRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#058c4220' },
-    weekLabel: { width: CELL_W, textAlign: 'center', fontSize: 11, color: '#64748b', fontWeight: '600', paddingVertical: 6, textTransform: 'uppercase' },
-    weekLine: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#058c4220' },
-    dayCell: { width: CELL_W, borderRightWidth: 1, borderRightColor: '#058c4220', overflow: 'hidden', paddingBottom: 4 },
+    weekRow: { flexDirection: 'row', borderBottomWidth: 1 },
+    weekLabel: { width: CELL_W, textAlign: 'center', fontSize: 11, fontWeight: '600', paddingVertical: 4, textTransform: 'uppercase' },
+    weekLine: { flexDirection: 'row', borderBottomWidth: 1 },
+    dayCell: { width: CELL_W, borderRightWidth: 1, overflow: 'hidden', paddingBottom: 4, minHeight: 65 },
     dayNumWrap: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', margin: 3 },
-    dayNumToday: { backgroundColor: '#058c42' },
-    dayNum: { fontSize: 13, color: '#cbd5e1' },
+    dayNum: { fontSize: 13 },
     dayNumTodayText: { color: 'white', fontWeight: '700' },
     pill: { marginHorizontal: 3, marginTop: 2, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 },
-    pillText: { fontSize: 10, color: 'white', fontWeight: '600' },
-    overflow: { fontSize: 10, color: '#64748b', marginLeft: 4, marginTop: 1 },
-    fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 10, borderRadius: 18, overflow: 'hidden', shadowColor: '#6366f1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 10 },
+    pillText: { fontSize: 10, fontWeight: '600' },
+    overflow: { fontSize: 10, marginLeft: 4, marginTop: 1 },
+    fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 10, borderRadius: 30, overflow: 'hidden', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
     fabGrad: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
-    sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
-    handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e2e8f0', alignSelf: 'center', marginBottom: 20 },
-    lbl: { fontSize: 11, fontWeight: '700', color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-    inp: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#1e293b', marginBottom: 14 },
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+    sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
+    handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+    lbl: { fontSize: 11, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+    inp: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, marginBottom: 14 },
     colorDot: { width: 26, height: 26, borderRadius: 13, marginRight: 8 },
     colorDotActive: { borderWidth: 3, borderColor: '#1e293b', transform: [{ scale: 1.15 }] },
-    evCard: { flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4, backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginBottom: 8 },
+    evCard: { flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4, borderRadius: 12, padding: 12, marginBottom: 8 },
 });

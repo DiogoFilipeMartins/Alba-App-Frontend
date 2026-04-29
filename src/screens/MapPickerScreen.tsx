@@ -83,8 +83,11 @@ export default function MapPickerScreen({ navigation, route }: Props) {
             Alert.alert('Nenhum ponto selecionado', 'Toca no mapa para escolher a localização.');
             return;
         }
-        navigation.navigate('SuggestPlace', {
-            pickedCoords: { lat: marker.latitude, lng: marker.longitude },
+        (navigation as any).navigate('Main', {
+            screen: 'SuggestPlace',
+            params: {
+                pickedCoords: { lat: marker.latitude, lng: marker.longitude },
+            }
         });
     };
 

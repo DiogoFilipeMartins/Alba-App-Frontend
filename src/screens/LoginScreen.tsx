@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -32,17 +33,10 @@ const MANAGEMENT_OPTIONS = [
   { value: 'condominio', label: 'Condomínio', description: 'Gestão de prédio e condóminos' },
 ] as const;
 
-const colors = {
-  background: '#020202',
-  primary: '#058c42',
-  inputBg: '#1a1a1a',
-  border: '#058c4220',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  textMuted: '#4B5563',
-};
+
 
 export default function LoginScreen({ navigation }: Props) {
+  const { colors, isDark } = useTheme();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
@@ -191,14 +185,14 @@ export default function LoginScreen({ navigation }: Props) {
                 {isSignUp && (
                   <>
                     <TextInput
-                      style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.border }]}
+                      style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
                       placeholder="Nome completo"
                       placeholderTextColor={colors.textMuted}
                       value={name}
                       onChangeText={setName}
                     />
                     <TextInput
-                      style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.border }]}
+                      style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
                       placeholder="Telemóvel"
                       placeholderTextColor={colors.textMuted}
                       value={phone}
@@ -208,7 +202,7 @@ export default function LoginScreen({ navigation }: Props) {
                   </>
                 )}
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.border }]}
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
                   placeholder="Endereço de email"
                   placeholderTextColor={colors.textMuted}
                   value={email}
@@ -217,7 +211,7 @@ export default function LoginScreen({ navigation }: Props) {
                   autoCapitalize="none"
                 />
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.border }]}
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
                   placeholder="Palavra-passe"
                   placeholderTextColor={colors.textMuted}
                   value={password}
@@ -247,7 +241,7 @@ export default function LoginScreen({ navigation }: Props) {
             ) : step === 'nif_step' ? (
               <View style={styles.form}>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.border }]}
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
                   placeholder="NIF"
                   placeholderTextColor={colors.textMuted}
                   value={nif}
@@ -273,7 +267,7 @@ export default function LoginScreen({ navigation }: Props) {
                         style={[
                           styles.optionCard,
                           {
-                            backgroundColor: isSelected ? colors.primary : colors.inputBg,
+                            backgroundColor: isSelected ? colors.primary : colors.card,
                             borderColor: isSelected ? colors.primary : colors.border,
                           },
                         ]}
@@ -303,7 +297,7 @@ export default function LoginScreen({ navigation }: Props) {
                           style={[
                             styles.optionCard,
                             {
-                              backgroundColor: isSelected ? colors.primary : colors.inputBg,
+                              backgroundColor: isSelected ? colors.primary : colors.card,
                               borderColor: isSelected ? colors.primary : colors.border,
                             },
                           ]}
@@ -325,14 +319,14 @@ export default function LoginScreen({ navigation }: Props) {
             ) : (
               <View style={styles.form}>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.border }]}
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
                   placeholder="Nome do Imóvel"
                   placeholderTextColor={colors.textMuted}
                   value={propertyData.name}
                   onChangeText={(t) => setPropertyData({ ...propertyData, name: t })}
                 />
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.textPrimary, borderColor: colors.border }]}
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
                   placeholder="Morada"
                   placeholderTextColor={colors.textMuted}
                   value={propertyData.address}

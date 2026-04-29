@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { apiService } from '../services/apiService';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Map'>;
 
@@ -17,6 +18,7 @@ interface Professional {
 }
 
 export default function MapScreen({ navigation }: Props) {
+  const { colors, isDark } = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,23 +54,23 @@ export default function MapScreen({ navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#16db65" />
-        <Text style={styles.loadingText}>A carregar o mapa...</Text>
+      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[styles.loadingText, { color: colors.accent }]}>A carregar o mapa...</Text>
       </View>
     );
   }
 
   if (errorMsg) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
         <Text style={styles.errorText}>{errorMsg}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <MapView
         provider={PROVIDER_GOOGLE}
         style={styles.map}
@@ -80,7 +82,7 @@ export default function MapScreen({ navigation }: Props) {
         }}
         showsUserLocation={true}
         showsMyLocationButton={true}
-
+        customMapStyle={isDark ? darkMapStyle : []}
       >
         {professionals.map((prof: Professional) => (
           prof.latitude && prof.longitude ? (
@@ -89,17 +91,38 @@ export default function MapScreen({ navigation }: Props) {
               coordinate={{ latitude: prof.latitude, longitude: prof.longitude }}
               title={prof.name}
               description={prof.specialty}
-              pinColor="#16db65"
+              pinColor={colors.accent}
             />
           ) : null
         ))}
       </MapView>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.accent }]}>
          <Text style={styles.headerText}>Encontre Profissionais</Text>
       </View>
     </View>
   );
 }
+
+const darkMapStyle = [
+  { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] },
+  { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{ "color": "#d59563" }] },
+  { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#d59563" }] },
+  { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#263c3f" }] },
+  { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#6b9a76" }] },
+  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] },
+  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#212a37" }] },
+  { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#9ca5b3" }] },
+  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#746855" }] },
+  { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#1f2835" }] },
+  { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#f3d19c" }] },
+  { "featureType": "transit", "elementType": "geometry", "stylers": [{ "color": "#2f3948" }] },
+  { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [{ "color": "#d59563" }] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#17263c" }] },
+  { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#515c6d" }] },
+  { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [{ "color": "#17263c" }] }
+];
 
 
 

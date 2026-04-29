@@ -20,6 +20,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'SuggestPlace'>,
@@ -27,12 +28,16 @@ type Props = CompositeScreenProps<
 >;
 
 
-const FIELD_STYLE = tw`bg-[#1a1a1a] border border-[#058c42]/20 rounded-xl px-4 py-3 text-white text-sm mb-3`;
-const LABEL_STYLE = tw`text-gray-500 text-xs mb-1`;
-
 export default function SuggestPlaceScreen({ navigation, route }: Props) {
     const { user } = useAuth();
+    const { colors, isDark } = useTheme();
     const [loading, setLoading] = useState(false);
+
+    const FIELD_STYLE = [
+        tw`rounded-xl px-4 py-3 text-sm mb-3 border`,
+        { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }
+    ];
+    const LABEL_STYLE = [tw`text-xs mb-1`, { color: colors.textSecondary }];
     const [locLoading, setLocLoading] = useState(false);
 
     const [form, setForm] = useState({
@@ -132,21 +137,21 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                 tw`flex-1 flex-row items-center justify-center py-3 rounded-xl border mr-2`,
                 form.type === value
                     ? { backgroundColor: color + '30', borderColor: color }
-                    : tw`border-gray-600 bg-gray-800`,
+                    : { backgroundColor: colors.card, borderColor: colors.border },
             ]}
         >
-            <Ionicons name={icon} size={18} color={form.type === value ? color : '#6b7280'} />
-            <Text style={[tw`ml-2 font-medium text-sm`, { color: form.type === value ? color : '#6b7280' }]}>
+            <Ionicons name={icon} size={18} color={form.type === value ? color : colors.textMuted} />
+            <Text style={[tw`ml-2 font-medium text-sm`, { color: form.type === value ? color : colors.textMuted }]}>
                 {label}
             </Text>
         </Pressable>
     );
 
     return (
-        <SafeAreaView style={tw`flex-1 bg-[#020202]`} edges={['top']}>
+        <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]} edges={['top']}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={tw`flex-1`}>
-                <View style={tw`flex-row items-center px-5 pt-4 pb-4`}>
-                    <Text style={tw`text-white text-xl font-bold`}>Sugerir Local</Text>
+                <View style={[tw`flex-row items-center px-5 pt-4 pb-4`, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+                    <Text style={[tw`text-xl font-bold`, { color: colors.textPrimary }]}>Sugerir Local</Text>
                 </View>
 
                 <ScrollView style={tw`flex-1 px-5`} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -201,10 +206,10 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                         </View>
                     </View>
 
-                    <Text style={tw`text-white font-semibold mb-2 mt-1`}>Localização *</Text>
+                    <Text style={[tw`font-semibold mb-2 mt-1`, { color: colors.textPrimary }]}>Localização *</Text>
 
                     <Pressable
-                        onPress={() => navigation.navigate('MapPicker', {
+                        onPress={() => (navigation as any).navigate('MapPicker', {
                             initialCoords: form.lat && form.lng
                                 ? { lat: parseFloat(form.lat), lng: parseFloat(form.lng) }
                                 : null,

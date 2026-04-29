@@ -16,27 +16,34 @@ import CalendarScreen from '../screens/CalendarScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
+import { useTheme } from '../contexts/ThemeContext';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 
 
 function MainTabs() {
+  const { colors, isDark } = useTheme();
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#020202' }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <Tab.Navigator
         id={undefined}
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: '#020202',
-            borderTopColor: '#058c4220',
+            backgroundColor: colors.card,
+            borderTopColor: colors.border,
             height: 70,
             paddingBottom: 10,
             paddingTop: 10,
+            elevation: 0,
+            shadowOpacity: 0,
+            borderTopWidth: 1,
           },
-          tabBarActiveTintColor: '#16db65',
-          tabBarInactiveTintColor: '#94a3b8',
+          tabBarActiveTintColor: colors.accent,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarIcon: ({ color, size }) => {
             let iconName: any;
             if (route.name === 'Map') iconName = 'map';
@@ -57,13 +64,15 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
+  const { colors } = useTheme();
+
   return (
     <NavigationContainer>
       <Stack.Navigator
         id={undefined}
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#020202' },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="Login" component={Login} />
