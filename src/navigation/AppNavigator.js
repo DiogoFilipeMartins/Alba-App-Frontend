@@ -18,7 +18,7 @@ export default function AppNavigator() {
         screenOptions={{
           headerShown: false,
           animationEnabled: true,
-          cardStyle: { backgroundColor: '#111827' },
+          cardStyle: { backgroundColor: '#020202' },
         }}
       >
         <Stack.Screen name="Login" component={Login} />
