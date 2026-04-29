@@ -51,6 +51,7 @@ export default function LoginScreen({ navigation }: Props) {
           email: email.trim(),
           password,
           username: name.trim(),
+          phone: phone.trim(),
         });
       } else {
         await signIn(email.trim(), password);
