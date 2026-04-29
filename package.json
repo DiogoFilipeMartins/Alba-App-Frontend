@@ -11,6 +11,7 @@
     "reset-project": "expo start -c"
   },
   "dependencies": {
+    "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.15.10",
@@ -20,6 +21,7 @@
     "@supabase/supabase-js": "^2.86.0",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.33",
+    "expo-font": "^55.0.6",
     "expo-linear-gradient": "~15.0.8",
     "expo-location": "^19.0.8",
     "expo-status-bar": "~3.0.9",

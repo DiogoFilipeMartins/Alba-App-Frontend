@@ -12,6 +12,17 @@ type ThemeColors = {
   accent: string;
   border: string;
   surface: string;
+  fontRegular: string;
+  fontMedium: string;
+  fontSemiBold: string;
+  fontBold: string;
+};
+
+const commonFonts = {
+  fontRegular: 'Poppins_400Regular',
+  fontMedium: 'Poppins_500Medium',
+  fontSemiBold: 'Poppins_600SemiBold',
+  fontBold: 'Poppins_700Bold',
 };
 
 const darkColors: ThemeColors = {
@@ -24,6 +35,7 @@ const darkColors: ThemeColors = {
   accent: '#16db65',
   border: '#058c4220',
   surface: '#020202',
+  ...commonFonts,
 };
 
 const lightColors: ThemeColors = {
@@ -36,6 +48,7 @@ const lightColors: ThemeColors = {
   accent: '#16db65',
   border: '#e2e8f0',
   surface: '#f1f5f9',
+  ...commonFonts,
 };
 
 interface ThemeContextType {

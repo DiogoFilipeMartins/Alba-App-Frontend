@@ -282,8 +282,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: '100%', height: '100%' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 15, fontSize: 16, fontWeight: '600' },
-  errorText: { fontSize: 16, color: '#FF5252', textAlign: 'center', padding: 30 },
+  loadingText: { marginTop: 15, fontSize: 16, fontFamily: 'Poppins_600SemiBold' },
+  errorText: { fontSize: 16, color: '#FF5252', textAlign: 'center', padding: 30, fontFamily: 'Poppins_400Regular' },
   
   topContainer: {
     position: 'absolute',
@@ -310,6 +310,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     paddingVertical: 10,
+    fontFamily: 'Poppins_400Regular',
   },
   filtersScroll: {
     marginTop: 12,
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
   sideActions: {
     position: 'absolute',
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
   },
   filterOptionText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
   suggestContainer: {
     position: 'absolute',
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
   suggestButtonText: {
     color: '#FFF',
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   closeSuggest: {
     backgroundColor: 'rgba(0,0,0,0.6)',
