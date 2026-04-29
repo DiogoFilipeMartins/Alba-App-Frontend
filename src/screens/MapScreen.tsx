@@ -80,7 +80,7 @@ export default function MapScreen({ navigation }: Props) {
         }}
         showsUserLocation={true}
         showsMyLocationButton={true}
-        customMapStyle={minimalistMapStyle}
+
       >
         {professionals.map((prof: Professional) => (
           prof.latitude && prof.longitude ? (
@@ -101,16 +101,7 @@ export default function MapScreen({ navigation }: Props) {
   );
 }
 
-const minimalistMapStyle = [
-  { "elementType": "geometry", "stylers": [{ "color": "#020202" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#16db65" }] },
-  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#000000" }] },
-  { "featureType": "administrative", "elementType": "geometry.stroke", "stylers": [{ "color": "#058c42" }] },
-  { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#020202" }] },
-  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#0d2818" }] },
-  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#058c42" }] },
-  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#0d2818" }] }
-];
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#020202' },
