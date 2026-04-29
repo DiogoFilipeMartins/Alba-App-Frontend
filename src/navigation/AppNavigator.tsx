@@ -28,6 +28,7 @@ function PlaceholderScreen({ name }: { name: string }) {
 function MainTabs() {
   return (
     <Tab.Navigator
+      id={undefined}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {

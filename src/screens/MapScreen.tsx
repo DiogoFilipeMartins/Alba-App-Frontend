@@ -3,10 +3,10 @@ import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { apiService } from '../services/apiService';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { RootStackParamList, MainTabParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Map'>;
+type Props = BottomTabScreenProps<MainTabParamList, 'Map'>;
 
 interface Professional {
   id: string;

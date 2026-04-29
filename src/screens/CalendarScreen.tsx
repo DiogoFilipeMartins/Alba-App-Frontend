@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -18,10 +18,10 @@ import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { apiService, CalendarEvent } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { RootStackParamList, MainTabParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>;
+type Props = BottomTabScreenProps<MainTabParamList, 'Calendar'>;
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CELL_W = SCREEN_W / 7;
@@ -59,6 +59,7 @@ export default function CalendarScreen({ navigation }: Props) {
     const [form, setForm] = useState({ title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0 });
     const [saving, setSaving] = useState(false);
 
+    const touchXRef = useRef(0);
     const [dayModal, setDayModal] = useState<string | null>(null);
 
     const fetchEvents = useCallback(async () => {
@@ -158,7 +159,19 @@ export default function CalendarScreen({ navigation }: Props) {
                 ))}
             </View>
 
-            <View style={tw`flex-1 bg-[#020202]`}>
+            <View 
+                style={tw`flex-1 bg-[#020202]`}
+                onTouchStart={e => {
+                    touchXRef.current = e.nativeEvent.pageX;
+                }}
+                onTouchEnd={e => {
+                    const deltaX = e.nativeEvent.pageX - touchXRef.current;
+                    if (Math.abs(deltaX) > 50) {
+                        if (deltaX > 0) prev();
+                        else next();
+                    }
+                }}
+            >
                 {weeks.map((week, wi) => (
                     <View key={wi} style={[styles.weekLine, { flex: 1 }]}>
                         {week.map((day, di) => {

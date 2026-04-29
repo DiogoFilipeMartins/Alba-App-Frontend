@@ -15,10 +15,11 @@ import * as Location from 'expo-location';
 import tw from 'twrnc';
 import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { RootStackParamList, MainTabParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'SuggestPlace'>;
+type Props = BottomTabScreenProps<MainTabParamList, 'SuggestPlace'>;
+
 
 const FIELD_STYLE = tw`bg-[#1a1a1a] border border-[#058c42]/20 rounded-xl px-4 py-3 text-white text-sm mb-3`;
 const LABEL_STYLE = tw`text-gray-500 text-xs mb-1`;
