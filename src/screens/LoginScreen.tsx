@@ -121,7 +121,7 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
-      navigation.replace('Home');
+      navigation.replace('Main');
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Falha ao entrar.');
     } finally {
@@ -138,7 +138,7 @@ export default function LoginScreen({ navigation }: Props) {
         username: name.trim(),
       });
       Alert.alert('Sucesso', 'Conta criada com sucesso!');
-      navigation.replace('Home');
+      navigation.replace('Main');
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Falha ao criar conta.');
     } finally {

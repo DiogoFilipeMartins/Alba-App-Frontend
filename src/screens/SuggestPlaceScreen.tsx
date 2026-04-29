@@ -139,9 +139,6 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
         <View style={tw`flex-1 bg-[#020202]`}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={tw`flex-1`}>
                 <View style={tw`flex-row items-center px-5 pt-12 pb-4`}>
-                    <Pressable onPress={() => navigation.goBack()} style={tw`p-2 mr-3`}>
-                        <Ionicons name="arrow-back" size={24} color="white" />
-                    </Pressable>
                     <Text style={tw`text-white text-xl font-bold`}>Sugerir Local</Text>
                 </View>
 

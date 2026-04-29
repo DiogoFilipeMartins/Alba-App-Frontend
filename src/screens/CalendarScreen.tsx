@@ -42,36 +42,7 @@ const buildTS = (date: string, time: string) =>
         ? `${date}T${time.padStart(5, '0')}:00+00:00`
         : `${date}T00:00:00+00:00`;
 
-function BottomBar({ navigation }: { navigation: any }) {
-    return (
-        <View style={styles.bottomBar}>
-            <Pressable style={styles.bottomBtn} onPress={() => navigation.navigate('Map')}>
-                <View style={styles.bottomIcon}>
-                    <Ionicons name="map" size={22} color="#94a3b8" />
-                </View>
-                <Text style={styles.bottomLabel}>Mapa</Text>
-            </Pressable>
-            <Pressable style={styles.bottomBtn} onPress={() => navigation.navigate('SuggestPlace')}>
-                <View style={styles.bottomIcon}>
-                    <Ionicons name="add-circle" size={22} color="#94a3b8" />
-                </View>
-                <Text style={styles.bottomLabel}>Sugerir</Text>
-            </Pressable>
-            <Pressable style={styles.bottomBtn}>
-                <View style={[styles.bottomIcon, { backgroundColor: '#058c4225' }]}>
-                    <Ionicons name="calendar" size={22} color="#16db65" />
-                </View>
-                <Text style={[styles.bottomLabel, { color: '#16db65', fontWeight: '700' }]}>Agenda</Text>
-            </Pressable>
-            <Pressable style={styles.bottomBtn}>
-                <View style={styles.bottomIcon}>
-                    <Ionicons name="chatbubbles" size={22} color="#94a3b8" />
-                </View>
-                <Text style={styles.bottomLabel}>Comunidade</Text>
-            </Pressable>
-        </View>
-    );
-}
+
 
 export default function CalendarScreen({ navigation }: Props) {
     const { profile } = useAuth();
@@ -166,9 +137,6 @@ export default function CalendarScreen({ navigation }: Props) {
         <View style={styles.root}>
             <View style={styles.header}>
                 <View style={tw`flex-row items-center`}>
-                    <Pressable onPress={() => {}} style={tw`p-2 mr-1`}>
-                        <Ionicons name="menu" size={24} color="#e2e8f0" />
-                    </Pressable>
                     <Pressable onPress={next} style={tw`flex-row items-center`}>
                         <Text style={styles.headerMonth}>{MONTHS[month].slice(0, 4)}... {year}</Text>
                         <Ionicons name="chevron-down" size={16} color="#94a3b8" style={tw`ml-0.5`} />
@@ -225,7 +193,7 @@ export default function CalendarScreen({ navigation }: Props) {
                 ))}
             </View>
 
-            <BottomBar navigation={navigation} />
+
             <Pressable style={styles.fab} onPress={() => openNew(today)}>
                 <View style={[styles.fabGrad, { backgroundColor: '#058c42' }]}>
                     <Ionicons name="add" size={28} color="white" />
@@ -362,11 +330,7 @@ const styles = StyleSheet.create({
     pill: { marginHorizontal: 3, marginTop: 2, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 },
     pillText: { fontSize: 10, color: 'white', fontWeight: '600' },
     overflow: { fontSize: 10, color: '#64748b', marginLeft: 4, marginTop: 1 },
-    bottomBar: { backgroundColor: '#020202', flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, paddingBottom: 22, borderTopWidth: 1, borderTopColor: '#058c4220' },
-    bottomBtn: { alignItems: 'center', flex: 1 },
-    bottomIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 3 },
-    bottomLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '500' },
-    fab: { position: 'absolute', bottom: 128, right: 20, zIndex: 10, borderRadius: 18, overflow: 'hidden', shadowColor: '#6366f1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 10 },
+    fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 10, borderRadius: 18, overflow: 'hidden', shadowColor: '#6366f1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 10 },
     fabGrad: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
     sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },

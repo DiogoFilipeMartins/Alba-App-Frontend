@@ -1,10 +1,14 @@
 export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
-  Home: undefined;
-  Map: undefined;
-  SuggestPlace: { pickedCoords?: { lat: number; lng: number } };
+  Main: undefined; // O ecrã principal agora é o Tab Navigator
   Admin: undefined;
   MapPicker: { initialCoords?: { lat: number; lng: number } | null };
+};
+
+export type MainTabParamList = {
+  Map: undefined;
+  SuggestPlace: { pickedCoords?: { lat: number; lng: number } };
   Calendar: undefined;
+  Community: undefined;
 };
