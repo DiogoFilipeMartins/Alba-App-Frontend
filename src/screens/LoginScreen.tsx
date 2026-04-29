@@ -52,11 +52,9 @@ export default function LoginScreen({ navigation }: Props) {
           password,
           username: name.trim(),
         });
-        Alert.alert('Sucesso', 'Conta criada com sucesso!');
       } else {
         await signIn(email.trim(), password);
       }
-      navigation.replace('Main');
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Falha na autenticação.');
     } finally {
