@@ -102,16 +102,13 @@ export default function MapPickerScreen({ navigation, route }) {
                 showsMyLocationButton={false}
             >
                 {marker && (
-                    <Marker coordinate={marker} pinColor="#3b82f6" />
+                    <Marker coordinate={marker} pinColor="#16db65" />
                 )}
             </MapView>
 
             {/* Header */}
             <View style={tw`absolute top-0 left-0 right-0 pt-12 px-5`}>
-                <LinearGradient
-                    colors={['rgba(17,24,39,0.97)', 'rgba(17,24,39,0.75)']}
-                    style={tw`rounded-2xl flex-row items-center px-4 py-3`}
-                >
+                <View style={[tw`rounded-2xl flex-row items-center px-4 py-3`, { backgroundColor: 'rgba(17,24,39,0.97)' }]}>
                     <Pressable onPress={() => navigation.goBack()} style={tw`p-2 mr-2`}>
                         <Ionicons name="arrow-back" size={24} color="white" />
                     </Pressable>
@@ -119,14 +116,14 @@ export default function MapPickerScreen({ navigation, route }) {
                         <Text style={tw`text-white text-base font-bold`}>Escolher Localização</Text>
                         <Text style={tw`text-gray-400 text-xs`}>Toca no mapa para colocar o pin</Text>
                     </View>
-                </LinearGradient>
+                </View>
             </View>
 
             {/* Hint central (quando ainda não há pin) */}
             {!marker && (
                 <View style={tw`absolute inset-0 items-center justify-center pointer-events-none`}>
                     <View style={tw`bg-black/60 rounded-2xl px-5 py-3 items-center`}>
-                        <Ionicons name="finger-print" size={32} color="#3b82f6" />
+                        <Ionicons name="finger-print" size={32} color="#16db65" />
                         <Text style={tw`text-white font-medium mt-1 text-sm`}>Toca para marcar</Text>
                     </View>
                 </View>
@@ -138,44 +135,36 @@ export default function MapPickerScreen({ navigation, route }) {
                 style={tw`absolute bottom-32 right-5 bg-white rounded-full p-4 shadow-lg`}
             >
                 {locLoading ? (
-                    <ActivityIndicator size="small" color="#3b82f6" />
+                    <ActivityIndicator size="small" color="#058c42" />
                 ) : (
-                    <Ionicons name="locate" size={24} color="#3b82f6" />
+                    <Ionicons name="locate" size={24} color="#058c42" />
                 )}
             </Pressable>
 
             {/* Coordenadas do pin selecionado */}
             {marker && (
                 <View style={tw`absolute bottom-24 left-5 right-5`}>
-                    <LinearGradient
-                        colors={['rgba(17,24,39,0.97)', 'rgba(17,24,39,0.85)']}
-                        style={tw`rounded-2xl px-4 py-3 flex-row items-center`}
-                    >
-                        <Ionicons name="location" size={18} color="#3b82f6" style={tw`mr-2`} />
+                    <View style={[tw`rounded-2xl px-4 py-3 flex-row items-center`, { backgroundColor: 'rgba(17,24,39,0.97)' }]}>
+                        <Ionicons name="location" size={18} color="#16db65" style={tw`mr-2`} />
                         <Text style={tw`text-white text-xs flex-1`} numberOfLines={1}>
                             {marker.latitude.toFixed(6)}, {marker.longitude.toFixed(6)}
                         </Text>
                         <Pressable onPress={() => setMarker(null)} style={tw`p-1 ml-2`}>
                             <Ionicons name="close-circle" size={18} color="#6b7280" />
                         </Pressable>
-                    </LinearGradient>
+                    </View>
                 </View>
             )}
 
             {/* Botão Confirmar */}
             <View style={tw`absolute bottom-5 left-5 right-5`}>
                 <Pressable onPress={handleConfirm} disabled={!marker}>
-                    <LinearGradient
-                        colors={marker ? ['#3b82f6', '#22d3ee'] : ['#374151', '#374151']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={tw`rounded-2xl py-4 items-center flex-row justify-center`}
-                    >
+                    <View style={[tw`rounded-2xl py-4 items-center flex-row justify-center`, { backgroundColor: marker ? '#058c42' : '#374151' }]}>
                         <Ionicons name="checkmark-circle" size={20} color={marker ? 'white' : '#6b7280'} style={tw`mr-2`} />
                         <Text style={[tw`font-bold text-base`, { color: marker ? 'white' : '#6b7280' }]}>
                             Confirmar Localização
                         </Text>
-                    </LinearGradient>
+                    </View>
                 </Pressable>
             </View>
         </View>

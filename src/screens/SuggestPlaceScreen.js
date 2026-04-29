@@ -17,8 +17,8 @@ import tw from 'twrnc';
 import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 
-const FIELD_STYLE = tw`bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white text-sm mb-3`;
-const LABEL_STYLE = tw`text-gray-400 text-xs mb-1`;
+const FIELD_STYLE = tw`bg-[#1a1a1a] border border-[#058c42]/20 rounded-xl px-4 py-3 text-white text-sm mb-3`;
+const LABEL_STYLE = tw`text-gray-500 text-xs mb-1`;
 
 export default function SuggestPlaceScreen({ navigation, route }) {
     const { user } = useAuth();
@@ -136,7 +136,7 @@ export default function SuggestPlaceScreen({ navigation, route }) {
     );
 
     return (
-        <LinearGradient colors={['#111827', '#0f172a']} style={tw`flex-1`}>
+        <View style={tw`flex-1 bg-[#020202]`}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={tw`flex-1`}>
                 {/* Header */}
                 <View style={tw`flex-row items-center px-5 pt-12 pb-4`}>
@@ -150,7 +150,7 @@ export default function SuggestPlaceScreen({ navigation, route }) {
                     {/* Tipo */}
                     <Text style={tw`text-white font-semibold mb-2`}>Tipo de local *</Text>
                     <View style={tw`flex-row mb-4`}>
-                        <TypeButton value="professional" label="Profissional" icon="person" color="#3b82f6" />
+                        <TypeButton value="professional" label="Profissional" icon="person" color="#16db65" />
                         <TypeButton value="institution" label="Instituição" icon="business" color="#22c55e" />
                     </View>
 
@@ -213,10 +213,10 @@ export default function SuggestPlaceScreen({ navigation, route }) {
                                 ? { lat: parseFloat(form.lat), lng: parseFloat(form.lng) }
                                 : null,
                         })}
-                        style={tw`flex-row items-center justify-center bg-blue-600/20 border border-blue-500 rounded-xl py-3 mb-3`}
+                        style={tw`flex-row items-center justify-center bg-[#058c42]/20 border border-[#058c42] rounded-xl py-3 mb-3`}
                     >
-                        <Ionicons name="map" size={18} color="#3b82f6" />
-                        <Text style={tw`text-blue-400 font-medium ml-2`}>Escolher no mapa</Text>
+                        <Ionicons name="map" size={18} color="#16db65" />
+                        <Text style={tw`text-[#16db65] font-medium ml-2`}>Escolher no mapa</Text>
                     </Pressable>
 
                     {/* Botão: usar GPS */}
@@ -266,21 +266,16 @@ export default function SuggestPlaceScreen({ navigation, route }) {
 
                     {/* Submit */}
                     <Pressable onPress={handleSubmit} disabled={loading} style={tw`mb-10 mt-2`}>
-                        <LinearGradient
-                            colors={loading ? ['#374151', '#374151'] : ['#3b82f6', '#22d3ee']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={tw`rounded-xl py-4 items-center`}
-                        >
+                        <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: loading ? '#374151' : '#058c42' }]}>
                             {loading ? (
                                 <ActivityIndicator color="white" />
                             ) : (
                                 <Text style={tw`text-white font-bold text-base`}>Enviar Sugestão</Text>
                             )}
-                        </LinearGradient>
+                        </View>
                     </Pressable>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </LinearGradient>
+        </View>
     );
 }

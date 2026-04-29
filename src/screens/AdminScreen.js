@@ -7,7 +7,6 @@ import {
     ActivityIndicator,
     Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { apiService } from '../services/apiService';
@@ -73,7 +72,7 @@ export default function AdminScreen({ navigation }) {
         const date = new Date(item.created_at).toLocaleDateString('pt-PT');
 
         return (
-            <View style={tw`bg-gray-800 rounded-2xl border border-gray-700 p-4 mb-3`}>
+            <View style={tw`bg-[#1a1a1a] rounded-2xl border border-[#058c42]/20 p-4 mb-3`}>
                 <View style={tw`flex-row items-center justify-between mb-2`}>
                     <View style={[tw`px-2 py-0.5 rounded-full`, { backgroundColor: color + '25' }]}>
                         <Text style={[tw`text-xs font-semibold`, { color }]}>{TYPE_LABEL[item.type] ?? item.type}</Text>
@@ -127,7 +126,7 @@ export default function AdminScreen({ navigation }) {
     };
 
     return (
-        <LinearGradient colors={['#111827', '#0f172a']} style={tw`flex-1`}>
+        <View style={tw`flex-1 bg-[#020202]`}>
             {/* Header */}
             <View style={tw`flex-row items-center px-5 pt-12 pb-4`}>
                 <Pressable onPress={() => navigation.goBack()} style={tw`p-2 mr-3`}>
@@ -149,7 +148,7 @@ export default function AdminScreen({ navigation }) {
                             onPress={() => setTab(t.key)}
                             style={[
                                 tw`flex-1 items-center py-2.5 rounded-xl mr-2`,
-                                active ? tw`bg-blue-600` : tw`bg-gray-800 border border-gray-700`,
+                                active ? tw`bg-[#058c42]` : tw`bg-[#1a1a1a] border border-[#058c42]/20`,
                             ]}
                         >
                             <View style={tw`flex-row items-center`}>
@@ -170,7 +169,7 @@ export default function AdminScreen({ navigation }) {
             {/* List */}
             {loading ? (
                 <View style={tw`flex-1 items-center justify-center`}>
-                    <ActivityIndicator size="large" color="#3b82f6" />
+                    <ActivityIndicator size="large" color="#16db65" />
                     <Text style={tw`text-gray-400 mt-3`}>A carregar...</Text>
                 </View>
             ) : (
@@ -190,6 +189,6 @@ export default function AdminScreen({ navigation }) {
                     }
                 />
             )}
-        </LinearGradient>
+        </View>
     );
 }

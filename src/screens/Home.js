@@ -7,13 +7,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
 
 const menuItems = [
-  { icon: 'map', label: 'Mapa', screen: 'Map', color: '#3b82f6' },
-  { icon: 'add-circle', label: 'Sugerir Local', screen: 'SuggestPlace', color: '#22d3ee' },
-  { icon: 'calendar', label: 'Calendário', screen: 'Calendar', color: '#22c55e' },
-  { icon: 'heart', label: 'Doações', screen: 'Donations', color: '#ef4444' },
-  { icon: 'chatbubbles', label: 'Chatbot', screen: 'Chatbot', color: '#8b5cf6' },
-  { icon: 'people', label: 'Comunidade', screen: 'Community', color: '#f59e0b' },
-  { icon: 'star', label: 'Favoritos', screen: 'Favorites', color: '#ec4899' },
+  { icon: 'map', label: 'Mapa', screen: 'Map', color: '#16db65' },
+  { icon: 'add-circle', label: 'Sugerir Local', screen: 'SuggestPlace', color: '#058c42' },
+  { icon: 'calendar', label: 'Calendário', screen: 'Calendar', color: '#16db65' },
+  { icon: 'heart', label: 'Doações', screen: 'Donations', color: '#058c42' },
+  { icon: 'chatbubbles', label: 'Chatbot', screen: 'Chatbot', color: '#16db65' },
+  { icon: 'people', label: 'Comunidade', screen: 'Community', color: '#058c42' },
+  { icon: 'star', label: 'Favoritos', screen: 'Favorites', color: '#16db65' },
 ];
 
 export default function Home({ navigation }) {
@@ -73,12 +73,7 @@ export default function Home({ navigation }) {
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Utilizador';
 
   return (
-    <LinearGradient
-      colors={['#111827', '#0f172a']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={tw`flex-1`}
-    >
+    <View style={tw`flex-1 bg-[#020202]`}>
       {/* Header */}
       <View style={tw`flex-row items-center justify-between px-5 pt-12 pb-4`}>
         <Pressable onPress={() => setMenuOpen(true)} style={tw`p-2`}>
@@ -93,21 +88,13 @@ export default function Home({ navigation }) {
       {/* Main Content */}
       <ScrollView style={tw`flex-1 px-5`} showsVerticalScrollIndicator={false}>
         {/* User Welcome Card */}
-        <LinearGradient
-          colors={['#1e3a5f', '#0f172a']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={tw`rounded-3xl p-6 mb-6 border border-gray-700`}
-        >
+        <View style={tw`rounded-3xl p-6 mb-6 border border-[#058c42]/30 bg-[#0d2818]`}>
           <View style={tw`flex-row items-center`}>
-            <LinearGradient
-              colors={['#3b82f6', '#22d3ee']}
-              style={tw`w-16 h-16 rounded-full items-center justify-center mr-4`}
-            >
+            <View style={[tw`w-16 h-16 rounded-full items-center justify-center mr-4`, { backgroundColor: '#058c42' }]}>
               <Text style={tw`text-white text-2xl font-bold`}>
                 {username.charAt(0).toUpperCase()}
               </Text>
-            </LinearGradient>
+            </View>
             <View style={tw`flex-1`}>
               <Text style={tw`text-gray-400 text-sm`}>Bem-vindo de volta,</Text>
               <Text style={tw`text-white text-xl font-bold`}>{username}</Text>
@@ -124,15 +111,12 @@ export default function Home({ navigation }) {
               onPress={() => handleMenuPress(item.screen)}
               style={tw`w-[48%] mb-4`}
             >
-              <LinearGradient
-                colors={['#1f2937', '#111827']}
-                style={tw`rounded-2xl p-5 border border-gray-700 items-center`}
-              >
+              <View style={tw`rounded-2xl p-5 border border-[#058c42]/30 items-center bg-[#0d2818]`}>
                 <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-3`, { backgroundColor: item.color + '20' }]}>
                   <Ionicons name={item.icon} size={24} color={item.color} />
                 </View>
                 <Text style={tw`text-white font-medium text-center`}>{item.label}</Text>
-              </LinearGradient>
+              </View>
             </Pressable>
           ))}
           {isAdmin && (
@@ -141,10 +125,7 @@ export default function Home({ navigation }) {
               onPress={() => handleMenuPress('Admin')}
               style={tw`w-[48%] mb-4`}
             >
-              <LinearGradient
-                colors={['#1f2937', '#111827']}
-                style={tw`rounded-2xl p-5 border border-yellow-700/50 items-center`}
-              >
+              <View style={tw`rounded-2xl p-5 border border-yellow-700/50 items-center bg-[#0d2818]`}>
                 <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-3`, { backgroundColor: '#f59e0b20' }]}>
                   <Ionicons name="shield-checkmark" size={24} color="#f59e0b" />
                   {pendingCount > 0 && (
@@ -154,16 +135,16 @@ export default function Home({ navigation }) {
                   )}
                 </View>
                 <Text style={tw`text-yellow-400 font-medium text-center`}>Painel Admin</Text>
-              </LinearGradient>
+              </View>
             </Pressable>
           )}
         </View>
 
         {/* Status Card */}
-        <View style={tw`bg-gray-800/50 rounded-2xl p-5 border border-gray-700 mb-6`}>
+        <View style={tw`bg-[#0d2818]/50 rounded-2xl p-5 border border-[#058c42]/30 mb-6`}>
           <View style={tw`flex-row items-center mb-3`}>
-            <Ionicons name="information-circle" size={20} color="#22d3ee" />
-            <Text style={tw`text-cyan-400 font-semibold ml-2`}>Estado da App</Text>
+            <Ionicons name="information-circle" size={20} color="#16db65" />
+            <Text style={tw`text-[#16db65] font-semibold ml-2`}>Estado da App</Text>
           </View>
           <Text style={tw`text-gray-400 text-sm leading-5`}>
             Funcionalidades em desenvolvimento: Calendário, Doações e Chatbot.
@@ -174,11 +155,7 @@ export default function Home({ navigation }) {
         {/* Admin Panel shortcut — only for admins */}
         {isAdmin && (
           <Pressable onPress={() => handleMenuPress('Admin')} style={tw`mb-6`}>
-            <LinearGradient
-              colors={['#7c3aed', '#4f46e5']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={tw`rounded-2xl p-5 flex-row items-center`}
-            >
+            <View style={[tw`rounded-2xl p-5 flex-row items-center`, { backgroundColor: '#058c42' }]}>
               <View style={tw`w-12 h-12 rounded-full bg-white/10 items-center justify-center mr-4`}>
                 <Ionicons name="shield-checkmark" size={24} color="white" />
               </View>
@@ -187,7 +164,7 @@ export default function Home({ navigation }) {
                 <Text style={tw`text-purple-200 text-xs`}>Gerir sugestões de locais</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
-            </LinearGradient>
+            </View>
           </Pressable>
         )}
       </ScrollView>
@@ -203,21 +180,15 @@ export default function Home({ navigation }) {
           style={tw`flex-1 flex-row`}
           onPress={() => setMenuOpen(false)}
         >
-          <LinearGradient
-            colors={['#1f2937', '#111827']}
-            style={tw`w-72 h-full pt-12 px-5`}
-          >
+          <View style={tw`w-72 h-full pt-12 px-5 bg-[#020202]`}>
             <Pressable onPress={(e) => e.stopPropagation()}>
               {/* Menu Header */}
               <View style={tw`flex-row items-center mb-8`}>
-                <LinearGradient
-                  colors={['#3b82f6', '#22d3ee']}
-                  style={tw`w-12 h-12 rounded-full items-center justify-center mr-3`}
-                >
+                <View style={[tw`w-12 h-12 rounded-full items-center justify-center mr-3`, { backgroundColor: '#058c42' }]}>
                   <Text style={tw`text-white text-lg font-bold`}>
                     {username.charAt(0).toUpperCase()}
                   </Text>
-                </LinearGradient>
+                </View>
                 <View>
                   <Text style={tw`text-white font-bold`}>{username}</Text>
                   <Text style={tw`text-gray-400 text-xs`}>{user?.email}</Text>
@@ -229,7 +200,7 @@ export default function Home({ navigation }) {
                 <Pressable
                   key={item.screen}
                   onPress={() => handleMenuPress(item.screen)}
-                  style={tw`flex-row items-center py-4 border-b border-gray-700`}
+                  style={tw`flex-row items-center py-4 border-b border-[#058c42]/20`}
                 >
                   <View style={[tw`w-10 h-10 rounded-full items-center justify-center mr-4`, { backgroundColor: item.color + '20' }]}>
                     <Ionicons name={item.icon} size={20} color={item.color} />
@@ -240,7 +211,7 @@ export default function Home({ navigation }) {
               {isAdmin && (
                 <Pressable
                   onPress={() => handleMenuPress('Admin')}
-                  style={tw`flex-row items-center py-4 border-b border-gray-700`}
+                  style={tw`flex-row items-center py-4 border-b border-[#058c42]/20`}
                 >
                   <View style={tw`w-10 h-10 rounded-full items-center justify-center mr-4 bg-yellow-500/20`}>
                     <Ionicons name="shield-checkmark" size={20} color="#f59e0b" />
@@ -265,10 +236,10 @@ export default function Home({ navigation }) {
                 <Text style={tw`text-red-400 font-medium`}>Terminar Sessão</Text>
               </Pressable>
             </Pressable>
-          </LinearGradient>
+          </View>
           <View style={tw`flex-1 bg-black/50`} />
         </Pressable>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 }

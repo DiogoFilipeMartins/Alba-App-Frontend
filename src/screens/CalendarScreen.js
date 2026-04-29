@@ -56,10 +56,10 @@ function BottomBar({ navigation }) {
                 <Text style={styles.bottomLabel}>Sugerir</Text>
             </Pressable>
             <Pressable style={styles.bottomBtn}>
-                <View style={[styles.bottomIcon, { backgroundColor: '#0ea5e925' }]}>
-                    <Ionicons name="calendar" size={22} color="#0ea5e9" />
+                <View style={[styles.bottomIcon, { backgroundColor: '#058c4225' }]}>
+                    <Ionicons name="calendar" size={22} color="#16db65" />
                 </View>
-                <Text style={[styles.bottomLabel, { color: '#0ea5e9', fontWeight: '700' }]}>Agenda</Text>
+                <Text style={[styles.bottomLabel, { color: '#16db65', fontWeight: '700' }]}>Agenda</Text>
             </Pressable>
             <Pressable style={styles.bottomBtn}>
                 <View style={styles.bottomIcon}>
@@ -199,7 +199,7 @@ export default function CalendarScreen({ navigation }) {
             </View>
 
             {/* ── Grid do mês ── */}
-            <View style={tw`flex-1`}>
+            <View style={tw`flex-1 bg-[#020202]`}>
                 {weeks.map((week, wi) => (
                     <View key={wi} style={[styles.weekLine, { flex: 1 }]}>
                         {week.map((day, di) => {
@@ -239,14 +239,14 @@ export default function CalendarScreen({ navigation }) {
             {/* ── Bottom bar com FAB ── */}
             <BottomBar navigation={navigation} />
             <Pressable style={styles.fab} onPress={() => openNew(today)}>
-                <LinearGradient colors={['#4f46e5', '#6366f1']} style={styles.fabGrad}>
+                <View style={[styles.fabGrad, { backgroundColor: '#058c42' }]}>
                     <Ionicons name="add" size={28} color="white" />
-                </LinearGradient>
+                </View>
             </Pressable>
 
             {loading && (
                 <View style={tw`absolute top-24 left-0 right-0 items-center`}>
-                    <ActivityIndicator color="#6366f1" />
+                    <ActivityIndicator color="#16db65" />
                 </View>
             )}
 
@@ -261,7 +261,7 @@ export default function CalendarScreen({ navigation }) {
                                 {new Date(dayModal + 'T12:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </Text>
                             <Pressable onPress={() => { setDayModal(null); openNew(dayModal); }}
-                                style={tw`bg-indigo-600 rounded-xl px-3 py-2 flex-row items-center`}>
+                                style={tw`bg-[#058c42] rounded-xl px-3 py-2 flex-row items-center`}>
                                 <Ionicons name="add" size={16} color="white" />
                                 <Text style={tw`text-white font-semibold ml-1 text-sm`}>Novo</Text>
                             </Pressable>
@@ -311,7 +311,7 @@ export default function CalendarScreen({ navigation }) {
                         <View style={tw`flex-row items-center justify-between mb-4`}>
                             <Text style={tw`text-gray-600 font-semibold text-sm`}>Dia inteiro</Text>
                             <Switch value={form.allDay} onValueChange={v => setForm(f => ({ ...f, allDay: v }))}
-                                trackColor={{ false: '#e2e8f0', true: '#6366f1' }} thumbColor="white" />
+                                trackColor={{ false: '#1a1a1a', true: '#058c42' }} thumbColor="white" />
                         </View>
 
                         {!form.allDay && (
@@ -345,12 +345,11 @@ export default function CalendarScreen({ navigation }) {
                             value={form.description} onChangeText={t => setForm(f => ({ ...f, description: t }))} multiline />
 
                         <Pressable onPress={handleSave} disabled={saving} style={tw`mt-2`}>
-                            <LinearGradient colors={saving ? ['#374151', '#374151'] : ['#6366f1', '#818cf8']}
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={tw`rounded-xl py-4 items-center`}>
+                            <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: saving ? '#374151' : '#058c42' }]}>
                                 {saving
                                     ? <ActivityIndicator color="white" />
                                     : <Text style={tw`text-white font-bold text-base`}>Guardar</Text>}
-                            </LinearGradient>
+                            </View>
                         </Pressable>
                     </View>
                 </KeyboardAvoidingView>
@@ -361,20 +360,20 @@ export default function CalendarScreen({ navigation }) {
 
 // ── Estilos ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: '#0f172a' },
+    root: { flex: 1, backgroundColor: '#020202' },
 
     // Header
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#1e293b' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#058c4220' },
     headerMonth: { fontSize: 20, fontWeight: '700', color: '#e2e8f0' },
     headerBtn: { padding: 8 },
 
     // Grid
-    weekRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#1e293b' },
+    weekRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#058c4220' },
     weekLabel: { width: CELL_W, textAlign: 'center', fontSize: 11, color: '#64748b', fontWeight: '600', paddingVertical: 6, textTransform: 'uppercase' },
-    weekLine: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#1e293b' },
-    dayCell: { width: CELL_W, borderRightWidth: 1, borderRightColor: '#1e293b', overflow: 'hidden', paddingBottom: 4 },
+    weekLine: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#058c4220' },
+    dayCell: { width: CELL_W, borderRightWidth: 1, borderRightColor: '#058c4220', overflow: 'hidden', paddingBottom: 4 },
     dayNumWrap: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', margin: 3 },
-    dayNumToday: { backgroundColor: '#6366f1' },
+    dayNumToday: { backgroundColor: '#058c42' },
     dayNum: { fontSize: 13, color: '#cbd5e1' },
     dayNumTodayText: { color: 'white', fontWeight: '700' },
 
@@ -384,7 +383,7 @@ const styles = StyleSheet.create({
     overflow: { fontSize: 10, color: '#64748b', marginLeft: 4, marginTop: 1 },
 
     // Bottom bar
-    bottomBar: { backgroundColor: '#0f172a', flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, paddingBottom: 22, borderTopWidth: 1, borderTopColor: '#1e293b' },
+    bottomBar: { backgroundColor: '#020202', flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, paddingBottom: 22, borderTopWidth: 1, borderTopColor: '#058c4220' },
     bottomBtn: { alignItems: 'center', flex: 1 },
     bottomIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 3 },
     bottomLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '500' },

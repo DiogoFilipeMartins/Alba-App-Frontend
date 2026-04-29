@@ -56,7 +56,7 @@ export default function MapScreen() {
     return (
       <View style={styles.centerContainer}>
         {/* Alto contraste para acessibilidade */}
-        <ActivityIndicator size="large" color="#000000" />
+        <ActivityIndicator size="large" color="#16db65" />
         <Text style={styles.loadingText}>A carregar o mapa...</Text>
       </View>
     );
@@ -94,7 +94,7 @@ export default function MapScreen() {
               title={prof.name}
               description={prof.specialty}
               // Marcador de alto contraste
-              pinColor="#FF0000"
+              pinColor="#16db65"
             />
           ) : null
         ))}
@@ -110,32 +110,47 @@ export default function MapScreen() {
 const minimalistMapStyle = [
   {
     "elementType": "geometry",
-    "stylers": [{ "color": "#f5f5f5" }] // Fundo neutro
-  },
-  {
-    "elementType": "labels.icon",
-    "stylers": [{ "visibility": "off" }] // Ocultar ícones desnecessários (POI) para evitar saturação visual
+    "stylers": [{ "color": "#020202" }]
   },
   {
     "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#333333" }] // Texto escuro sobre fundo claro (alto contraste)
+    "stylers": [{ "color": "#16db65" }]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [{ "color": "#000000" }]
+  },
+  {
+    "featureType": "administrative",
+    "elementType": "geometry.stroke",
+    "stylers": [{ "color": "#058c42" }]
+  },
+  {
+    "featureType": "landscape",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#020202" }]
   },
   {
     "featureType": "road",
     "elementType": "geometry",
-    "stylers": [{ "color": "#ffffff" }] // Estradas muito claras para se destacarem
+    "stylers": [{ "color": "#0d2818" }]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.stroke",
+    "stylers": [{ "color": "#058c42" }]
   },
   {
     "featureType": "water",
     "elementType": "geometry",
-    "stylers": [{ "color": "#c9c9c9" }] // Água em tom neutro e sem reflexos brilhantes
+    "stylers": [{ "color": "#0d2818" }]
   }
 ];
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Fundo de alto contraste
+    backgroundColor: '#020202',
   },
   map: {
     width: '100%',
@@ -145,12 +160,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF', // Fundo de alto contraste
+    backgroundColor: '#020202',
   },
   loadingText: {
     marginTop: 10,
     fontSize: 18,
-    color: '#000000', // Texto preto sobre fundo branco
+    color: '#16db65',
     fontWeight: 'bold',
   },
   errorText: {
@@ -165,9 +180,9 @@ const styles = StyleSheet.create({
     top: 50,
     left: 20,
     right: 20,
-    backgroundColor: '#000000', // Barra preta sólida
+    backgroundColor: '#058c42', // Barra verde sólida
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 12,
     elevation: 5, // Sombra para separar do mapa
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
