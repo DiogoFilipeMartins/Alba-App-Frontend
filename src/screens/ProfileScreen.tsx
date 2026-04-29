@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/types';
 
@@ -11,6 +12,7 @@ type Props = BottomTabScreenProps<MainTabParamList, 'Profile'>;
 
 export default function ProfileScreen({ navigation }: Props) {
     const { profile, signOut, isAdmin } = useAuth();
+    const { colors, isDark, toggleTheme } = useTheme();
     const username = profile?.username || 'Utilizador';
 
     const handleLogout = async () => {
@@ -46,34 +48,34 @@ export default function ProfileScreen({ navigation }: Props) {
     }
 
     return (
-        <View style={s.root}>
+        <View style={[s.root, { backgroundColor: colors.background }]}>
             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
                 <View style={s.header}>
-                    <View style={s.avatar}>
+                    <View style={[s.avatar, { backgroundColor: colors.primary }]}>
                         <Text style={s.avatarTxt}>{(username[0] || 'U').toUpperCase()}</Text>
                     </View>
-                    <Text style={s.name}>{username}</Text>
+                    <Text style={[s.name, { color: colors.textPrimary }]}>{username}</Text>
                     {isAdmin && (
-                        <View style={tw`bg-[#058c42]/20 px-3 py-1 rounded-full mt-2`}>
-                            <Text style={tw`text-[#16db65] text-xs font-bold uppercase tracking-wider`}>Administrador</Text>
+                        <View style={[tw`px-3 py-1 rounded-full mt-2`, { backgroundColor: colors.primary + '20' }]}>
+                            <Text style={[tw`text-xs font-bold uppercase tracking-wider`, { color: colors.accent }]}>Administrador</Text>
                         </View>
                     )}
                 </View>
 
                 <View style={s.section}>
-                    <Text style={s.secTitle}>Definições</Text>
-                    <View style={s.card}>
+                    <Text style={[s.secTitle, { color: colors.textMuted }]}>Definições</Text>
+                    <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         {menuItems.map((item, i) => (
                             <TouchableOpacity
                                 key={item.label}
-                                style={[s.item, i < menuItems.length - 1 && s.itemBorder]}
+                                style={[s.item, i < menuItems.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}
                                 onPress={() => item.onPress()}
                             >
-                                <View style={s.iconBox}>
-                                    <Ionicons name={item.icon as any} size={18} color="#16db65" />
+                                <View style={[s.iconBox, { backgroundColor: isDark ? colors.background : colors.surface }]}>
+                                    <Ionicons name={item.icon as any} size={18} color={colors.accent} />
                                 </View>
-                                <Text style={s.itemLabel}>{item.label}</Text>
-                                <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
+                                <Text style={[s.itemLabel, { color: colors.textPrimary }]}>{item.label}</Text>
+                                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -81,23 +83,23 @@ export default function ProfileScreen({ navigation }: Props) {
 
                 <View style={s.section}>
                     <TouchableOpacity 
-                        style={[s.card, s.toggleArea]}
-                        onPress={() => {}}
+                        style={[s.card, s.toggleArea, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={toggleTheme}
                     >
-                        <View style={s.iconBox}>
-                            <Ionicons name="moon-outline" size={18} color="#16db65" />
+                        <View style={[s.iconBox, { backgroundColor: isDark ? colors.background : colors.surface }]}>
+                            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={18} color={colors.accent} />
                         </View>
-                        <Text style={[s.itemLabel, { flex: 1 }]}>Modo Escuro</Text>
+                        <Text style={[s.itemLabel, { flex: 1, color: colors.textPrimary }]}>Modo {isDark ? 'Escuro' : 'Claro'}</Text>
                         <Switch 
-                            value={true} 
-                            disabled
-                            trackColor={{ false: '#1a1a1a', true: '#058c42' }}
+                            value={isDark} 
+                            onValueChange={toggleTheme}
+                            trackColor={{ false: colors.border, true: colors.primary }}
                             thumbColor="#FFF"
                         />
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
+                <TouchableOpacity style={[s.logoutBtn, { borderColor: '#ef444433', backgroundColor: '#ef444405' }]} onPress={handleLogout}>
                     <Ionicons name="log-out-outline" size={20} color="#ef4444" />
                     <Text style={s.logoutTxt}>Terminar Sessão</Text>
                 </TouchableOpacity>
@@ -107,21 +109,20 @@ export default function ProfileScreen({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-    root: { flex: 1, backgroundColor: '#020202' },
+    root: { flex: 1 },
     scroll: { paddingBottom: 40 },
     header: { alignItems: 'center', paddingVertical: 64 },
-    avatar: { width: 100, height: 100, borderRadius: 25, backgroundColor: '#058c42', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWeight: 1, borderColor: '#16db6520' },
+    avatar: { width: 100, height: 100, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     avatarTxt: { color: '#FFF', fontSize: 42, fontWeight: '900' },
-    name: { fontSize: 26, fontWeight: '900', color: '#e2e8f0' },
+    name: { fontSize: 26, fontWeight: '900' },
 
     section: { paddingHorizontal: 24, marginTop: 10 },
-    secTitle: { fontSize: 13, fontWeight: '800', color: '#94a3b8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.8 },
-    card: { backgroundColor: '#1a1a1a', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#058c4220' },
+    secTitle: { fontSize: 13, fontWeight: '800', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.8 },
+    card: { borderRadius: 20, overflow: 'hidden', borderWidth: 1 },
     item: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 16 },
-    itemBorder: { borderBottomWidth: 1, borderBottomColor: '#058c4210' },
-    iconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#020202', alignItems: 'center', justifyContent: 'center' },
-    itemLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: '#e2e8f0' },
+    iconBox: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    itemLabel: { flex: 1, fontSize: 15, fontWeight: '700' },
     toggleArea: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 16 },
-    logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginHorizontal: 24, marginTop: 40, padding: 20, borderRadius: 20, borderWidth: 1, borderColor: '#ef444433', backgroundColor: '#ef444405' },
+    logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginHorizontal: 24, marginTop: 40, padding: 20, borderRadius: 20, borderWidth: 1 },
     logoutTxt: { fontSize: 16, fontWeight: '800', color: '#ef4444' },
 });
