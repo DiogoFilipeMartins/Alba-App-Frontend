@@ -13,7 +13,7 @@ type Props = BottomTabScreenProps<MainTabParamList, 'Map'>;
   // Removed Professional interface in favor of Place from apiService
 
 // Componente de Marcador Memoizado para Performance
-const PlaceMarker = memo(({ place, colors }: { place: any, colors: any }) => {
+const PlaceMarker = memo(({ place, colors, onPress }: { place: any, colors: any, onPress: () => void }) => {
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
 
   // Desativar monitorização de mudanças após o render inicial para ganhar performance
@@ -32,8 +32,7 @@ const PlaceMarker = memo(({ place, colors }: { place: any, colors: any }) => {
   return (
     <Marker
       coordinate={{ latitude: lat, longitude: lng }}
-      title={place.name}
-      description={place.description || (place.type === 'professional' ? 'Profissional' : 'Instituição')}
+      onPress={onPress}
       tracksViewChanges={tracksViewChanges}
     >
       <View style={[styles.customMarker, { backgroundColor: place.type === 'professional' ? colors.accent : '#3b82f6' }]}>
@@ -49,6 +48,7 @@ export default function MapScreen({ navigation }: Props) {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [showSuggestBtn, setShowSuggestBtn] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,13 +129,13 @@ export default function MapScreen({ navigation }: Props) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <MapView
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
         style={styles.map}
+        provider={PROVIDER_GOOGLE}
         initialRegion={{
-          latitude: location?.coords.latitude || 39.3999,
-          longitude: location?.coords.longitude || -8.2245,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
+          latitude: 38.7223,
+          longitude: -9.1393,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
         }}
         showsUserLocation={true}
         showsMyLocationButton={false}
@@ -145,6 +145,7 @@ export default function MapScreen({ navigation }: Props) {
           setShowSuggestBtn(true);
         }}
         onPress={() => {
+          setSelectedPlace(null);
           if (showSuggestBtn) setShowSuggestBtn(false);
         }}
       >
@@ -155,10 +156,65 @@ export default function MapScreen({ navigation }: Props) {
             title="Local selecionado"
           />
         )}
-        {filteredPlaces.map((place: any) => (
-          <PlaceMarker key={place.id} place={place} colors={colors} />
+        {filteredPlaces.map(p => (
+          <PlaceMarker 
+            key={p.id} 
+            place={p} 
+            colors={colors} 
+            onPress={() => setSelectedPlace(p)}
+          />
         ))}
       </MapView>
+
+      {/* Painel de Detalhes (Bottom Sheet) */}
+      {selectedPlace && (
+        <View style={[styles.bottomSheet, { backgroundColor: colors.card }]}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <View>
+              <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>{selectedPlace.name}</Text>
+              <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+                {selectedPlace.type === 'professional' ? 'Profissional Especializado' : 'Instituição de Apoio'}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => setSelectedPlace(null)} style={styles.closeSheet}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.badgesRow}>
+            <View style={[styles.badge, { backgroundColor: colors.primary + '15' }]}>
+              <Ionicons name="volume-mute" size={16} color={colors.primary} />
+              <Text style={[styles.badgeText, { color: colors.primary }]}>Silêncio</Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: '#3b82f615' }]}>
+              <Ionicons name="sunny" size={16} color="#3b82f6" />
+              <Text style={[styles.badgeText, { color: '#3b82f6' }]}>Luz Suave</Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: colors.accent + '15' }]}>
+              <Ionicons name="ribbon" size={16} color={colors.accent} />
+              <Text style={[styles.badgeText, { color: colors.accent }]}>Acessível</Text>
+            </View>
+          </View>
+
+          <Text style={[styles.sheetDesc, { color: colors.textSecondary }]}>
+            {selectedPlace.description || 'Este local está preparado para receber pessoas com necessidades específicas, garantindo um ambiente seguro e acolhedor.'}
+          </Text>
+
+          <View style={styles.sheetActions}>
+            <TouchableOpacity style={[styles.mainAction, { backgroundColor: colors.primary }]}>
+              <Ionicons name="navigate" size={20} color="#FFF" />
+              <Text style={styles.mainActionText}>Como chegar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]}>
+              <Ionicons name="call-outline" size={20} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]}>
+              <Ionicons name="heart-outline" size={20} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Top UI: Search and Filters Button */}
       <View style={styles.topContainer}>
@@ -427,5 +483,100 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-  }
+  },
+  // Bottom Sheet Styles
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingTop: 12,
+    elevation: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    zIndex: 100,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontFamily: 'Poppins_700Bold',
+    marginBottom: 4,
+  },
+  sheetSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
+    opacity: 0.7,
+  },
+  closeSheet: {
+    padding: 4,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  sheetDesc: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontFamily: 'Poppins_400Regular',
+    marginBottom: 24,
+  },
+  sheetActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  mainAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 56,
+    borderRadius: 16,
+    gap: 10,
+  },
+  mainActionText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontFamily: 'Poppins_700Bold',
+  },
+  secondaryAction: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
