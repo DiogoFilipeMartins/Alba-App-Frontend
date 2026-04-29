@@ -93,7 +93,7 @@ export default function CalendarScreen({ navigation }: Props) {
 
     const handleSave = async () => {
         if (!form.title.trim()) { Alert.alert('Título obrigatório'); return; }
-        if (!userId) return;
+        if (!userId) { Alert.alert('Erro', 'Sessão não encontrada. Faz login novamente.'); return; }
         setSaving(true);
         try {
             const starts = form.allDay ? buildTS(modalDate, '00:00') : buildTS(modalDate, form.startTime);
@@ -249,9 +249,9 @@ export default function CalendarScreen({ navigation }: Props) {
 
             {/* New Event Modal */}
             <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                    <View style={[styles.overlay, { justifyContent: 'flex-end' }]}>
-                        <View style={[styles.sheet, { backgroundColor: colors.card }]}>
+                <View style={{ flex: 1 }}>
+                    <Pressable style={[styles.overlay, { justifyContent: 'center', padding: 20 }]} onPress={() => setShowModal(false)}>
+                        <Pressable style={[styles.sheet, { backgroundColor: colors.card, borderRadius: 28 }]} onPress={e => e.stopPropagation()}>
                             <View style={[styles.handle, { backgroundColor: colors.border }]} />
 
                             <Text style={[styles.lbl, { color: colors.textSecondary }]}>Novo Evento - {modalDate}</Text>
@@ -321,9 +321,9 @@ export default function CalendarScreen({ navigation }: Props) {
                                     </View>
                                 </Pressable>
                             </View>
-                        </View>
-                    </View>
-                </KeyboardAvoidingView>
+                        </Pressable>
+                    </Pressable>
+                </View>
             </Modal>
         </SafeAreaView>
     );
@@ -346,8 +346,8 @@ const styles = StyleSheet.create({
     overflow: { fontSize: 10, marginLeft: 4, marginTop: 1 },
     fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 10, borderRadius: 30, overflow: 'hidden', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
     fabGrad: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
-    sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' },
+    sheet: { padding: 24, paddingBottom: 30 },
     handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
     lbl: { fontSize: 11, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
     inp: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, marginBottom: 14 },

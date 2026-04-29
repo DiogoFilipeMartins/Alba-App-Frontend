@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, ScrollView, Platform, Modal, Pressable } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -11,6 +11,37 @@ import { useTheme } from '../contexts/ThemeContext';
 type Props = BottomTabScreenProps<MainTabParamList, 'Map'>;
 
   // Removed Professional interface in favor of Place from apiService
+
+// Componente de Marcador Memoizado para Performance
+const PlaceMarker = memo(({ place, colors }: { place: any, colors: any }) => {
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+
+  // Desativar monitorização de mudanças após o render inicial para ganhar performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTracksViewChanges(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const lat = parseFloat(place.latitude || place.lat);
+  const lng = parseFloat(place.longitude || place.lng);
+
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  return (
+    <Marker
+      coordinate={{ latitude: lat, longitude: lng }}
+      title={place.name}
+      description={place.description || (place.type === 'professional' ? 'Profissional' : 'Instituição')}
+      tracksViewChanges={tracksViewChanges}
+    >
+      <View style={[styles.customMarker, { backgroundColor: place.type === 'professional' ? colors.accent : '#3b82f6' }]}>
+        <Ionicons name={place.type === 'professional' ? 'medical' : 'business'} size={14} color="#FFF" />
+      </View>
+    </Marker>
+  );
+});
 
 export default function MapScreen({ navigation }: Props) {
   const { colors, isDark } = useTheme();
@@ -124,27 +155,9 @@ export default function MapScreen({ navigation }: Props) {
             title="Local selecionado"
           />
         )}
-        {filteredPlaces.map((place: any) => {
-          // Tentar obter coordenadas de vários nomes possíveis
-          const lat = parseFloat(place.latitude || place.lat);
-          const lng = parseFloat(place.longitude || place.lng);
-
-          if (!isNaN(lat) && !isNaN(lng)) {
-            return (
-              <Marker
-                key={place.id}
-                coordinate={{ latitude: lat, longitude: lng }}
-                title={place.name}
-                description={place.description || (place.type === 'professional' ? 'Profissional' : 'Instituição')}
-              >
-                <View style={[styles.customMarker, { backgroundColor: place.type === 'professional' ? colors.accent : '#3b82f6' }]}>
-                  <Ionicons name={place.type === 'professional' ? 'medical' : 'business'} size={14} color="#FFF" />
-                </View>
-              </Marker>
-            );
-          }
-          return null;
-        })}
+        {filteredPlaces.map((place: any) => (
+          <PlaceMarker key={place.id} place={place} colors={colors} />
+        ))}
       </MapView>
 
       {/* Top UI: Search and Filters Button */}
