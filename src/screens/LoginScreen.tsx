@@ -27,6 +27,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { signIn, signUp } = useAuth();
 
   const handleAuth = async () => {
@@ -115,14 +116,26 @@ export default function LoginScreen({ navigation }: Props) {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
-                placeholder="Palavra-passe"
-                placeholderTextColor={colors.textMuted}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border }]}
+                  placeholder="Palavra-passe"
+                  placeholderTextColor={colors.textMuted}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon} 
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={24} 
+                    color={colors.textMuted} 
+                  />
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: colors.primary }]}
                 onPress={handleAuth}
@@ -164,6 +177,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, lineHeight: 24, opacity: 0.8 },
   form: { gap: 16 },
   input: { height: 64, borderRadius: 8, paddingHorizontal: 24, fontSize: 16, borderWidth: 1, marginBottom: 16 },
+  passwordContainer: { position: 'relative', width: '100%' },
+  passwordInput: { paddingRight: 60 },
+  eyeIcon: { position: 'absolute', right: 20, top: 20, height: 24, justifyContent: 'center' },
   button: { height: 64, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 12, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
   buttonText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
   switchBtn: { alignItems: 'center', marginTop: 24 },
