@@ -1,4 +1,33 @@
+import { supabase } from '../lib/supabase';
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+const getAuthHeaders = async (headers: HeadersInit = {}) => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+        throw error;
+    }
+
+    const accessToken = data.session?.access_token;
+    if (!accessToken) {
+        throw new Error('Sessão expirada. Inicie sessão novamente.');
+    }
+
+    return {
+        ...headers,
+        Authorization: `Bearer ${accessToken}`,
+    };
+};
+
+const apiFetch = async (path: string, init: RequestInit = {}, authenticated = true) => {
+    const headers = authenticated ? await getAuthHeaders(init.headers) : init.headers;
+    const response = await fetch(`${API_URL}${path}`, {
+        ...init,
+        headers,
+    });
+
+    return handleResponse(response);
+};
 
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
@@ -42,59 +71,51 @@ export const apiService = {
     // Places
     async getPlaces(filters: any = {}): Promise<Place[]> {
         const params = new URLSearchParams(filters).toString();
-        const response = await fetch(`${API_URL}/places?${params}`);
-        return handleResponse(response);
+        return apiFetch(`/places?${params}`);
     },
 
     async getPendingPlacesCount(): Promise<{ count: number }> {
-        const response = await fetch(`${API_URL}/places/pending-count`);
-        return handleResponse(response);
+        return apiFetch('/places/pending-count');
     },
 
     async updatePlaceStatus(id: string, status: string): Promise<Place> {
-        const response = await fetch(`${API_URL}/places/${id}/status`, {
+        return apiFetch(`/places/${id}/status`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
         });
-        return handleResponse(response);
     },
 
     async createPlace(placeData: any): Promise<Place> {
-        const response = await fetch(`${API_URL}/places`, {
+        return apiFetch('/places', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(placeData),
         });
-        return handleResponse(response);
     },
 
     // Calendar Events
     async getCalendarEvents(userId: string, from?: string, to?: string): Promise<CalendarEvent[]> {
         const params = new URLSearchParams({ userId, from: from || '', to: to || '' }).toString();
-        const response = await fetch(`${API_URL}/calendar-events?${params}`);
-        return handleResponse(response);
+        return apiFetch(`/calendar-events?${params}`);
     },
 
     async createCalendarEvent(eventData: any): Promise<CalendarEvent> {
-        const response = await fetch(`${API_URL}/calendar-events`, {
+        return apiFetch('/calendar-events', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(eventData),
         });
-        return handleResponse(response);
     },
 
     async deleteCalendarEvent(id: string): Promise<void> {
-        const response = await fetch(`${API_URL}/calendar-events/${id}`, {
+        await apiFetch(`/calendar-events/${id}`, {
             method: 'DELETE',
         });
-        return handleResponse(response);
     },
 
     // Profile
     async getProfile(id: string): Promise<any> {
-        const response = await fetch(`${API_URL}/profile/${id}`);
-        return handleResponse(response);
+        return apiFetch(`/profile/${id}`);
     },
 };
