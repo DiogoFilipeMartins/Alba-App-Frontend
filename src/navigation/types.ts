@@ -9,6 +9,7 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   Map: undefined;
   SuggestPlace: { pickedCoords?: { lat: number; lng: number } };
+  Donations: undefined;
   Calendar: undefined;
   Profile: undefined;
 };

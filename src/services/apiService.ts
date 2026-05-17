@@ -70,6 +70,27 @@ export interface CalendarEvent {
     color?: string;
 }
 
+export interface DonationCampaign {
+    id: string;
+    title: string;
+    description?: string;
+    goal_amount: number;
+    current_amount: number;
+    place_id: string;
+    is_active: boolean;
+    place?: Place;
+}
+
+export interface DonationRecord {
+    id: string;
+    amount: number;
+    status: string;
+    donor_name?: string | null;
+    note?: string | null;
+    created_at: string;
+    campaign?: DonationCampaign | null;
+}
+
 export const apiService = {
     // Places
     async getPlaces(filters: any = {}): Promise<Place[]> {
@@ -101,6 +122,40 @@ export const apiService = {
         const params = new URLSearchParams({ query }).toString();
         const response = await apiFetch(`/search?${params}`, {}, false) as { success: boolean; results: Place[] };
         return response.results ?? [];
+    },
+
+    async getFavoritePlaces(): Promise<Place[]> {
+        return apiFetch('/favorites');
+    },
+
+    async addFavoritePlace(placeId: string): Promise<void> {
+        await apiFetch('/favorites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ placeId }),
+        });
+    },
+
+    async removeFavoritePlace(placeId: string): Promise<void> {
+        await apiFetch(`/favorites/${placeId}`, {
+            method: 'DELETE',
+        });
+    },
+
+    async getDonationCampaigns(): Promise<DonationCampaign[]> {
+        return apiFetch('/donation-campaigns');
+    },
+
+    async getMyDonations(): Promise<DonationRecord[]> {
+        return apiFetch('/donations/me');
+    },
+
+    async createDonation(payload: { campaignId: string; amount: number; donorName?: string; note?: string }): Promise<DonationRecord> {
+        return apiFetch('/donations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
     },
 
     // Calendar Events

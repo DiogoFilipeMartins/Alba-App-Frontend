@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Place } from './apiService';
+import { apiService, Place } from './apiService';
 
 const FAVORITES_KEY = 'alba.favoritePlaces.v1';
 
@@ -37,11 +37,18 @@ const writeFavorites = async (favorites: FavoritePlace[]) => {
 
 export const favoritesService = {
     async list(): Promise<FavoritePlace[]> {
-        return readFavorites();
+        try {
+            const places = await apiService.getFavoritePlaces();
+            const normalized = places.map(normalizePlace);
+            await writeFavorites(normalized);
+            return normalized;
+        } catch {
+            return readFavorites();
+        }
     },
 
     async getIds(): Promise<string[]> {
-        const favorites = await readFavorites();
+        const favorites = await this.list();
         return favorites.map((favorite) => favorite.id);
     },
 
@@ -50,10 +57,20 @@ export const favoritesService = {
         const exists = favorites.some((favorite) => favorite.id === place.id);
 
         if (exists) {
+            try {
+                await apiService.removeFavoritePlace(place.id);
+            } catch {
+                // Mantém fallback local se a sincronização falhar.
+            }
             await writeFavorites(favorites.filter((favorite) => favorite.id !== place.id));
             return false;
         }
 
+        try {
+            await apiService.addFavoritePlace(place.id);
+        } catch {
+            // Mantém fallback local se a sincronização falhar.
+        }
         await writeFavorites([normalizePlace(place), ...favorites]);
         return true;
     },

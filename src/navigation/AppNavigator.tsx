@@ -15,6 +15,7 @@ import SuggestPlaceScreen from '../screens/SuggestPlaceScreen';
 import AdminScreen from '../screens/AdminScreen';
 import MapPickerScreen from '../screens/MapPickerScreen';
 import CalendarScreen from '../screens/CalendarScreen';
+import DonationsScreen from '../screens/DonationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
@@ -50,6 +51,7 @@ function MainTabs() {
             let iconName: any;
             if (route.name === 'Map') iconName = 'map';
             else if (route.name === 'SuggestPlace') iconName = 'add-circle';
+            else if (route.name === 'Donations') iconName = 'heart';
             else if (route.name === 'Calendar') iconName = 'calendar';
             else if (route.name === 'Profile') iconName = 'person';
             return <Ionicons name={iconName} size={size} color={color} />;
@@ -58,6 +60,7 @@ function MainTabs() {
       >
         <Tab.Screen name="Map" component={MapScreen} options={{ tabBarLabel: 'Mapa' }} />
         <Tab.Screen name="SuggestPlace" component={SuggestPlaceScreen} options={{ tabBarLabel: 'Sugerir' }} />
+        <Tab.Screen name="Donations" component={DonationsScreen} options={{ tabBarLabel: 'Doar' }} />
         <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarLabel: 'Agenda' }} />
         <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Perfil' }} />
       </Tab.Navigator>
