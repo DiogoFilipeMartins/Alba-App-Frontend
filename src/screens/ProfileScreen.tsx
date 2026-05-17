@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/types';
 import { FavoritePlace, favoritesService } from '../services/favoritesService';
+import { apiService } from '../services/apiService';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -47,6 +48,28 @@ export default function ProfileScreen({ navigation }: Props) {
                             Alert.alert('Erro', error?.message || 'Não foi possível terminar a sessão.');
                         }
                     } 
+                },
+            ]
+        );
+    };
+
+    const handleDeleteAccount = async () => {
+        Alert.alert(
+            'Eliminar Conta',
+            'Esta ação é definitiva e remove o teu perfil e os teus eventos. Queres continuar?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await apiService.deleteMyAccount();
+                            await signOut();
+                        } catch (error: any) {
+                            Alert.alert('Erro', error?.message || 'Não foi possível eliminar a conta.');
+                        }
+                    },
                 },
             ]
         );
@@ -145,6 +168,11 @@ export default function ProfileScreen({ navigation }: Props) {
                     <Ionicons name="log-out-outline" size={20} color="#ef4444" />
                     <Text style={s.logoutTxt}>Terminar Sessão</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity style={[s.deleteBtn, { borderColor: '#b91c1c33', backgroundColor: '#b91c1c10' }]} onPress={handleDeleteAccount}>
+                    <Ionicons name="trash-outline" size={20} color="#b91c1c" />
+                    <Text style={s.deleteTxt}>Eliminar Conta</Text>
+                </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
     );
@@ -172,4 +200,6 @@ const s = StyleSheet.create({
     toggleArea: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 16 },
     logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginHorizontal: 24, marginTop: 40, padding: 20, borderRadius: 20, borderWidth: 1 },
     logoutTxt: { fontSize: 16, fontWeight: '800', color: '#ef4444' },
+    deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginHorizontal: 24, marginTop: 14, padding: 18, borderRadius: 20, borderWidth: 1 },
+    deleteTxt: { fontSize: 15, fontWeight: '800', color: '#b91c1c' },
 });

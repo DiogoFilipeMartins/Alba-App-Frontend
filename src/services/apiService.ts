@@ -135,4 +135,10 @@ export const apiService = {
     async getProfile(id: string): Promise<any> {
         return apiFetch(`/profile/${id}`);
     },
+
+    async deleteMyAccount(): Promise<void> {
+        await apiFetch('/account', {
+            method: 'DELETE',
+        });
+    },
 };
