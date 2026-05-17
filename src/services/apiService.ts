@@ -56,6 +56,8 @@ export interface Place {
     created_by?: string;
     place_accessibility?: Array<{
         wheelchair_accessible?: boolean;
+        low_noise?: boolean;
+        soft_lighting?: boolean;
     }>;
 }
 

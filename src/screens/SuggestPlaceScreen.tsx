@@ -9,6 +9,7 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
+    Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,6 +53,9 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
         postal_code: '',
         lat: '',
         lng: '',
+        wheelchair_accessible: false,
+        low_noise: false,
+        soft_lighting: false,
     });
 
     const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -115,6 +119,11 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                 latitude: lat,
                 longitude: lng,
                 created_by: user?.id ?? null,
+                accessibility: {
+                    wheelchair_accessible: form.wheelchair_accessible,
+                    low_noise: form.low_noise,
+                    soft_lighting: form.soft_lighting,
+                },
             });
 
             Alert.alert(
@@ -261,6 +270,23 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                             <TextInput style={FIELD_STYLE as any} placeholder="-9.1399" placeholderTextColor="#6b7280" value={form.lng} onChangeText={set('lng')} keyboardType="decimal-pad" />
                         </View>
                     </View>
+
+                    <Text style={[tw`font-semibold mb-2 mt-1`, { color: colors.textPrimary }]}>Acessibilidade</Text>
+                    {[
+                        { key: 'wheelchair_accessible', label: 'Acesso adaptado a mobilidade reduzida' },
+                        { key: 'low_noise', label: 'Ambiente com ruído reduzido' },
+                        { key: 'soft_lighting', label: 'Iluminação suave' },
+                    ].map((item) => (
+                        <View key={item.key} style={[tw`flex-row items-center justify-between rounded-xl px-4 py-3 mb-3 border`, { borderColor: colors.border, backgroundColor: colors.card }]}> 
+                            <Text style={[tw`text-sm flex-1 mr-4`, { color: colors.textPrimary }]}>{item.label}</Text>
+                            <Switch
+                                value={form[item.key as keyof typeof form] as boolean}
+                                onValueChange={(value) => setForm((f) => ({ ...f, [item.key]: value }))}
+                                trackColor={{ false: colors.border, true: colors.primary }}
+                                thumbColor="#fff"
+                            />
+                        </View>
+                    ))}
 
                     <Pressable onPress={handleSubmit} disabled={loading} style={tw`mb-10 mt-2`}>
                         <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: loading ? '#374151' : '#058c42' }]}>

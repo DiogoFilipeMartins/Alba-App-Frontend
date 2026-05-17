@@ -168,6 +168,12 @@ export default function MapScreen({ navigation }: Props) {
         selectedAccessibility?.wheelchair_accessible
           ? { key: 'wheelchair', label: 'Acesso adaptado', icon: 'accessibility', color: colors.accent, background: colors.accent + '15' }
           : null,
+        selectedAccessibility?.low_noise
+          ? { key: 'low-noise', label: 'Ruído reduzido', icon: 'volume-mute', color: colors.primary, background: colors.primary + '15' }
+          : null,
+        selectedAccessibility?.soft_lighting
+          ? { key: 'soft-lighting', label: 'Luz suave', icon: 'sunny', color: '#f59e0b', background: '#f59e0b15' }
+          : null,
         selectedPlace.city
           ? { key: 'city', label: selectedPlace.city, icon: 'location', color: '#3b82f6', background: '#3b82f615' }
           : null,
