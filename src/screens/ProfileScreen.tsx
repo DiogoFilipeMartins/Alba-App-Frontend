@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/types';
+import { FavoritePlace, favoritesService } from '../services/favoritesService';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,6 +17,19 @@ export default function ProfileScreen({ navigation }: Props) {
     const { profile, signOut, isAdmin } = useAuth();
     const { colors, isDark, toggleTheme } = useTheme();
     const username = profile?.username || 'Utilizador';
+    const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
+
+    useEffect(() => {
+        const loadFavorites = async () => {
+            const data = await favoritesService.list();
+            setFavorites(data);
+        };
+
+        const unsubscribe = navigation.addListener('focus', loadFavorites);
+        loadFavorites();
+
+        return unsubscribe;
+    }, [navigation]);
 
     const handleLogout = async () => {
         Alert.alert(
@@ -62,6 +76,32 @@ export default function ProfileScreen({ navigation }: Props) {
                             <Text style={[tw`text-xs font-bold uppercase tracking-wider`, { color: colors.accent }]}>Administrador</Text>
                         </View>
                     )}
+                </View>
+
+                <View style={s.section}>
+                    <Text style={[s.secTitle, { color: colors.textMuted }]}>Favoritos</Text>
+                    <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+                        <View style={s.favoriteSummary}>
+                            <View style={[s.iconBox, { backgroundColor: isDark ? colors.background : colors.surface }]}> 
+                                <Ionicons name="heart" size={18} color="#ef4444" />
+                            </View>
+                            <View style={s.favoriteMeta}>
+                                <Text style={[s.itemLabel, { color: colors.textPrimary }]}>{favorites.length} local(is) guardado(s)</Text>
+                                <Text style={[s.favoriteText, { color: colors.textSecondary }]}>Os teus locais favoritos ficam guardados neste dispositivo.</Text>
+                            </View>
+                        </View>
+                        {favorites.slice(0, 3).map((favorite, index) => (
+                            <View key={favorite.id} style={[s.favoriteRow, index < Math.min(favorites.length, 3) - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+                                <Text style={[s.favoriteName, { color: colors.textPrimary }]}>{favorite.name}</Text>
+                                <Text style={[s.favoriteText, { color: colors.textSecondary }]}>{favorite.city || (favorite.type === 'professional' ? 'Profissional' : 'Instituição')}</Text>
+                            </View>
+                        ))}
+                        {favorites.length === 0 && (
+                            <View style={s.favoriteRow}>
+                                <Text style={[s.favoriteText, { color: colors.textSecondary }]}>Ainda não guardaste locais favoritos.</Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
 
                 <View style={s.section}>
@@ -124,6 +164,11 @@ const s = StyleSheet.create({
     item: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 16 },
     iconBox: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     itemLabel: { flex: 1, fontSize: 15, fontWeight: '700' },
+    favoriteSummary: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 16 },
+    favoriteMeta: { flex: 1 },
+    favoriteRow: { paddingHorizontal: 18, paddingVertical: 14 },
+    favoriteName: { fontSize: 14, fontWeight: '700', marginBottom: 4 },
+    favoriteText: { fontSize: 13, lineHeight: 18 },
     toggleArea: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 16 },
     logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginHorizontal: 24, marginTop: 40, padding: 20, borderRadius: 20, borderWidth: 1 },
     logoutTxt: { fontSize: 16, fontWeight: '800', color: '#ef4444' },

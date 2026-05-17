@@ -54,6 +54,9 @@ export interface Place {
     status: 'pending' | 'approved' | 'rejected';
     created_at: string;
     created_by?: string;
+    place_accessibility?: Array<{
+        wheelchair_accessible?: boolean;
+    }>;
 }
 
 export interface CalendarEvent {
@@ -92,6 +95,12 @@ export const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(placeData),
         });
+    },
+
+    async searchPlaces(query: string): Promise<Place[]> {
+        const params = new URLSearchParams({ query }).toString();
+        const response = await apiFetch(`/search?${params}`, {}, false) as { success: boolean; results: Place[] };
+        return response.results ?? [];
     },
 
     // Calendar Events

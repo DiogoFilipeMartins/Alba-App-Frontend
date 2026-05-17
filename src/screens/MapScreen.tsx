@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, ScrollView, Platform, Modal, Pressable } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Modal, Pressable, Alert, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -7,6 +7,7 @@ import { apiService, Place } from '../services/apiService';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
+import { favoritesService } from '../services/favoritesService';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Map'>;
 
@@ -46,17 +47,25 @@ export default function MapScreen({ navigation }: Props) {
   const { colors, isDark } = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [showSuggestBtn, setShowSuggestBtn] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [smartResults, setSmartResults] = useState<Place[] | null>(null);
+  const [smartSearching, setSmartSearching] = useState(false);
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const mapRef = React.useRef<MapView | null>(null);
 
-  const FILTERS = ['Todos', 'Profissional', 'Instituição'];
+  const FILTERS = ['Todos', 'Profissional', 'Instituição', 'Favoritos'];
+
+  const loadFavorites = async () => {
+    const ids = await favoritesService.getIds();
+    setFavoriteIds(ids);
+  };
 
   const fetchData = async () => {
     try {
@@ -85,15 +94,87 @@ export default function MapScreen({ navigation }: Props) {
 
   useEffect(() => {
     fetchData();
+    loadFavorites();
   }, []);
 
-  const filteredPlaces = places.filter(p => {
+  const handleSmartSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSmartResults(null);
+      return;
+    }
+
+    try {
+      setSmartSearching(true);
+      const results = await apiService.searchPlaces(searchQuery.trim());
+      setSmartResults(results);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message || 'Não foi possível executar a pesquisa inteligente.');
+    } finally {
+      setSmartSearching(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!selectedPlace) {
+      return;
+    }
+
+    const isFavoriteNow = await favoritesService.toggle(selectedPlace);
+    await loadFavorites();
+    Alert.alert(
+      isFavoriteNow ? 'Local guardado' : 'Local removido',
+      isFavoriteNow ? 'Este local foi adicionado aos teus favoritos.' : 'Este local foi removido dos teus favoritos.'
+    );
+  };
+
+  const openDirections = async () => {
+    if (!selectedPlace) {
+      return;
+    }
+
+    const latitude = Number(selectedPlace.latitude);
+    const longitude = Number(selectedPlace.longitude);
+    const label = encodeURIComponent(selectedPlace.name);
+    const primaryUrl = Platform.select({
+      ios: `http://maps.apple.com/?ll=${latitude},${longitude}&q=${label}`,
+      android: `geo:${latitude},${longitude}?q=${latitude},${longitude}(${label})`,
+      default: `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`,
+    });
+
+    if (!primaryUrl) {
+      return;
+    }
+
+    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    const supported = await Linking.canOpenURL(primaryUrl);
+    await Linking.openURL(supported ? primaryUrl : fallbackUrl);
+  };
+
+  const placesToRender = smartResults ?? places;
+
+  const filteredPlaces = placesToRender.filter(p => {
     const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          (p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     const filterType = activeFilter === 'Profissional' ? 'professional' : activeFilter === 'Instituição' ? 'institution' : 'Todos';
-    const matchesFilter = filterType === 'Todos' || p.type === filterType;
+    const matchesType = filterType === 'Todos' || p.type === filterType;
+    const matchesFavorites = activeFilter !== 'Favoritos' || favoriteIds.includes(p.id);
+    const matchesFilter = matchesType && matchesFavorites;
     return matchesSearch && matchesFilter;
   });
+
+  const selectedAccessibility = selectedPlace?.place_accessibility?.[0];
+  const accessibilityBadges = selectedPlace
+    ? [
+        selectedAccessibility?.wheelchair_accessible
+          ? { key: 'wheelchair', label: 'Acesso adaptado', icon: 'accessibility', color: colors.accent, background: colors.accent + '15' }
+          : null,
+        selectedPlace.city
+          ? { key: 'city', label: selectedPlace.city, icon: 'location', color: '#3b82f6', background: '#3b82f615' }
+          : null,
+      ].filter(Boolean) as Array<{ key: string; label: string; icon: keyof typeof Ionicons.glyphMap; color: string; background: string }>
+    : [];
+
+  const isSelectedFavorite = selectedPlace ? favoriteIds.includes(selectedPlace.id) : false;
 
   console.log(`[Frontend] Locais após filtro: ${filteredPlaces.length}`);
 
@@ -183,18 +264,17 @@ export default function MapScreen({ navigation }: Props) {
           </View>
 
           <View style={styles.badgesRow}>
-            <View style={[styles.badge, { backgroundColor: colors.primary + '15' }]}>
-              <Ionicons name="volume-mute" size={16} color={colors.primary} />
-              <Text style={[styles.badgeText, { color: colors.primary }]}>Silêncio</Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: '#3b82f615' }]}>
-              <Ionicons name="sunny" size={16} color="#3b82f6" />
-              <Text style={[styles.badgeText, { color: '#3b82f6' }]}>Luz Suave</Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: colors.accent + '15' }]}>
-              <Ionicons name="ribbon" size={16} color={colors.accent} />
-              <Text style={[styles.badgeText, { color: colors.accent }]}>Acessível</Text>
-            </View>
+            {accessibilityBadges.length > 0 ? accessibilityBadges.map((badge) => (
+              <View key={badge.key} style={[styles.badge, { backgroundColor: badge.background }] }>
+                <Ionicons name={badge.icon} size={16} color={badge.color} />
+                <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
+              </View>
+            )) : (
+              <View style={[styles.badge, { backgroundColor: colors.border }] }>
+                <Ionicons name="help-circle-outline" size={16} color={colors.textSecondary} />
+                <Text style={[styles.badgeText, { color: colors.textSecondary }]}>Acessibilidade por confirmar</Text>
+              </View>
+            )}
           </View>
 
           <Text style={[styles.sheetDesc, { color: colors.textSecondary }]}>
@@ -202,15 +282,15 @@ export default function MapScreen({ navigation }: Props) {
           </Text>
 
           <View style={styles.sheetActions}>
-            <TouchableOpacity style={[styles.mainAction, { backgroundColor: colors.primary }]}>
+            <TouchableOpacity style={[styles.mainAction, { backgroundColor: colors.primary }] } onPress={openDirections}>
               <Ionicons name="navigate" size={20} color="#FFF" />
               <Text style={styles.mainActionText}>Como chegar</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]}>
               <Ionicons name="call-outline" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]}>
-              <Ionicons name="heart-outline" size={20} color={colors.textPrimary} />
+            <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]} onPress={handleToggleFavorite}>
+              <Ionicons name={isSelectedFavorite ? 'heart' : 'heart-outline'} size={20} color={isSelectedFavorite ? '#ef4444' : colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -224,19 +304,39 @@ export default function MapScreen({ navigation }: Props) {
             placeholder="Pesquisar..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(value) => {
+              setSearchQuery(value);
+              if (!value.trim()) {
+                setSmartResults(null);
+              }
+            }}
             style={[styles.searchInput, { color: colors.textPrimary }]}
+            onSubmitEditing={handleSmartSearch}
           />
           {searchQuery !== '' && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={{ marginRight: 10 }}>
               <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
+          <TouchableOpacity onPress={handleSmartSearch} style={styles.filterBtn}>
+            {smartSearching ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <MaterialCommunityIcons name="creation" size={20} color={smartResults ? colors.accent : colors.textSecondary} />
+            )}
+          </TouchableOpacity>
           <View style={{ width: 1, height: 24, backgroundColor: colors.border, marginHorizontal: 10 }} />
           <TouchableOpacity onPress={() => setShowFilterModal(true)} style={styles.filterBtn}>
              <Ionicons name="options" size={20} color={activeFilter !== 'Todos' ? colors.accent : colors.textSecondary} />
           </TouchableOpacity>
         </View>
+        {(smartResults || activeFilter === 'Favoritos') && (
+          <View style={[styles.smartHint, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.smartHintText, { color: colors.textSecondary }]}>
+              {smartResults ? `Pesquisa inteligente activa: ${filteredPlaces.length} resultado(s)` : `Filtro de favoritos activo: ${filteredPlaces.length} local(is)`}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Filter Modal */}
@@ -361,6 +461,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
+  },
+  smartHint: {
+    marginTop: 10,
+    marginHorizontal: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  smartHintText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
   },
   searchInput: {
     flex: 1,
