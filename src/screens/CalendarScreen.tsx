@@ -59,6 +59,7 @@ export default function CalendarScreen({ navigation }: Props) {
     const [modalDate, setModalDate] = useState(todayStr());
     const [form, setForm] = useState({ title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0 });
     const [saving, setSaving] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
     const touchXRef = useRef(0);
     const [dayModal, setDayModal] = useState<string | null>(null);
@@ -98,15 +99,22 @@ export default function CalendarScreen({ navigation }: Props) {
         try {
             const starts = form.allDay ? buildTS(modalDate, '00:00') : buildTS(modalDate, form.startTime);
             const ends = form.allDay ? buildTS(modalDate, '23:59') : (form.endTime ? buildTS(modalDate, form.endTime) : null);
-            await apiService.createCalendarEvent({
+            const payload = {
                 user_id: userId,
                 title: form.title.trim(),
                 description: form.description.trim() || null,
                 starts_at: starts,
                 ends_at: ends,
                 all_day: form.allDay,
-            });
-            setShowModal(false);
+            };
+
+            if (editingEvent) {
+                await apiService.updateCalendarEvent(editingEvent.id, payload);
+            } else {
+                await apiService.createCalendarEvent(payload);
+            }
+
+            closeModal();
             resetForm();
             await fetchEvents();
         } catch (e: any) { Alert.alert('Erro', e.message); }
@@ -127,9 +135,31 @@ export default function CalendarScreen({ navigation }: Props) {
 
     const resetForm = () => setForm({ title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0 });
 
+    const closeModal = () => {
+        setShowModal(false);
+        setEditingEvent(null);
+        resetForm();
+    };
+
     const openNew = (iso: string) => {
         setModalDate(iso || todayStr());
+        setEditingEvent(null);
         resetForm();
+        setShowModal(true);
+    };
+
+    const openEdit = (event: CalendarEvent) => {
+        setEditingEvent(event);
+        setModalDate(eventDay(event.starts_at) || todayStr());
+        setForm({
+            title: event.title,
+            description: event.description || '',
+            startTime: event.all_day ? '' : fmtTime(event.starts_at),
+            endTime: event.all_day ? '' : fmtTime(event.ends_at || undefined),
+            allDay: event.all_day,
+            colorIdx: 0,
+        });
+        setDayModal(null);
         setShowModal(true);
     };
 
@@ -221,6 +251,9 @@ export default function CalendarScreen({ navigation }: Props) {
                                             </Text>
                                             {e.description && <Text style={[tw`mt-1 text-sm`, { color: colors.textSecondary }]}>{e.description}</Text>}
                                         </View>
+                                        <Pressable onPress={() => openEdit(e)} style={tw`p-2`}>
+                                            <Ionicons name="create-outline" size={20} color={colors.accent} />
+                                        </Pressable>
                                         <Pressable onPress={() => handleDelete(e.id)} style={tw`p-2`}>
                                             <Ionicons name="trash-outline" size={20} color="#ef4444" />
                                         </Pressable>
@@ -248,13 +281,13 @@ export default function CalendarScreen({ navigation }: Props) {
             </Modal>
 
             {/* New Event Modal */}
-            <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+            <Modal visible={showModal} transparent animationType="slide" onRequestClose={closeModal}>
                 <View style={{ flex: 1 }}>
-                    <Pressable style={[styles.overlay, { justifyContent: 'center', padding: 20 }]} onPress={() => setShowModal(false)}>
+                    <Pressable style={[styles.overlay, { justifyContent: 'center', padding: 20 }]} onPress={closeModal}>
                         <Pressable style={[styles.sheet, { backgroundColor: colors.card, borderRadius: 28 }]} onPress={e => e.stopPropagation()}>
                             <View style={[styles.handle, { backgroundColor: colors.border }]} />
 
-                            <Text style={[styles.lbl, { color: colors.textSecondary }]}>Novo Evento - {modalDate}</Text>
+                            <Text style={[styles.lbl, { color: colors.textSecondary }]}>{editingEvent ? 'Editar Evento' : 'Novo Evento'} - {modalDate}</Text>
                             <TextInput
                                 style={[styles.inp, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
                                 placeholder="Título do evento"
@@ -308,7 +341,7 @@ export default function CalendarScreen({ navigation }: Props) {
                             )}
 
                             <View style={tw`flex-row gap-3 mt-2`}>
-                                <Pressable style={tw`flex-1`} onPress={() => setShowModal(false)}>
+                                <Pressable style={tw`flex-1`} onPress={closeModal}>
                                     <View style={[tw`rounded-xl py-4 items-center border`, { borderColor: colors.border }]}>
                                         <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Cancelar</Text>
                                     </View>
@@ -317,7 +350,7 @@ export default function CalendarScreen({ navigation }: Props) {
                                     <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: colors.accent }]}>
                                         {saving
                                             ? <ActivityIndicator color="white" />
-                                            : <Text style={tw`text-white font-bold text-base`}>Guardar</Text>}
+                                            : <Text style={tw`text-white font-bold text-base`}>{editingEvent ? 'Atualizar' : 'Guardar'}</Text>}
                                     </View>
                                 </Pressable>
                             </View>

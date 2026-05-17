@@ -117,6 +117,14 @@ export const apiService = {
         });
     },
 
+    async updateCalendarEvent(id: string, eventData: any): Promise<CalendarEvent> {
+        return apiFetch(`/calendar-events/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(eventData),
+        });
+    },
+
     async deleteCalendarEvent(id: string): Promise<void> {
         await apiFetch(`/calendar-events/${id}`, {
             method: 'DELETE',

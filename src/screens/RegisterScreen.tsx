@@ -17,6 +17,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,7 +51,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
     try {
       setLoading(true);
-      await signUp({ email, password, username });
+      await signUp({ email, password, username, phone: phone.trim() || undefined });
       Alert.alert('Conta criada', 'Verifica a tua caixa de entrada para confirmar o email antes de iniciar sessão.');
       navigation.replace('Login');
     } catch (e: any) {
@@ -86,6 +87,13 @@ export default function RegisterScreen({ navigation }: Props) {
             <View style={[tw`flex-row items-center rounded-2xl px-4 py-4`, { backgroundColor: colors.card }]}>
               <Ionicons name="mail" size={20} color={colors.textSecondary} style={{ marginRight: 12 }} />
               <TextInput ref={emailRef} value={email} onChangeText={setEmail} placeholder="Endereço de email" placeholderTextColor={colors.textMuted} style={[tw`flex-1 text-lg`, { color: colors.textPrimary }]} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} />
+            </View>
+          </View>
+
+          <View style={tw`mb-4`}>
+            <View style={[tw`flex-row items-center rounded-2xl px-4 py-4`, { backgroundColor: colors.card }]}> 
+              <Ionicons name="call" size={20} color={colors.textSecondary} style={{ marginRight: 12 }} />
+              <TextInput value={phone} onChangeText={setPhone} placeholder="Telemóvel (opcional)" placeholderTextColor={colors.textMuted} style={[tw`flex-1 text-lg`, { color: colors.textPrimary }]} keyboardType="phone-pad" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} />
             </View>
           </View>
 
