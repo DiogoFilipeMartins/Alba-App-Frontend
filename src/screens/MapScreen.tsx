@@ -4,12 +4,17 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { apiService, Place } from '../services/apiService';
+import { CompositeScreenProps } from '@react-navigation/native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { favoritesService } from '../services/favoritesService';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'Map'>;
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Map'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
 
   // Removed Professional interface in favor of Place from apiService
 
