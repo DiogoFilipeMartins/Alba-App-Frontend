@@ -70,22 +70,27 @@ export default function MapScreen({ navigation }: Props) {
   const fetchData = async () => {
     try {
       setLoading(true);
+      console.log('[MapScreen] A pedir permissões de localização...');
       let { status } = await Location.requestForegroundPermissionsAsync();
+      console.log('[MapScreen] Permissão de localização:', status);
       if (status !== 'granted') {
         setErrorMsg('Permissão de acesso à localização negada.');
         setLoading(false);
         return;
       }
 
+      console.log('[MapScreen] A obter localização atual...');
       let loc = await Location.getCurrentPositionAsync({});
+      console.log('[MapScreen] Localização obtida:', loc);
       setLocation(loc);
 
+      console.log('[MapScreen] A buscar locais ao backend...');
       const data = await apiService.getPlaces({ status: 'approved' });
-      console.log('[Frontend] Dados recebidos do servidor:', data);
+      console.log('[MapScreen] Dados recebidos do servidor:', data);
       setPlaces(data);
 
     } catch (error) {
-      console.error('Erro ao obter localização ou dados:', error);
+      console.error('[MapScreen] Erro ao obter localização ou dados:', error);
       setErrorMsg('Ocorreu um erro ao carregar os dados.');
     } finally {
       setLoading(false);

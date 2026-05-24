@@ -1,390 +1,648 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-    View,
-    Text,
-    Pressable,
-    Modal,
-    TextInput,
-    Alert,
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    Switch,
-    StyleSheet,
-    Dimensions,
-    ScrollView,
+  View,
+  Text,
+  Pressable,
+  Modal,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  Switch,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import tw from 'twrnc';
 import { apiService, CalendarEvent } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { RootStackParamList, MainTabParamList } from '../navigation/types';
+import { MainTabParamList } from '../navigation/types';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Calendar'>;
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const { width: SCREEN_W } = Dimensions.get('window');
 const CELL_W = SCREEN_W / 7;
+const HOUR_H = 60;
+const TIMELINE_HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-const WEEK_DAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const WEEK_DAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
 
-const EVENT_COLORS = ['#2563eb', '#16a34a', '#9333ea', '#dc2626', '#d97706', '#0891b2', '#db2777'];
+const EVENT_COLORS = [
+  '#007AFF',
+  '#34C759',
+  '#FF3B30',
+  '#FF9500',
+  '#AF52DE',
+  '#FF2D55',
+  '#5AC8FA',
+  '#FFCC00',
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function daysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
 function firstDOW(y: number, m: number) { return new Date(y, m, 1).getDay(); }
 const todayStr = () => new Date().toISOString().slice(0, 10);
-const dayISO = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-const eventDay = (ts: string | undefined) => ts?.slice(0, 10) ?? '';
-const fmtTime = (ts: string | undefined) => ts?.slice(11, 16) ?? '';
-const buildTS = (date: string, time: string) =>
-    time && /^\d{1,2}:\d{2}$/.test(time)
-        ? `${date}T${time.padStart(5, '0')}:00+00:00`
-        : `${date}T00:00:00+00:00`;
+const dayISO = (y: number, m: number, d: number) =>
+  `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+const eventDay = (ts?: string) => ts?.slice(0, 10) ?? '';
+const fmtTime = (ts?: string | null) => ts?.slice(11, 16) ?? '';
+const buildTS = (date: string, time: string) => {
+  if (!time) return `${date}T00:00:00+00:00`;
+  const match = time.match(/^(\d{1,2})[.:h](\d{0,2})$/i);
+  if (match) {
+    const h = match[1].padStart(2, '0');
+    const m = (match[2] || '0').padStart(2, '0');
+    return `${date}T${h}:${m}:00+00:00`;
+  }
+  const matchHour = time.match(/^(\d{1,2})$/);
+  if (matchHour) {
+    const h = matchHour[1].padStart(2, '0');
+    return `${date}T${h}:00:00+00:00`;
+  }
+  return `${date}T00:00:00+00:00`;
+};
+const colorForEvent = (e: CalendarEvent, idx: number) => e.color || EVENT_COLORS[idx % EVENT_COLORS.length];
+const fmtHour = (h: number) => h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
+const eventTopOffset = (ts?: string) => {
+  if (!ts) return 0;
+  const h = parseInt(ts.slice(11, 13), 10);
+  const m = parseInt(ts.slice(14, 16), 10);
+  return h * HOUR_H + (m / 60) * HOUR_H;
+};
+const eventHeight = (start?: string, end?: string | null) => {
+  if (!start || !end) return HOUR_H;
+  const s = parseInt(start.slice(11, 13), 10) * 60 + parseInt(start.slice(14, 16), 10);
+  const e = parseInt(end.slice(11, 13), 10) * 60 + parseInt(end.slice(14, 16), 10);
+  return Math.max((e - s) / 60 * HOUR_H, 24);
+};
 
-export default function CalendarScreen({ navigation }: Props) {
-    const { profile } = useAuth();
-    const userId = profile?.id;
-    const { colors, isDark } = useTheme();
+// ─── DotPill ──────────────────────────────────────────────────────────────────
 
-    const now = new Date();
-    const [year, setYear] = useState(now.getFullYear());
-    const [month, setMonth] = useState(now.getMonth());
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(false);
+interface DotPillProps { color: string; label: string; allDay: boolean; }
 
-    const [showModal, setShowModal] = useState(false);
-    const [modalDate, setModalDate] = useState(todayStr());
-    const [form, setForm] = useState({ title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0 });
-    const [saving, setSaving] = useState(false);
-    const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+const DotPill: React.FC<DotPillProps> = ({ color, label }) => (
+  <View style={[dp.wrap, { backgroundColor: color + '22' }]}>
+    <View style={[dp.dot, { backgroundColor: color }]} />
+    <Text numberOfLines={1} style={[dp.text, { color }]}>{label}</Text>
+  </View>
+);
 
-    const touchXRef = useRef(0);
-    const [dayModal, setDayModal] = useState<string | null>(null);
+const dp = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row', alignItems: 'center', borderRadius: 4,
+    paddingHorizontal: 4, paddingVertical: 1.5, marginTop: 2, marginHorizontal: 1,
+    maxWidth: CELL_W - 6,
+  },
+  dot: { width: 5, height: 5, borderRadius: 3, marginRight: 3, flexShrink: 0 },
+  text: { fontSize: 10, fontWeight: '500', flexShrink: 1 },
+});
 
-    const fetchEvents = useCallback(async () => {
-        if (!userId) return;
-        setLoading(true);
-        try {
-            const from = `${year}-${String(month + 1).padStart(2, '0')}-01T00:00:00+00:00`;
-            const last = daysInMonth(year, month);
-            const to = `${year}-${String(month + 1).padStart(2, '0')}-${last}T23:59:59+00:00`;
-            const data = await apiService.getCalendarEvents(userId, from, to);
-            setEvents(data ?? []);
-        } catch (e) { console.error(e); }
-        finally { setLoading(false); }
-    }, [year, month, userId]);
+// ─── DayTimeline ──────────────────────────────────────────────────────────────
 
-    useEffect(() => { fetchEvents(); }, [fetchEvents]);
-
-    const prev = () => { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); };
-    const next = () => { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); };
-    const goToday = () => { setYear(now.getFullYear()); setMonth(now.getMonth()); };
-
-    const total = daysInMonth(year, month);
-    const first = firstDOW(year, month);
-    const cells = [...Array(first).fill(null), ...Array.from({ length: total }, (_, i) => i + 1)];
-    while (cells.length % 7 !== 0) cells.push(null);
-    const weeks: (number | null)[][] = [];
-    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-
-    const eventsForDay = (iso: string) => events.filter(e => eventDay(e.starts_at) === iso);
-
-    const handleSave = async () => {
-        if (!form.title.trim()) { Alert.alert('Título obrigatório'); return; }
-        if (!userId) { Alert.alert('Erro', 'Sessão não encontrada. Faz login novamente.'); return; }
-        setSaving(true);
-        try {
-            const starts = form.allDay ? buildTS(modalDate, '00:00') : buildTS(modalDate, form.startTime);
-            const ends = form.allDay ? buildTS(modalDate, '23:59') : (form.endTime ? buildTS(modalDate, form.endTime) : null);
-            const payload = {
-                user_id: userId,
-                title: form.title.trim(),
-                description: form.description.trim() || null,
-                starts_at: starts,
-                ends_at: ends,
-                all_day: form.allDay,
-            };
-
-            if (editingEvent) {
-                await apiService.updateCalendarEvent(editingEvent.id, payload);
-            } else {
-                await apiService.createCalendarEvent(payload);
-            }
-
-            closeModal();
-            resetForm();
-            await fetchEvents();
-        } catch (e: any) { Alert.alert('Erro', e.message); }
-        finally { setSaving(false); }
-    };
-
-    const handleDelete = async (id: string) => {
-        Alert.alert('Eliminar evento', 'Tens a certeza?', [
-            { text: 'Cancelar', style: 'cancel' },
-            {
-                text: 'Eliminar', style: 'destructive', onPress: async () => {
-                    await apiService.deleteCalendarEvent(id);
-                    setEvents(p => p.filter(e => e.id !== id));
-                }
-            },
-        ]);
-    };
-
-    const resetForm = () => setForm({ title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0 });
-
-    const closeModal = () => {
-        setShowModal(false);
-        setEditingEvent(null);
-        resetForm();
-    };
-
-    const openNew = (iso: string) => {
-        setModalDate(iso || todayStr());
-        setEditingEvent(null);
-        resetForm();
-        setShowModal(true);
-    };
-
-    const openEdit = (event: CalendarEvent) => {
-        setEditingEvent(event);
-        setModalDate(eventDay(event.starts_at) || todayStr());
-        setForm({
-            title: event.title,
-            description: event.description || '',
-            startTime: event.all_day ? '' : fmtTime(event.starts_at),
-            endTime: event.all_day ? '' : fmtTime(event.ends_at || undefined),
-            allDay: event.all_day,
-            colorIdx: 0,
-        });
-        setDayModal(null);
-        setShowModal(true);
-    };
-
-    const today = todayStr();
-
-    return (
-        <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top']}>
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <View style={tw`flex-1 flex-row items-center`}>
-                    <Pressable onPress={next} style={tw`flex-row items-center`}>
-                        <Text numberOfLines={1} style={[styles.headerMonth, { color: colors.textPrimary }]}>{MONTHS[month]} {year}</Text>
-                        <Ionicons name="chevron-down" size={16} color={colors.textSecondary} style={tw`ml-1`} />
-                    </Pressable>
-                </View>
-                <View style={tw`flex-row items-center`}>
-                    <Pressable onPress={goToday} style={styles.headerBtn}>
-                        <Ionicons name="today-outline" size={22} color={colors.textPrimary} />
-                    </Pressable>
-                    <Pressable onPress={fetchEvents} style={styles.headerBtn}>
-                        <Ionicons name="refresh" size={22} color={colors.textPrimary} />
-                    </Pressable>
-                </View>
-            </View>
-
-            <View style={[styles.weekRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-                {WEEK_DAYS.map(d => (
-                    <Text key={d} style={[styles.weekLabel, { color: colors.textSecondary }]}>{d}</Text>
-                ))}
-            </View>
-
-            <View
-                style={tw`flex-1`}
-                onTouchStart={e => touchXRef.current = e.nativeEvent.pageX}
-                onTouchEnd={e => {
-                    const diff = e.nativeEvent.pageX - touchXRef.current;
-                    if (Math.abs(diff) > 50) {
-                        if (diff > 0) prev(); else next();
-                    }
-                }}
-            >
-                {weeks.map((w, wi) => (
-                    <View key={wi} style={[styles.weekLine, { flex: 1, borderBottomColor: colors.border }]}>
-                        {w.map((d, di) => {
-                            const iso = d ? dayISO(year, month, d) : '';
-                            const isToday = iso === today;
-                            const dayEvents = eventsForDay(iso);
-
-                            return (
-                                <Pressable key={di} style={[styles.dayCell, { borderRightColor: colors.border }]} onPress={() => iso && setDayModal(iso)}>
-                                    <View style={[styles.dayNumWrap, isToday && { backgroundColor: colors.accent }]}>
-                                        <Text style={[styles.dayNum, { color: d ? colors.textPrimary : 'transparent' }, isToday && styles.dayNumTodayText]}>{d}</Text>
-                                    </View>
-                                    <View style={tw`flex-1`}>
-                                        {dayEvents.slice(0, 2).map(e => (
-                                            <View key={e.id} style={[styles.pill, { backgroundColor: colors.accent + '30' }]}>
-                                                <Text numberOfLines={1} style={[styles.pillText, { color: colors.textPrimary }]}>{e.title}</Text>
-                                            </View>
-                                        ))}
-                                        {dayEvents.length > 2 && <Text style={[styles.overflow, { color: colors.textSecondary }]}>+{dayEvents.length - 2}</Text>}
-                                    </View>
-                                </Pressable>
-                            );
-                        })}
-                    </View>
-                ))}
-            </View>
-
-            <Pressable style={styles.fab} onPress={() => openNew(today)}>
-                <View style={[styles.fabGrad, { backgroundColor: colors.accent }]}>
-                    <Ionicons name="add" size={32} color="white" />
-                </View>
-            </Pressable>
-
-            {/* Day Events Modal */}
-            <Modal visible={!!dayModal} transparent animationType="fade" onRequestClose={() => setDayModal(null)}>
-                <Pressable style={styles.overlay} onPress={() => setDayModal(null)}>
-                    <View style={[styles.sheet, { backgroundColor: colors.card, marginTop: 'auto' }]}>
-                        <View style={[styles.handle, { backgroundColor: colors.border }]} />
-                        <Text style={[styles.lbl, { color: colors.textSecondary }]}>Eventos de {dayModal}</Text>
-
-                        <ScrollView style={tw`max-h-80`}>
-                            {dayModal && eventsForDay(dayModal).length > 0 ? (
-                                eventsForDay(dayModal).map(e => (
-                                    <View key={e.id} style={[styles.evCard, { backgroundColor: colors.background, borderLeftColor: colors.accent }]}>
-                                        <View style={tw`flex-1`}>
-                                            <Text style={[tw`font-bold text-base`, { color: colors.textPrimary }]}>{e.title}</Text>
-                                            <Text style={[tw`text-xs`, { color: colors.textSecondary }]}>
-                                                {e.all_day ? 'Todo o dia' : `${fmtTime(e.starts_at)} - ${fmtTime(e.ends_at)}`}
-                                            </Text>
-                                            {e.description && <Text style={[tw`mt-1 text-sm`, { color: colors.textSecondary }]}>{e.description}</Text>}
-                                        </View>
-                                        <Pressable onPress={() => openEdit(e)} style={tw`p-2`}>
-                                            <Ionicons name="create-outline" size={20} color={colors.accent} />
-                                        </Pressable>
-                                        <Pressable onPress={() => handleDelete(e.id)} style={tw`p-2`}>
-                                            <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                                        </Pressable>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text style={[tw`text-center py-8`, { color: colors.textSecondary }]}>Nenhum evento para este dia.</Text>
-                            )}
-                        </ScrollView>
-
-                        <Pressable
-                            onPress={() => {
-                                const d = dayModal;
-                                setDayModal(null);
-                                if (d) openNew(d);
-                            }}
-                            style={tw`mt-4`}
-                        >
-                            <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: colors.accent }]}>
-                                <Text style={tw`text-white font-bold`}>Adicionar Novo Evento</Text>
-                            </View>
-                        </Pressable>
-                    </View>
-                </Pressable>
-            </Modal>
-
-            {/* New Event Modal */}
-            <Modal visible={showModal} transparent animationType="slide" onRequestClose={closeModal}>
-                <View style={{ flex: 1 }}>
-                    <Pressable style={[styles.overlay, { justifyContent: 'center', padding: 20 }]} onPress={closeModal}>
-                        <Pressable style={[styles.sheet, { backgroundColor: colors.card, borderRadius: 28 }]} onPress={e => e.stopPropagation()}>
-                            <View style={[styles.handle, { backgroundColor: colors.border }]} />
-
-                            <Text style={[styles.lbl, { color: colors.textSecondary }]}>{editingEvent ? 'Editar Evento' : 'Novo Evento'} - {modalDate}</Text>
-                            <TextInput
-                                style={[styles.inp, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                                placeholder="Título do evento"
-                                placeholderTextColor={colors.textMuted}
-                                value={form.title}
-                                onChangeText={t => setForm(f => ({ ...f, title: t }))}
-                            />
-
-                            <TextInput
-                                style={[styles.inp, tw`h-24`, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                                placeholder="Descrição (opcional)"
-                                placeholderTextColor={colors.textMuted}
-                                multiline
-                                value={form.description}
-                                onChangeText={t => setForm(f => ({ ...f, description: t }))}
-                            />
-
-                            <View style={tw`flex-row items-center justify-between mb-4`}>
-                                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Todo o dia</Text>
-                                <Switch
-                                    value={form.allDay}
-                                    onValueChange={v => setForm(f => ({ ...f, allDay: v }))}
-                                    trackColor={{ false: '#767577', true: colors.accent + '80' }}
-                                    thumbColor={form.allDay ? colors.accent : '#f4f3f4'}
-                                />
-                            </View>
-
-                            {!form.allDay && (
-                                <View style={tw`flex-row gap-4 mb-4`}>
-                                    <View style={tw`flex-1`}>
-                                        <Text style={[styles.lbl, { color: colors.textSecondary }]}>Início (HH:MM)</Text>
-                                        <TextInput
-                                            style={[styles.inp, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                                            placeholder="09:00"
-                                            placeholderTextColor={colors.textMuted}
-                                            value={form.startTime}
-                                            onChangeText={t => setForm(f => ({ ...f, startTime: t }))}
-                                        />
-                                    </View>
-                                    <View style={tw`flex-1`}>
-                                        <Text style={[styles.lbl, { color: colors.textSecondary }]}>Fim (HH:MM)</Text>
-                                        <TextInput
-                                            style={[styles.inp, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                                            placeholder="10:00"
-                                            placeholderTextColor={colors.textMuted}
-                                            value={form.endTime}
-                                            onChangeText={t => setForm(f => ({ ...f, endTime: t }))}
-                                        />
-                                    </View>
-                                </View>
-                            )}
-
-                            <View style={tw`flex-row gap-3 mt-2`}>
-                                <Pressable style={tw`flex-1`} onPress={closeModal}>
-                                    <View style={[tw`rounded-xl py-4 items-center border`, { borderColor: colors.border }]}>
-                                        <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Cancelar</Text>
-                                    </View>
-                                </Pressable>
-                                <Pressable style={tw`flex-1`} onPress={handleSave} disabled={saving}>
-                                    <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: colors.accent }]}>
-                                        {saving
-                                            ? <ActivityIndicator color="white" />
-                                            : <Text style={tw`text-white font-bold text-base`}>{editingEvent ? 'Atualizar' : 'Guardar'}</Text>}
-                                    </View>
-                                </Pressable>
-                            </View>
-                        </Pressable>
-                    </Pressable>
-                </View>
-            </Modal>
-        </SafeAreaView>
-    );
+interface TimelineProps {
+  events: CalendarEvent[];
+  date: string;
+  ios: { text: string; textSecondary: string; cardBg: string; separator: string; };
+  onEdit: (e: CalendarEvent) => void;
+  onDelete: (id: string) => void;
+  onAdd: () => void;
+  isDark: boolean;
+  onBack?: () => void;
 }
 
-const styles = StyleSheet.create({
-    root: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 8, paddingHorizontal: 16, borderBottomWidth: 1 },
-    headerMonth: { fontSize: 20, fontFamily: 'Poppins_700Bold' },
-    headerBtn: { padding: 8 },
-    weekRow: { flexDirection: 'row', borderBottomWidth: 1 },
-    weekLabel: { width: CELL_W, textAlign: 'center', fontSize: 11, fontFamily: 'Poppins_600SemiBold', paddingVertical: 4, textTransform: 'uppercase' },
-    weekLine: { flexDirection: 'row', borderBottomWidth: 1 },
-    dayCell: { width: CELL_W, borderRightWidth: 1, overflow: 'hidden', paddingBottom: 4, minHeight: 65 },
-    dayNumWrap: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', margin: 3 },
-    dayNum: { fontSize: 13, fontFamily: 'Poppins_400Regular' },
-    dayNumTodayText: { color: 'white', fontFamily: 'Poppins_700Bold' },
-    pill: { marginHorizontal: 3, marginTop: 2, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 },
-    pillText: { fontSize: 10, fontFamily: 'Poppins_600SemiBold' },
-    overflow: { fontSize: 10, marginLeft: 4, marginTop: 1, fontFamily: 'Poppins_400Regular' },
-    fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 10, borderRadius: 30, overflow: 'hidden', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
-    fabGrad: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' },
-    sheet: { padding: 24, paddingBottom: 30 },
-    handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
-    lbl: { fontSize: 11, fontFamily: 'Poppins_700Bold', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-    inp: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, marginBottom: 14, fontFamily: 'Poppins_400Regular' },
-    colorDot: { width: 26, height: 26, borderRadius: 13, marginRight: 8 },
-    colorDotActive: { borderWidth: 3, borderColor: '#1e293b', transform: [{ scale: 1.15 }] },
-    evCard: { flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4, borderRadius: 12, padding: 12, marginBottom: 8 },
+function DayTimeline({ events, date, ios, onEdit, onDelete, onAdd, isDark, onBack }: TimelineProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const isToday = date === todayStr();
+
+  useEffect(() => {
+    const targetHour = isToday ? Math.max(now.getHours() - 1, 0) : 8;
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: targetHour * HOUR_H, animated: true });
+    }, 300);
+  }, [date]);
+
+  const allDayEvents = events.filter(e => e.all_day);
+  const timedEvents = events.filter(e => !e.all_day);
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Header do dia */}
+      <View style={[tl.header, { borderBottomColor: ios.separator }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {onBack && (
+            <Pressable onPress={onBack} style={{ marginRight: 12 }}>
+              <Ionicons name="chevron-back" size={24} color="#007AFF" />
+            </Pressable>
+          )}
+          <View>
+            <Text style={[tl.headerWeekday, { color: '#FF3B30' }]}>
+              {new Date(date + 'T12:00:00').toLocaleDateString('pt-PT', { weekday: 'long' }).toUpperCase()}
+            </Text>
+            <Text style={[tl.headerDate, { color: ios.text }]}>
+              {new Date(date + 'T12:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}
+            </Text>
+          </View>
+        </View>
+        <Pressable onPress={onAdd} style={[tl.addBtn, { backgroundColor: '#007AFF' }]}>
+          <Ionicons name="add" size={20} color="#fff" />
+        </Pressable>
+      </View>
+
+      {/* Eventos todo o dia */}
+      {allDayEvents.length > 0 && (
+        <View style={[tl.allDayStrip, { borderBottomColor: ios.separator, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+          <Text style={[tl.allDayLabel, { color: ios.textSecondary }]}>todo o dia</Text>
+          <View style={{ flex: 1, gap: 3 }}>
+            {allDayEvents.map((e, i) => (
+              <Pressable key={e.id} onPress={() => onEdit(e)}>
+                <View style={[tl.allDayPill, { backgroundColor: EVENT_COLORS[i % EVENT_COLORS.length] }]}>
+                  <Text style={tl.allDayPillText} numberOfLines={1}>{e.title}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Timeline com horas */}
+      <ScrollView ref={scrollRef} style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        <View style={tl.timelineWrap}>
+          {TIMELINE_HOURS.map(h => (
+            <View key={h} style={[tl.hourRow, { height: HOUR_H }]}>
+              <Text style={[tl.hourLabel, { color: ios.textSecondary }]}>{fmtHour(h)}</Text>
+              <View style={[tl.hourLine, { backgroundColor: ios.separator }]} />
+            </View>
+          ))}
+
+          {isToday && (
+            <View style={[tl.nowLine, { top: (nowMinutes / 60) * HOUR_H }]}>
+              <View style={tl.nowDot} />
+              <View style={tl.nowBar} />
+            </View>
+          )}
+
+          {timedEvents.map((e, i) => {
+            const top = eventTopOffset(e.starts_at);
+            const height = eventHeight(e.starts_at, e.ends_at);
+            const color = colorForEvent(e, i);
+            return (
+              <Pressable
+                key={e.id}
+                style={[tl.eventBlock, {
+                  top, height,
+                  backgroundColor: color + '22',
+                  borderLeftColor: color,
+                  left: 64, right: 8,
+                }]}
+                onPress={() => onEdit(e)}
+                onLongPress={() => onDelete(e.id)}
+              >
+                <Text style={[tl.eventTitle, { color }]} numberOfLines={1}>{e.title}</Text>
+                {height > 30 && (
+                  <Text style={[tl.eventTime, { color: color + 'BB' }]}>
+                    {fmtTime(e.starts_at)}{e.ends_at ? ` – ${fmtTime(e.ends_at)}` : ''}
+                  </Text>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const tl = StyleSheet.create({
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerWeekday: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  headerDate: { fontSize: 20, fontWeight: '700', marginTop: 1 },
+  addBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  allDayStrip: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    paddingHorizontal: 16, paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth, gap: 8,
+  },
+  allDayLabel: { fontSize: 11, width: 48, paddingTop: 3 },
+  allDayPill: { borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3 },
+  allDayPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  timelineWrap: { position: 'relative', paddingBottom: 40, marginTop: 16 },
+  hourRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  hourLabel: { width: 56, textAlign: 'right', fontSize: 11, fontWeight: '400', paddingRight: 8, marginTop: -7 },
+  hourLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  nowLine: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', alignItems: 'center', zIndex: 10 },
+  nowDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF3B30', marginLeft: 50 },
+  nowBar: { flex: 1, height: 1.5, backgroundColor: '#FF3B30' },
+  eventBlock: { position: 'absolute', borderLeftWidth: 3, borderRadius: 6, padding: 5, overflow: 'hidden' },
+  eventTitle: { fontSize: 12, fontWeight: '600' },
+  eventTime: { fontSize: 11, marginTop: 1 },
+});
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function CalendarScreen({ navigation }: Props) {
+  const { profile } = useAuth();
+  const userId = profile?.id;
+  const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string>(todayStr());
+  const [viewMode, setViewMode] = useState<'month' | 'day'>('month');
+
+  const [showForm, setShowForm] = useState(false);
+  const [formDate, setFormDate] = useState(todayStr());
+  const [form, setForm] = useState({
+    title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0,
+  });
+  const [saving, setSaving] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
+  const touchX = useRef(0);
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+
+  const fetchEvents = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const from = `${year}-${String(month + 1).padStart(2, '0')}-01T00:00:00+00:00`;
+      const last = daysInMonth(year, month);
+      const to = `${year}-${String(month + 1).padStart(2, '0')}-${last}T23:59:59+00:00`;
+      const data = await apiService.getCalendarEvents(userId, from, to);
+      setEvents(data ?? []);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [year, month, userId]);
+
+  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+
+  // ── Grid ──────────────────────────────────────────────────────────────────
+
+  const total = daysInMonth(year, month);
+  const first = firstDOW(year, month);
+  const cells = [...Array(first).fill(null), ...Array.from({ length: total }, (_, i) => i + 1)];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+  const eventsForDay = (iso: string) => events.filter(e => eventDay(e.starts_at) === iso);
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  const prev = () => { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); };
+  const next = () => { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); };
+  const goToday = () => { setYear(now.getFullYear()); setMonth(now.getMonth()); setSelectedDay(todayStr()); };
+
+  // ── Form ──────────────────────────────────────────────────────────────────
+
+  const resetForm = () => setForm({ title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0 });
+
+  const openNewForm = (iso: string) => {
+    setFormDate(iso); setEditingEvent(null); resetForm();
+    setTimeout(() => setShowForm(true), 100);
+  };
+
+  const openEditForm = (event: CalendarEvent) => {
+    setEditingEvent(event);
+    setFormDate(eventDay(event.starts_at) || todayStr());
+    setForm({
+      title: event.title,
+      description: event.description || '',
+      startTime: event.all_day ? '' : fmtTime(event.starts_at),
+      endTime: event.all_day ? '' : fmtTime(event.ends_at ?? undefined),
+      allDay: event.all_day,
+      colorIdx: event.color ? Math.max(0, EVENT_COLORS.indexOf(event.color)) : 0,
+    });
+    setTimeout(() => setShowForm(true), 100);
+  };
+
+  const closeForm = () => { setShowForm(false); setEditingEvent(null); resetForm(); };
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { Alert.alert('Título obrigatório'); return; }
+    if (!userId) { Alert.alert('Erro', 'Faz login novamente.'); return; }
+    setSaving(true);
+    try {
+      const starts = form.allDay ? buildTS(formDate, '00:00') : buildTS(formDate, form.startTime);
+      const ends = form.allDay ? buildTS(formDate, '23:59') : (form.endTime ? buildTS(formDate, form.endTime) : null);
+      const payload = {
+        user_id: userId,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        starts_at: starts, ends_at: ends, all_day: form.allDay,
+        color: EVENT_COLORS[form.colorIdx],
+      };
+      if (editingEvent) { await apiService.updateCalendarEvent(editingEvent.id, payload); }
+      else { await apiService.createCalendarEvent(payload); }
+      closeForm();
+      await fetchEvents();
+    } catch (e: any) { Alert.alert('Erro', e.message); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    Alert.alert('Eliminar evento', 'Tens a certeza?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: async () => {
+        await apiService.deleteCalendarEvent(id);
+        setEvents(p => p.filter(e => e.id !== id));
+      }},
+    ]);
+  };
+
+  // ── Theme ─────────────────────────────────────────────────────────────────
+
+  const today = todayStr();
+  const ios = {
+    accent: '#007AFF',
+    todayBg: '#FF3B30',
+    cellBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    headerBg: isDark ? '#1C1C1E' : '#F2F2F7',
+    sheetBg: isDark ? '#1C1C1E' : '#FFFFFF',
+    handle: isDark ? '#48484A' : '#C7C7CC',
+    cardBg: isDark ? '#2C2C2E' : '#F2F2F7',
+    inputBg: isDark ? '#2C2C2E' : '#F2F2F7',
+    separator: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+    text: isDark ? '#FFFFFF' : '#000000',
+    textSecondary: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  return (
+    <SafeAreaView style={[s.root, { backgroundColor: ios.headerBg }]} edges={['top']}>
+
+      {viewMode === 'month' ? (
+        <>
+          {/* Header */}
+          <View style={[s.header, { backgroundColor: ios.headerBg }]}>
+            <View style={s.headerLeft}>
+              <Pressable onPress={prev} hitSlop={8} style={s.navBtn}>
+                <Ionicons name="chevron-back" size={20} color={ios.accent} />
+              </Pressable>
+              <Pressable onPress={next} hitSlop={8} style={s.navBtn}>
+                <Ionicons name="chevron-forward" size={20} color={ios.accent} />
+              </Pressable>
+            </View>
+            <Pressable onPress={goToday} style={s.headerCenter}>
+              <Text style={[s.monthTitle, { color: ios.text }]}>{MONTHS[month]}</Text>
+              <Text style={[s.yearTitle, { color: ios.textSecondary }]}>{year}</Text>
+            </Pressable>
+            <View style={s.headerRight}>
+              {loading && <ActivityIndicator size="small" color={ios.accent} style={{ marginRight: 6 }} />}
+              <Pressable hitSlop={8} style={s.navBtn} onPress={fetchEvents}>
+                <Ionicons name="refresh" size={19} color={ios.accent} />
+              </Pressable>
+              <Pressable hitSlop={8} style={s.navBtn} onPress={() => openNewForm(selectedDay)}>
+                <Ionicons name="add" size={24} color={ios.accent} />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Dias da semana */}
+          <View style={[s.weekRow, { backgroundColor: ios.headerBg, borderBottomColor: ios.cellBorder }]}>
+            {WEEK_DAYS.map((d, i) => (
+              <Text key={i} style={[s.weekLabel, { color: i === 0 || i === 6 ? '#FF3B30' : ios.textSecondary }]}>
+                {d}
+              </Text>
+            ))}
+          </View>
+
+          {/* Grelha */}
+          <View
+            style={[s.grid, { backgroundColor: isDark ? '#000000' : '#FFFFFF' }]}
+            onTouchStart={e => { touchX.current = e.nativeEvent.pageX; }}
+            onTouchEnd={e => {
+              const diff = e.nativeEvent.pageX - touchX.current;
+              if (Math.abs(diff) > 60) { if (diff > 0) prev(); else next(); }
+            }}
+          >
+            {weeks.map((week, wi) => (
+              <View key={wi} style={[s.weekLine, { borderBottomColor: ios.cellBorder }]}>
+                {week.map((d, di) => {
+                  const iso = d ? dayISO(year, month, d) : '';
+                  const isToday = iso === today;
+                  const isSelected = iso === selectedDay && iso !== today;
+                  const dayEvts = d ? eventsForDay(iso) : [];
+                  const isWeekend = di === 0 || di === 6;
+                  return (
+                    <Pressable
+                      key={di}
+                      style={[s.cell, { borderRightColor: ios.cellBorder }]}
+                      onPress={() => {
+                        if (iso) {
+                          setSelectedDay(iso);
+                          setViewMode('day');
+                        }
+                      }}
+                    >
+                      <View style={[
+                        s.dayNumWrap,
+                        isToday && { backgroundColor: ios.todayBg },
+                        isSelected && { backgroundColor: isDark ? '#3A3A3C' : '#E5E5EA' },
+                      ]}>
+                        <Text style={[
+                          s.dayNum,
+                          { color: d ? (isWeekend ? '#FF3B30' : ios.text) : 'transparent' },
+                          (isToday || isSelected) && { color: isToday ? '#FFFFFF' : ios.text },
+                        ]}>
+                          {d ?? ''}
+                        </Text>
+                      </View>
+                      <ScrollView style={s.pillsScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+                        {dayEvts.map((e, ei) => (
+                          <DotPill key={e.id} color={colorForEvent(e, ei)} label={e.title} allDay={e.all_day} />
+                        ))}
+                      </ScrollView>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        </>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: isDark ? '#000' : '#fff' }}>
+          <DayTimeline
+            events={eventsForDay(selectedDay)}
+            date={selectedDay}
+            ios={{
+              text: ios.text,
+              textSecondary: ios.textSecondary,
+              cardBg: ios.cardBg,
+              separator: ios.separator,
+            }}
+            onEdit={openEditForm}
+            onDelete={handleDelete}
+            onAdd={() => openNewForm(selectedDay)}
+            isDark={isDark}
+            onBack={() => setViewMode('month')}
+          />
+        </View>
+      )}
+
+      {/* Modal formulário */}
+      <Modal visible={showForm} transparent animationType="slide" onRequestClose={closeForm} statusBarTranslucent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <Pressable style={{ flex: 1 }} onPress={closeForm} />
+          <View style={[s.formSheet, { backgroundColor: ios.sheetBg, paddingBottom: insets.bottom + 16 }]}>
+            <View style={[s.sheetHandle, { backgroundColor: ios.handle }]} />
+            <View style={s.formHeader}>
+              <Pressable onPress={closeForm}>
+                <Text style={[s.formCancel, { color: ios.accent }]}>Cancelar</Text>
+              </Pressable>
+              <Text style={[s.formTitle, { color: ios.text }]}>
+                {editingEvent ? 'Editar Evento' : 'Novo Evento'}
+              </Text>
+              <Pressable onPress={handleSave} disabled={saving}>
+                {saving
+                  ? <ActivityIndicator color={ios.accent} />
+                  : <Text style={[s.formSave, { color: ios.accent }]}>{editingEvent ? 'Atualizar' : 'Adicionar'}</Text>}
+              </Pressable>
+            </View>
+
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}>
+              {/* Cor */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
+                {EVENT_COLORS.map((c, i) => (
+                  <Pressable key={i} onPress={() => setForm(f => ({ ...f, colorIdx: i }))}
+                    style={[s.colorDot, { backgroundColor: c }, form.colorIdx === i && s.colorDotSelected]} />
+                ))}
+              </ScrollView>
+
+              <Text style={[s.fieldLabel, { color: ios.textSecondary }]}>TÍTULO</Text>
+              <TextInput
+                style={[s.input, { backgroundColor: ios.inputBg, color: ios.text }]}
+                placeholder="Título do evento" placeholderTextColor={ios.textSecondary}
+                value={form.title} onChangeText={t => setForm(f => ({ ...f, title: t }))} autoFocus
+              />
+
+              <Text style={[s.fieldLabel, { color: ios.textSecondary }]}>DESCRIÇÃO</Text>
+              <TextInput
+                style={[s.input, s.inputMultiline, { backgroundColor: ios.inputBg, color: ios.text }]}
+                placeholder="Notas (opcional)" placeholderTextColor={ios.textSecondary}
+                multiline value={form.description} onChangeText={t => setForm(f => ({ ...f, description: t }))}
+              />
+
+              <View style={[s.toggleRow, { backgroundColor: ios.inputBg }]}>
+                <Text style={[s.toggleLabel, { color: ios.text }]}>Todo o dia</Text>
+                <Switch
+                  value={form.allDay} onValueChange={v => setForm(f => ({ ...f, allDay: v }))}
+                  trackColor={{ false: '#767577', true: ios.accent }}
+                  thumbColor="#FFFFFF" ios_backgroundColor="#767577"
+                />
+              </View>
+
+              {!form.allDay && (
+                <View style={s.timeRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.fieldLabel, { color: ios.textSecondary }]}>INÍCIO</Text>
+                    <TextInput
+                      style={[s.input, { backgroundColor: ios.inputBg, color: ios.text }]}
+                      placeholder="09:00" placeholderTextColor={ios.textSecondary}
+                      value={form.startTime} onChangeText={t => setForm(f => ({ ...f, startTime: t }))}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.fieldLabel, { color: ios.textSecondary }]}>FIM</Text>
+                    <TextInput
+                      style={[s.input, { backgroundColor: ios.inputBg, color: ios.text }]}
+                      placeholder="10:00" placeholderTextColor={ios.textSecondary}
+                      value={form.endTime} onChangeText={t => setForm(f => ({ ...f, endTime: t }))}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+    </SafeAreaView>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+
+  root: { flex: 1 },
+
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 },
+
+  headerLeft: { flexDirection: 'row', gap: 2, flex: 1 },
+
+  headerCenter: { alignItems: 'center', flex: 2 },
+
+  headerRight: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flex: 1, gap: 2 },
+
+  navBtn: { padding: 6 },
+
+  monthTitle: { fontSize: 17, fontWeight: '600', letterSpacing: -0.3 },
+  
+  yearTitle: { fontSize: 13, fontWeight: '400', marginTop: -1 },
+
+  weekRow: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
+
+  weekLabel: { width: CELL_W, textAlign: 'center', fontSize: 12, fontWeight: '600', paddingVertical: 5, letterSpacing: 0.2 },
+
+  grid: { flex: 1 },
+
+  weekLine: { flexDirection: 'row', flex: 1, borderBottomWidth: StyleSheet.hairlineWidth },
+
+  cell: { width: CELL_W, borderRightWidth: StyleSheet.hairlineWidth, paddingBottom: 2 },
+
+  dayNumWrap: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', margin: 3, alignSelf: 'center' },
+  
+  dayNum: { fontSize: 13, fontWeight: '400' },
+
+  pillsScroll: { flex: 1, paddingHorizontal: 1 },
+
+  sheetHandle: { width: 36, height: 5, borderRadius: 3, alignSelf: 'center', marginBottom: 14 },
+
+  formSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingTop: 10 },
+
+  formHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 16 },
+
+  formTitle: { fontSize: 17, fontWeight: '600' },
+
+  formCancel: { fontSize: 16 },
+
+  formSave: { fontSize: 16, fontWeight: '600' },
+
+  fieldLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, marginBottom: 6, marginTop: 4 },
+
+  input: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12 },
+
+  inputMultiline: { height: 80, textAlignVertical: 'top' },
+
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
+
+  toggleLabel: { fontSize: 15 },
+
+  timeRow: { flexDirection: 'row', gap: 12 },
+
+  colorDot: { width: 28, height: 28, borderRadius: 14 },
+
+  colorDotSelected: { borderWidth: 3, borderColor: '#FFFFFF', transform: [{ scale: 1.15 }] },
 });

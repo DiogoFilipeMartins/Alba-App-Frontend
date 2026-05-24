@@ -59,7 +59,6 @@ function MainTabs() {
         })}
       >
         <Tab.Screen name="Map" component={MapScreen} options={{ tabBarLabel: 'Mapa' }} />
-        <Tab.Screen name="SuggestPlace" component={SuggestPlaceScreen} options={{ tabBarLabel: 'Sugerir' }} />
         <Tab.Screen name="Donations" component={DonationsScreen} options={{ tabBarLabel: 'Doar' }} />
         <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarLabel: 'Agenda' }} />
         <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Perfil' }} />
