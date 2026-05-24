@@ -52,8 +52,6 @@ function MainTabs() {
           tabBarIcon: ({ color, size }) => {
             let iconName: any;
             if (route.name === 'Map') iconName = 'map';
-            else if (route.name === 'SuggestPlace') iconName = 'add-circle';
-            else if (route.name === 'Donations') iconName = 'heart';
             else if (route.name === 'Calendar') iconName = 'calendar';
             else if (route.name === 'Profile') iconName = 'person';
             else if (route.name === 'Communities') iconName = 'people';
