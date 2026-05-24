@@ -111,7 +111,7 @@ const dp = StyleSheet.create({
 interface TimelineProps {
   events: CalendarEvent[];
   date: string;
-  ios: { text: string; textSecondary: string; cardBg: string; separator: string; };
+  ios: { text: string; textSecondary: string; cardBg: string; separator: string; accent: string; todayBg: string; };
   onEdit: (e: CalendarEvent) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
@@ -210,11 +210,11 @@ function DayTimeline({ events, date, ios, onEdit, onDelete, onAdd, isDark, onBac
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {onBack && (
             <Pressable onPress={onBack} style={{ marginRight: 12 }}>
-              <Ionicons name="chevron-back" size={24} color="#007AFF" />
+              <Ionicons name="chevron-back" size={24} color={ios.accent} />
             </Pressable>
           )}
           <View>
-            <Text style={[tl.headerWeekday, { color: '#FF3B30' }]}>
+            <Text style={[tl.headerWeekday, { color: ios.todayBg }]}>
               {new Date(date + 'T12:00:00').toLocaleDateString('pt-PT', { weekday: 'long' }).toUpperCase()}
             </Text>
             <Text style={[tl.headerDate, { color: ios.text }]}>
@@ -222,7 +222,7 @@ function DayTimeline({ events, date, ios, onEdit, onDelete, onAdd, isDark, onBac
             </Text>
           </View>
         </View>
-        <Pressable onPress={onAdd} style={[tl.addBtn, { backgroundColor: '#007AFF' }]}>
+        <Pressable onPress={onAdd} style={[tl.addBtn, { backgroundColor: ios.accent }]}>
           <Ionicons name="add" size={20} color="#fff" />
         </Pressable>
       </View>
@@ -440,8 +440,8 @@ export default function CalendarScreen({ navigation }: Props) {
 
   const today = todayStr();
   const ios = {
-    accent: '#007AFF',
-    todayBg: '#FF3B30',
+    accent: colors.primary,
+    todayBg: colors.primary,
     cellBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
     headerBg: isDark ? '#1C1C1E' : '#F2F2F7',
     sheetBg: isDark ? '#1C1C1E' : '#FFFFFF',
@@ -476,9 +476,6 @@ export default function CalendarScreen({ navigation }: Props) {
             </Pressable>
             <View style={s.headerRight}>
               {loading && <ActivityIndicator size="small" color={ios.accent} style={{ marginRight: 6 }} />}
-              <Pressable hitSlop={8} style={s.navBtn} onPress={fetchEvents}>
-                <Ionicons name="refresh" size={19} color={ios.accent} />
-              </Pressable>
               <Pressable hitSlop={8} style={s.navBtn} onPress={() => openNewForm(selectedDay)}>
                 <Ionicons name="add" size={24} color={ios.accent} />
               </Pressable>
@@ -488,7 +485,7 @@ export default function CalendarScreen({ navigation }: Props) {
           {/* Dias da semana */}
           <View style={[s.weekRow, { backgroundColor: ios.headerBg, borderBottomColor: ios.cellBorder }]}>
             {WEEK_DAYS.map((d, i) => (
-              <Text key={i} style={[s.weekLabel, { color: i === 0 || i === 6 ? '#FF3B30' : ios.textSecondary }]}>
+              <Text key={i} style={[s.weekLabel, { color: i === 0 || i === 6 ? ios.todayBg : ios.textSecondary }]}>
                 {d}
               </Text>
             ))}
@@ -529,7 +526,7 @@ export default function CalendarScreen({ navigation }: Props) {
                       ]}>
                         <Text style={[
                           s.dayNum,
-                          { color: d ? (isWeekend ? '#FF3B30' : ios.text) : 'transparent' },
+                          { color: d ? (isWeekend ? ios.todayBg : ios.text) : 'transparent' },
                           (isToday || isSelected) && { color: isToday ? '#FFFFFF' : ios.text },
                         ]}>
                           {d ?? ''}
@@ -557,6 +554,8 @@ export default function CalendarScreen({ navigation }: Props) {
               textSecondary: ios.textSecondary,
               cardBg: ios.cardBg,
               separator: ios.separator,
+              accent: ios.accent,
+              todayBg: ios.todayBg,
             }}
             onEdit={openEditForm}
             onDelete={handleDelete}
