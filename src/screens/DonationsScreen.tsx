@@ -224,7 +224,7 @@ export default function DonationsScreen({}: Props) {
             {/* National Organizations Section */}
             <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Associações Nacionais</Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Apoia as organizações de referência.</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Apoie organizações nacionais.</Text>
             </View>
             <ScrollView 
                 horizontal 

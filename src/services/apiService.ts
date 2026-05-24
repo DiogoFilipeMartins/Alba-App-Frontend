@@ -198,4 +198,35 @@ export const apiService = {
             method: 'DELETE',
         });
     },
+
+    // Communities
+    async getCommunities(): Promise<Community[]> {
+        return apiFetch('/communities');
+    },
+
+    async createCommunity(data: { name: string, description: string }): Promise<Community> {
+        return apiFetch('/communities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+    },
+
+    async joinCommunity(id: string): Promise<void> {
+        await apiFetch(`/communities/${id}/join`, {
+            method: 'POST',
+        });
+    },
+
+    async getCommunityMessages(id: string): Promise<CommunityMessage[]> {
+        return apiFetch(`/communities/${id}/messages`);
+    },
+
+    async sendCommunityMessage(id: string, content: string): Promise<CommunityMessage> {
+        return apiFetch(`/communities/${id}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content }),
+        });
+    },
 };

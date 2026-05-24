@@ -5,14 +5,18 @@ import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { MainTabParamList } from '../navigation/types';
+import { CompositeScreenProps } from '@react-navigation/native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { FavoritePlace, favoritesService } from '../services/favoritesService';
 import { apiService } from '../services/apiService';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'Profile'>;
+type Props = CompositeScreenProps<
+    BottomTabScreenProps<MainTabParamList, 'Profile'>,
+    NativeStackScreenProps<RootStackParamList>
+>;
 
 export default function ProfileScreen({ navigation }: Props) {
     const { profile, signOut, isAdmin } = useAuth();
@@ -76,6 +80,8 @@ export default function ProfileScreen({ navigation }: Props) {
     };
 
     const menuItems = [
+        { icon: 'add-circle-outline', label: 'Sugerir Local', onPress: () => navigation.navigate('SuggestPlace', {}) },
+        { icon: 'heart-outline', label: 'Doar e Apoiar', onPress: () => navigation.navigate('Donations') },
         { icon: 'person-outline', label: 'Dados Pessoais', onPress: () => {} },
         { icon: 'notifications-outline', label: 'Notificações', onPress: () => {} },
         { icon: 'shield-checkmark-outline', label: 'Segurança', onPress: () => {} },

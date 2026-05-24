@@ -17,6 +17,8 @@ import MapPickerScreen from '../screens/MapPickerScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import DonationsScreen from '../screens/DonationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import CommunitiesScreen from '../screens/CommunitiesScreen';
+import CommunityChatScreen from '../screens/CommunityChatScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -54,12 +56,13 @@ function MainTabs() {
             else if (route.name === 'Donations') iconName = 'heart';
             else if (route.name === 'Calendar') iconName = 'calendar';
             else if (route.name === 'Profile') iconName = 'person';
+            else if (route.name === 'Communities') iconName = 'people';
             return <Ionicons name={iconName} size={size} color={color} />;
           },
         })}
       >
         <Tab.Screen name="Map" component={MapScreen} options={{ tabBarLabel: 'Mapa' }} />
-        <Tab.Screen name="Donations" component={DonationsScreen} options={{ tabBarLabel: 'Doar' }} />
+        <Tab.Screen name="Communities" component={CommunitiesScreen} options={{ tabBarLabel: 'Comunidade' }} />
         <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarLabel: 'Agenda' }} />
         <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Perfil' }} />
       </Tab.Navigator>
@@ -97,7 +100,10 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="Admin" component={AdminScreen} />
-            <Stack.Screen name="MapPicker" component={MapPickerScreen} />
+            <Stack.Screen name="SuggestPlace" component={SuggestPlaceScreen} />
+            <Stack.Screen name="Donations" component={DonationsScreen} />
+            <Stack.Screen name="MapPicker" component={MapPickerScreen} options={{ presentation: 'modal' }} />
+            <Stack.Screen name="CommunityChat" component={CommunityChatScreen} />
           </>
         )}
       </Stack.Navigator>
