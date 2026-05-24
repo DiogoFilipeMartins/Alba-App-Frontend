@@ -19,15 +19,10 @@ import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { CompositeScreenProps } from '@react-navigation/native';
-import { RootStackParamList, MainTabParamList } from '../navigation/types';
+import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 
-type Props = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'SuggestPlace'>,
-  NativeStackScreenProps<RootStackParamList>
->;
-
+type Props = NativeStackScreenProps<RootStackParamList, 'SuggestPlace'>;
 
 export default function SuggestPlaceScreen({ navigation, route }: Props) {
     const { user } = useAuth();
@@ -160,6 +155,9 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
         <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]} edges={['top']}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={tw`flex-1`}>
                 <View style={[tw`flex-row items-center px-5 pt-4 pb-4`, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+                    <Pressable onPress={() => navigation.goBack()} style={tw`mr-4`}>
+                        <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                    </Pressable>
                     <Text style={[tw`text-xl font-bold`, { color: colors.textPrimary }]}>Sugerir Local</Text>
                 </View>
 

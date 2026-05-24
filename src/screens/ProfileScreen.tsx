@@ -82,10 +82,10 @@ export default function ProfileScreen({ navigation }: Props) {
     const menuItems = [
         { icon: 'add-circle-outline', label: 'Sugerir Local', onPress: () => navigation.navigate('SuggestPlace', {}) },
         { icon: 'heart-outline', label: 'Doar e Apoiar', onPress: () => navigation.navigate('Donations') },
-        { icon: 'person-outline', label: 'Dados Pessoais', onPress: () => {} },
-        { icon: 'notifications-outline', label: 'Notificações', onPress: () => {} },
-        { icon: 'shield-checkmark-outline', label: 'Segurança', onPress: () => {} },
-        { icon: 'help-circle-outline', label: 'Suporte', onPress: () => {} },
+        { icon: 'person-outline', label: 'Dados Pessoais', onPress: () => Alert.alert('Em Desenvolvimento', 'Esta funcionalidade estará disponível em breve.') },
+        { icon: 'notifications-outline', label: 'Notificações', onPress: () => Alert.alert('Em Desenvolvimento', 'Esta funcionalidade estará disponível em breve.') },
+        { icon: 'shield-checkmark-outline', label: 'Segurança', onPress: () => Alert.alert('Em Desenvolvimento', 'Esta funcionalidade estará disponível em breve.') },
+        { icon: 'help-circle-outline', label: 'Suporte', onPress: () => Alert.alert('Em Desenvolvimento', 'Esta funcionalidade estará disponível em breve.') },
     ];
 
     if (isAdmin) {

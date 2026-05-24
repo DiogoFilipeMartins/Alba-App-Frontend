@@ -15,12 +15,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { MainTabParamList } from '../navigation/types';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
 import { apiService, DonationCampaign, DonationRecord } from '../services/apiService';
 import { useTheme } from '../contexts/ThemeContext';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'Donations'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Donations'>;
 
 const { width } = Dimensions.get('window');
 const ORG_CARD_WIDTH = width * 0.75;
@@ -62,6 +64,7 @@ const NATIONAL_ORGS = [
 
 export default function DonationsScreen({}: Props) {
     const { colors, isDark } = useTheme();
+    const navigation = useNavigation<any>();
     const [campaigns, setCampaigns] = useState<DonationCampaign[]>([]);
     const [myDonations, setMyDonations] = useState<DonationRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -199,9 +202,14 @@ export default function DonationsScreen({}: Props) {
 
     const ListHeader = () => (
         <View style={styles.headerContainer}>
-            <View style={styles.pageTitleWrap}>
-                <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Impacto</Text>
-                <Text style={[styles.pageSubtitle, { color: colors.textSecondary }]}>Faz a diferença na comunidade autista.</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, paddingHorizontal: 20 }}>
+                <Pressable onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8, marginLeft: -8 }}>
+                    <Ionicons name="chevron-back" size={28} color={colors.primary} />
+                </Pressable>
+                <View style={styles.pageTitleWrap}>
+                    <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Impacto</Text>
+                    <Text style={[styles.pageSubtitle, { color: colors.textSecondary }]}>Faz a diferença na comunidade autista.</Text>
+                </View>
             </View>
 
             {/* Impact Summary Card */}
@@ -335,8 +343,8 @@ const styles = StyleSheet.create({
     root: { flex: 1 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     listContent: { paddingBottom: 40 },
-    headerContainer: { paddingBottom: 16 },
-    pageTitleWrap: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
+    headerContainer: { paddingTop: 40, paddingBottom: 24 },
+    pageTitleWrap: { flex: 1 },
     pageTitle: { fontSize: 32, fontFamily: 'Poppins_700Bold', letterSpacing: -0.5 },
     pageSubtitle: { fontSize: 15, fontFamily: 'Poppins_400Regular', marginTop: -2 },
     
