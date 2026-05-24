@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -135,6 +135,74 @@ function DayTimeline({ events, date, ios, onEdit, onDelete, onAdd, isDark, onBac
   const allDayEvents = events.filter(e => e.all_day);
   const timedEvents = events.filter(e => !e.all_day);
 
+  const layoutEvents = useMemo(() => {
+    const sorted = [...timedEvents].sort((a, b) => {
+      const startA = eventTopOffset(a.starts_at);
+      const startB = eventTopOffset(b.starts_at);
+      if (startA === startB) {
+        return eventHeight(b.starts_at, b.ends_at) - eventHeight(a.starts_at, a.ends_at);
+      }
+      return startA - startB;
+    });
+
+    const columns: { top: number; bottom: number }[][] = [];
+    let lastEventEnding: number | null = null;
+    const groups: { event: CalendarEvent, top: number, bottom: number, colIndex: number, originalIndex: number }[][] = [];
+    let currentGroup: { event: CalendarEvent, top: number, bottom: number, colIndex: number, originalIndex: number }[] = [];
+
+    sorted.forEach(e => {
+      const originalIndex = events.findIndex(ev => ev.id === e.id);
+      const top = eventTopOffset(e.starts_at);
+      const bottom = top + eventHeight(e.starts_at, e.ends_at);
+
+      if (lastEventEnding !== null && top >= lastEventEnding) {
+        groups.push([...currentGroup]);
+        columns.length = 0;
+        currentGroup = [];
+        lastEventEnding = null;
+      }
+
+      let placed = false;
+      let colIndex = 0;
+      for (let i = 0; i < columns.length; i++) {
+        if (top >= columns[i][columns[i].length - 1].bottom) {
+          columns[i].push({ top, bottom });
+          colIndex = i;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        columns.push([{ top, bottom }]);
+        colIndex = columns.length - 1;
+      }
+
+      currentGroup.push({ event: e, top, bottom, colIndex, originalIndex });
+      lastEventEnding = lastEventEnding === null ? bottom : Math.max(lastEventEnding, bottom);
+    });
+    if (currentGroup.length > 0) groups.push(currentGroup);
+
+    const availW = SCREEN_W - 64 - 8;
+    const result: any[] = [];
+    
+    groups.forEach(group => {
+      const numCols = Math.max(...group.map(g => g.colIndex)) + 1;
+      const w = availW / numCols;
+      group.forEach(item => {
+        result.push({
+          event: item.event,
+          top: item.top,
+          height: item.bottom - item.top,
+          left: 64 + (item.colIndex * w),
+          width: w > 2 ? w - 2 : w,
+          color: colorForEvent(item.event, item.originalIndex)
+        });
+      });
+    });
+
+    return result;
+  }, [timedEvents, events]);
+
   return (
     <View style={{ flex: 1 }}>
       {/* Header do dia */}
@@ -192,31 +260,30 @@ function DayTimeline({ events, date, ios, onEdit, onDelete, onAdd, isDark, onBac
             </View>
           )}
 
-          {timedEvents.map((e, i) => {
-            const top = eventTopOffset(e.starts_at);
-            const height = eventHeight(e.starts_at, e.ends_at);
-            const color = colorForEvent(e, i);
-            return (
-              <Pressable
-                key={e.id}
-                style={[tl.eventBlock, {
-                  top, height,
-                  backgroundColor: color + '22',
-                  borderLeftColor: color,
-                  left: 64, right: 8,
-                }]}
-                onPress={() => onEdit(e)}
-                onLongPress={() => onDelete(e.id)}
-              >
-                <Text style={[tl.eventTitle, { color }]} numberOfLines={1}>{e.title}</Text>
-                {height > 30 && (
-                  <Text style={[tl.eventTime, { color: color + 'BB' }]}>
-                    {fmtTime(e.starts_at)}{e.ends_at ? ` – ${fmtTime(e.ends_at)}` : ''}
-                  </Text>
-                )}
-              </Pressable>
-            );
-          })}
+          {layoutEvents.map(({ event: e, top, height, left, width, color }) => (
+            <Pressable
+              key={e.id}
+              style={[tl.eventBlock, {
+                top, height, left, width,
+                backgroundColor: color + '22',
+                borderLeftColor: color,
+              }]}
+              onPress={() => onEdit(e)}
+              onLongPress={() => onDelete(e.id)}
+            >
+              <Text style={[tl.eventTitle, { color }]} numberOfLines={height > 40 ? 2 : 1}>{e.title}</Text>
+              {height > 30 && (
+                <Text style={[tl.eventTime, { color: color + 'BB' }]}>
+                  {fmtTime(e.starts_at)}{e.ends_at ? ` – ${fmtTime(e.ends_at)}` : ''}
+                </Text>
+              )}
+              {height > 50 && e.description && (
+                <Text style={[tl.eventDesc, { color: ios.textSecondary }]} numberOfLines={Math.floor((height - 35) / 14)}>
+                  {e.description}
+                </Text>
+              )}
+            </Pressable>
+          ))}
         </View>
       </ScrollView>
     </View>
@@ -249,6 +316,7 @@ const tl = StyleSheet.create({
   eventBlock: { position: 'absolute', borderLeftWidth: 3, borderRadius: 6, padding: 5, overflow: 'hidden' },
   eventTitle: { fontSize: 12, fontWeight: '600' },
   eventTime: { fontSize: 11, marginTop: 1 },
+  eventDesc: { fontSize: 10, marginTop: 2, lineHeight: 14 },
 });
 
 // ─── Main Component ───────────────────────────────────────────────────────────
