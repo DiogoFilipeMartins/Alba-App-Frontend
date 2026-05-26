@@ -34,7 +34,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "A Alba precisa da tua localização para mostrar profissionais de saúde próximos de ti."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

@@ -11,7 +11,9 @@ import {
   StyleSheet,
   Dimensions,
   ScrollView,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiService, CalendarEvent } from '../services/apiService';
@@ -83,6 +85,17 @@ const eventHeight = (start?: string, end?: string | null) => {
   const s = parseInt(start.slice(11, 13), 10) * 60 + parseInt(start.slice(14, 16), 10);
   const e = parseInt(end.slice(11, 13), 10) * 60 + parseInt(end.slice(14, 16), 10);
   return Math.max((e - s) / 60 * HOUR_H, 24);
+};
+
+const parseTimeStr = (timeStr: string, defaultH: number) => {
+  const d = new Date();
+  if (timeStr && timeStr.includes(':')) {
+    const [h, m] = timeStr.split(':');
+    d.setHours(Number(h), Number(m), 0, 0);
+  } else {
+    d.setHours(defaultH, 0, 0, 0);
+  }
+  return d;
 };
 
 // ─── DotPill ──────────────────────────────────────────────────────────────────
@@ -332,6 +345,8 @@ export default function CalendarScreen({ navigation }: Props) {
   const [month, setMonth] = useState(now.getMonth());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showPicker, setShowPicker] = useState<'start' | 'end' | null>(null);
   const [selectedDay, setSelectedDay] = useState<string>(todayStr());
   const [viewMode, setViewMode] = useState<'month' | 'day'>('month');
 
@@ -340,7 +355,6 @@ export default function CalendarScreen({ navigation }: Props) {
   const [form, setForm] = useState({
     title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0,
   });
-  const [saving, setSaving] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   const touchX = useRef(0);
@@ -622,21 +636,83 @@ export default function CalendarScreen({ navigation }: Props) {
                 <View style={s.timeRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={[s.fieldLabel, { color: ios.textSecondary }]}>INÍCIO</Text>
-                    <TextInput
-                      style={[s.input, { backgroundColor: ios.inputBg, color: ios.text }]}
-                      placeholder="09:00" placeholderTextColor={ios.textSecondary}
-                      value={form.startTime} onChangeText={t => setForm(f => ({ ...f, startTime: t }))}
-                      keyboardType="numbers-and-punctuation"
-                    />
+                    {Platform.OS === 'ios' ? (
+                      <View style={[s.input, { backgroundColor: ios.inputBg, paddingVertical: 8, height: 50, justifyContent: 'center' }]}>
+                        <DateTimePicker
+                          value={parseTimeStr(form.startTime, 9)}
+                          mode="time"
+                          display="compact"
+                          themeVariant={isDark ? 'dark' : 'light'}
+                          onChange={(e, d) => {
+                            if (d) setForm(f => ({ ...f, startTime: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }));
+                          }}
+                        />
+                      </View>
+                    ) : (
+                      <>
+                        <Pressable 
+                          style={[s.input, { backgroundColor: ios.inputBg, height: 50, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' }]}
+                          onPress={() => setShowPicker('start')}
+                        >
+                          <Ionicons name="time-outline" size={18} color={ios.text} style={{ marginRight: 8 }} />
+                          <Text style={{ color: ios.text, fontSize: 16 }}>{form.startTime || '--:--'}</Text>
+                        </Pressable>
+                        {showPicker === 'start' && (
+                          <DateTimePicker
+                            value={parseTimeStr(form.startTime, 9)}
+                            mode="time"
+                            display="default"
+                            is24Hour={true}
+                            onChange={(e, d) => {
+                              setShowPicker(null);
+                              if (e.type === 'set' && d) {
+                                setForm(f => ({ ...f, startTime: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }));
+                              }
+                            }}
+                          />
+                        )}
+                      </>
+                    )}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[s.fieldLabel, { color: ios.textSecondary }]}>FIM</Text>
-                    <TextInput
-                      style={[s.input, { backgroundColor: ios.inputBg, color: ios.text }]}
-                      placeholder="10:00" placeholderTextColor={ios.textSecondary}
-                      value={form.endTime} onChangeText={t => setForm(f => ({ ...f, endTime: t }))}
-                      keyboardType="numbers-and-punctuation"
-                    />
+                    {Platform.OS === 'ios' ? (
+                      <View style={[s.input, { backgroundColor: ios.inputBg, paddingVertical: 8, height: 50, justifyContent: 'center' }]}>
+                        <DateTimePicker
+                          value={parseTimeStr(form.endTime, 10)}
+                          mode="time"
+                          display="compact"
+                          themeVariant={isDark ? 'dark' : 'light'}
+                          onChange={(e, d) => {
+                            if (d) setForm(f => ({ ...f, endTime: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }));
+                          }}
+                        />
+                      </View>
+                    ) : (
+                      <>
+                        <Pressable 
+                          style={[s.input, { backgroundColor: ios.inputBg, height: 50, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' }]}
+                          onPress={() => setShowPicker('end')}
+                        >
+                          <Ionicons name="time-outline" size={18} color={ios.text} style={{ marginRight: 8 }} />
+                          <Text style={{ color: ios.text, fontSize: 16 }}>{form.endTime || '--:--'}</Text>
+                        </Pressable>
+                        {showPicker === 'end' && (
+                          <DateTimePicker
+                            value={parseTimeStr(form.endTime, 10)}
+                            mode="time"
+                            display="default"
+                            is24Hour={true}
+                            onChange={(e, d) => {
+                              setShowPicker(null);
+                              if (e.type === 'set' && d) {
+                                setForm(f => ({ ...f, endTime: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }));
+                              }
+                            }}
+                          />
+                        )}
+                      </>
+                    )}
                   </View>
                 </View>
               )}
