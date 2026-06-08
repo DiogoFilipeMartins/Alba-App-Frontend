@@ -25,6 +25,7 @@
     "expo-font": "^55.0.6",
     "expo-linear-gradient": "~15.0.8",
     "expo-location": "^19.0.8",
+    "expo-notifications": "~0.32.17",
     "expo-splash-screen": "^55.0.19",
     "expo-status-bar": "~3.0.9",
     "lucide-react-native": "^0.548.0",
