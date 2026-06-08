@@ -93,6 +93,24 @@ export interface DonationRecord {
     campaign?: DonationCampaign | null;
 }
 
+export interface Community {
+    id: string;
+    name: string;
+    description?: string;
+    created_by: string;
+    is_member?: boolean;
+    member_count?: number;
+}
+
+export interface CommunityMessage {
+    id: string;
+    community_id: string;
+    user_id: string;
+    content: string;
+    created_at: string;
+    profiles?: { full_name: string };
+}
+
 export const apiService = {
     // Places
     async getPlaces(filters: any = {}): Promise<Place[]> {
@@ -115,6 +133,14 @@ export const apiService = {
     async createPlace(placeData: any): Promise<Place> {
         return apiFetch('/places', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(placeData),
+        });
+    },
+
+    async updatePlace(id: string, placeData: Partial<Pick<Place, 'name' | 'description' | 'phone' | 'address_line' | 'city'>> & { accessibility?: { wheelchair_accessible?: boolean; low_noise?: boolean; soft_lighting?: boolean } }): Promise<Place> {
+        return apiFetch(`/places/${id}`, {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(placeData),
         });
@@ -229,4 +255,14 @@ export const apiService = {
             body: JSON.stringify({ content }),
         });
     },
+
+    async sendChatMessage(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<string> {
+        const data = await apiFetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages }),
+        }, false) as { reply: string };
+        return data.reply;
+    },
 };
+
