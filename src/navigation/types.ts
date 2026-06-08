@@ -11,6 +11,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Map: undefined;
+  Chatbot: undefined;
   Communities: undefined;
   Calendar: undefined;
   Profile: undefined;

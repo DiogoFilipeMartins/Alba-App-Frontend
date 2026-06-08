@@ -19,6 +19,7 @@ import DonationsScreen from '../screens/DonationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CommunitiesScreen from '../screens/CommunitiesScreen';
 import CommunityChatScreen from '../screens/CommunityChatScreen';
+import ChatbotScreen from '../screens/ChatbotScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -49,9 +50,10 @@ function MainTabs() {
           },
           tabBarActiveTintColor: colors.accent,
           tabBarInactiveTintColor: colors.textMuted,
-          tabBarIcon: ({ color, size }) => {
+          tabBarIcon: ({ color, size, focused }) => {
             let iconName: any;
             if (route.name === 'Map') iconName = 'map';
+            else if (route.name === 'Chatbot') iconName = focused ? 'sparkles' : 'sparkles-outline';
             else if (route.name === 'Calendar') iconName = 'calendar';
             else if (route.name === 'Profile') iconName = 'person';
             else if (route.name === 'Communities') iconName = 'people';
@@ -60,6 +62,7 @@ function MainTabs() {
         })}
       >
         <Tab.Screen name="Map" component={MapScreen} options={{ tabBarLabel: 'Mapa' }} />
+        <Tab.Screen name="Chatbot" component={ChatbotScreen} options={{ tabBarLabel: 'Alba IA' }} />
         <Tab.Screen name="Communities" component={CommunitiesScreen} options={{ tabBarLabel: 'Comunidade' }} />
         <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarLabel: 'Agenda' }} />
         <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Perfil' }} />
