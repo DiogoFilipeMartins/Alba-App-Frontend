@@ -21,7 +21,7 @@ type Props = CompositeScreenProps<
 export default function ProfileScreen({ navigation }: Props) {
     const { profile, signOut, isAdmin } = useAuth();
     const { colors, isDark, toggleTheme } = useTheme();
-    const username = profile?.username || 'Utilizador';
+    const username = profile?.full_name || profile?.username || 'Utilizador';
     const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
 
     useEffect(() => {
