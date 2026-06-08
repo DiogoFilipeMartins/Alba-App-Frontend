@@ -125,6 +125,7 @@ export default function LoginScreen({ navigation }: Props) {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  keyboardType={!showPassword && Platform.OS === 'android' ? 'visible-password' : 'default'}
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="off"
