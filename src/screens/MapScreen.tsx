@@ -65,11 +65,25 @@ export default function MapScreen({ navigation }: Props) {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const mapRef = React.useRef<MapView | null>(null);
 
-  const FILTERS = ['Todos', 'Profissional', 'Instituição', 'Favoritos'];
+  const FILTERS = ['Todos', 'Profissional', 'Instituição', 'Favoritos', 'Próximos'];
 
   const loadFavorites = async () => {
     const ids = await favoritesService.getIds();
     setFavoriteIds(ids);
+  };
+
+  // Haversine distance in km between two lat/lng points
+  const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
   const fetchData = async () => {
@@ -162,15 +176,33 @@ export default function MapScreen({ navigation }: Props) {
 
   const placesToRender = smartResults ?? places;
 
-  const filteredPlaces = placesToRender.filter(p => {
-    const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         (p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-    const filterType = activeFilter === 'Profissional' ? 'professional' : activeFilter === 'Instituição' ? 'institution' : 'Todos';
-    const matchesType = filterType === 'Todos' || p.type === filterType;
-    const matchesFavorites = activeFilter !== 'Favoritos' || favoriteIds.includes(p.id);
-    const matchesFilter = matchesType && matchesFavorites;
-    return matchesSearch && matchesFilter;
-  });
+  const filteredPlaces = (() => {
+    const userLat = location?.coords.latitude;
+    const userLng = location?.coords.longitude;
+
+    let list = placesToRender.filter(p => {
+      const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      const filterType = activeFilter === 'Profissional' ? 'professional' : activeFilter === 'Instituição' ? 'institution' : 'Todos';
+      const matchesType = filterType === 'Todos' || p.type === filterType;
+      const matchesFavorites = activeFilter !== 'Favoritos' || favoriteIds.includes(p.id);
+      const matchesFilter = matchesType && matchesFavorites;
+      return matchesSearch && matchesFilter;
+    });
+
+    // For 'Próximos', sort by distance and limit to 20 closest
+    if (activeFilter === 'Próximos' && userLat !== undefined && userLng !== undefined) {
+      list = list
+        .map(p => ({
+          ...p,
+          _distKm: getDistanceKm(userLat, userLng, Number(p.latitude), Number(p.longitude)),
+        }))
+        .sort((a: any, b: any) => a._distKm - b._distKm)
+        .slice(0, 20) as any[];
+    }
+
+    return list;
+  })();
 
   const selectedAccessibility = selectedPlace?.place_accessibility?.[0];
   const accessibilityBadges = selectedPlace
@@ -280,6 +312,22 @@ export default function MapScreen({ navigation }: Props) {
           </View>
 
           <View style={styles.badgesRow}>
+            {/* Distance badge when 'Próximos' filter is active */}
+            {activeFilter === 'Próximos' && location && (() => {
+              const dist = getDistanceKm(
+                location.coords.latitude,
+                location.coords.longitude,
+                Number(selectedPlace.latitude),
+                Number(selectedPlace.longitude),
+              );
+              const label = dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`;
+              return (
+                <View style={[styles.badge, { backgroundColor: '#10b98115' }]}>
+                  <Ionicons name="navigate-circle" size={16} color="#10b981" />
+                  <Text style={[styles.badgeText, { color: '#10b981' }]}>{label}</Text>
+                </View>
+              );
+            })()}
             {accessibilityBadges.length > 0 ? accessibilityBadges.map((badge) => (
               <View key={badge.key} style={[styles.badge, { backgroundColor: badge.background }] }>
                 <Ionicons name={badge.icon} size={16} color={badge.color} />
@@ -346,10 +394,14 @@ export default function MapScreen({ navigation }: Props) {
              <Ionicons name="options" size={20} color={activeFilter !== 'Todos' ? colors.accent : colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        {(smartResults || activeFilter === 'Favoritos') && (
+        {(smartResults || activeFilter === 'Favoritos' || activeFilter === 'Próximos') && (
           <View style={[styles.smartHint, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.smartHintText, { color: colors.textSecondary }]}>
-              {smartResults ? `Pesquisa inteligente activa: ${filteredPlaces.length} resultado(s)` : `Filtro de favoritos activo: ${filteredPlaces.length} local(is)`}
+              {smartResults
+                ? `Pesquisa inteligente activa: ${filteredPlaces.length} resultado(s)`
+                : activeFilter === 'Próximos'
+                ? `${filteredPlaces.length} locais mais próximos`
+                : `Filtro de favoritos activo: ${filteredPlaces.length} local(is)`}
             </Text>
           </View>
         )}
