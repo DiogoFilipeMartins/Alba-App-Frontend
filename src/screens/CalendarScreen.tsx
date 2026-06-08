@@ -17,6 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiService, CalendarEvent } from '../services/apiService';
+import { notificationService } from '../services/notificationService';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -376,6 +377,11 @@ export default function CalendarScreen({ navigation }: Props) {
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
+  // Request notification permissions on mount
+  useEffect(() => {
+    notificationService.requestPermissions();
+  }, []);
+
   // ── Grid ──────────────────────────────────────────────────────────────────
 
   const total = daysInMonth(year, month);
@@ -432,8 +438,18 @@ export default function CalendarScreen({ navigation }: Props) {
         starts_at: starts, ends_at: ends, all_day: form.allDay,
         color: EVENT_COLORS[form.colorIdx],
       };
-      if (editingEvent) { await apiService.updateCalendarEvent(editingEvent.id, payload); }
-      else { await apiService.createCalendarEvent(payload); }
+      let savedEvent: CalendarEvent;
+      if (editingEvent) {
+        savedEvent = await apiService.updateCalendarEvent(editingEvent.id, payload);
+      } else {
+        savedEvent = await apiService.createCalendarEvent(payload);
+      }
+      // Schedule a 30-min reminder (skipped for all-day events)
+      if (!form.allDay) {
+        notificationService.scheduleEventReminder(savedEvent.id, savedEvent.title, savedEvent.starts_at);
+      } else {
+        notificationService.cancelEventReminder(savedEvent.id);
+      }
       closeForm();
       await fetchEvents();
     } catch (e: any) { Alert.alert('Erro', e.message); }
@@ -445,6 +461,7 @@ export default function CalendarScreen({ navigation }: Props) {
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: async () => {
         await apiService.deleteCalendarEvent(id);
+        await notificationService.cancelEventReminder(id);
         setEvents(p => p.filter(e => e.id !== id));
       }},
     ]);
