@@ -11,7 +11,8 @@ import {
     Alert,
     ScrollView,
     Linking,
-    Dimensions
+    Dimensions,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,15 +71,17 @@ export default function DonationsScreen({}: Props) {
     const [campaigns, setCampaigns] = useState<DonationCampaign[]>([]);
     const [myDonations, setMyDonations] = useState<DonationRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedCampaign, setSelectedCampaign] = useState<DonationCampaign | null>(null);
     const [amount, setAmount] = useState('10');
     const [donorName, setDonorName] = useState('');
     const [note, setNote] = useState('');
 
-    const fetchData = async () => {
+    const fetchData = async (isRefresh = false) => {
         try {
-            setLoading(true);
+            if (isRefresh) setRefreshing(true);
+            else setLoading(true);
             const [campaignData, donationData] = await Promise.all([
                 apiService.getDonationCampaigns(),
                 apiService.getMyDonations(),
@@ -89,6 +92,7 @@ export default function DonationsScreen({}: Props) {
             console.error(error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -213,6 +217,14 @@ export default function DonationsScreen({}: Props) {
                 keyExtractor={(item) => item.id}
                 renderItem={renderCampaign}
                 ListHeaderComponent={ListHeader}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={() => fetchData(true)}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
+                    />
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyWrap}>
                         <Ionicons name="leaf-outline" size={48} color={colors.border} />

@@ -20,6 +20,8 @@ import ProfileScreen from '../screens/ProfileScreen';
 import CommunitiesScreen from '../screens/CommunitiesScreen';
 import CommunityChatScreen from '../screens/CommunityChatScreen';
 import ChatbotScreen from '../screens/ChatbotScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import SecurityScreen from '../screens/SecurityScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -105,6 +107,8 @@ export default function AppNavigator() {
             <Stack.Screen name="Donations" component={DonationsScreen} />
             <Stack.Screen name="MapPicker" component={MapPickerScreen} options={{ presentation: 'modal' }} />
             <Stack.Screen name="CommunityChat" component={CommunityChatScreen} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="Security" component={SecurityScreen} />
           </>
         )}
       </Stack.Navigator>

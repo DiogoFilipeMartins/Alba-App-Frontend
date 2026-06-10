@@ -9,6 +9,7 @@ import {
     Modal,
     TextInput,
     Alert,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ export default function CommunitiesScreen({ navigation }: Props) {
     const { colors, isDark } = useTheme();
     const [communities, setCommunities] = useState<Community[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [creating, setCreating] = useState(false);
     const [joining, setJoining] = useState<string | null>(null);
 
@@ -35,14 +37,16 @@ export default function CommunitiesScreen({ navigation }: Props) {
     const [newName, setNewName] = useState('');
     const [newDesc, setNewDesc] = useState('');
 
-    const fetchData = async () => {
+    const fetchData = async (isRefresh = false) => {
         try {
+            if (isRefresh) setRefreshing(true);
             const data = await apiService.getCommunities();
             setCommunities(data);
         } catch (error: any) {
             console.error('Erro ao carregar comunidades', error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -148,6 +152,14 @@ export default function CommunitiesScreen({ navigation }: Props) {
                 keyExtractor={item => item.id}
                 renderItem={renderCommunity}
                 contentContainerStyle={styles.list}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={() => fetchData(true)}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
+                    />
+                }
                 ListEmptyComponent={
                     <View style={styles.empty}>
                         <Ionicons name="chatbubbles-outline" size={48} color={colors.border} />

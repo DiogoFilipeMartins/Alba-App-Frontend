@@ -7,10 +7,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { FavoritePlace, favoritesService } from '../services/favoritesService';
 import { apiService } from '../services/apiService';
-
+import { notificationService } from '../services/notificationService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Props = CompositeScreenProps<
@@ -24,17 +25,36 @@ export default function ProfileScreen({ navigation }: Props) {
     const username = profile?.full_name || profile?.username || 'Utilizador';
     const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
 
+    const [notificationsGranted, setNotificationsGranted] = useState(false);
+
     useEffect(() => {
         const loadFavorites = async () => {
             const data = await favoritesService.list();
             setFavorites(data);
         };
 
+        const checkNotifications = async () => {
+            const granted = await notificationService.requestPermissions();
+            setNotificationsGranted(granted);
+        };
+
         const unsubscribe = navigation.addListener('focus', loadFavorites);
         loadFavorites();
+        checkNotifications();
 
         return unsubscribe;
     }, [navigation]);
+
+    const handleToggleNotifications = async () => {
+        const granted = await notificationService.requestPermissions();
+        setNotificationsGranted(granted);
+        if (!granted) {
+            Alert.alert(
+                'Permissão necessária',
+                'Para ativar notificações, vai às Definições do teu telemóvel e ativa as notificações para a Alba App.'
+            );
+        }
+    };
 
     const handleLogout = async () => {
         Alert.alert(
@@ -82,10 +102,8 @@ export default function ProfileScreen({ navigation }: Props) {
     const menuItems = [
         { icon: 'add-circle-outline', label: 'Sugerir Local', onPress: () => navigation.navigate('SuggestPlace', {}) },
         { icon: 'heart-outline', label: 'Doar e Apoiar', onPress: () => navigation.navigate('Donations') },
-        { icon: 'person-outline', label: 'Dados Pessoais', onPress: () => Alert.alert('Em Desenvolvimento', 'Esta funcionalidade estará disponível em breve.') },
-        { icon: 'notifications-outline', label: 'Notificações', onPress: () => Alert.alert('Em Desenvolvimento', 'Esta funcionalidade estará disponível em breve.') },
-        { icon: 'shield-checkmark-outline', label: 'Segurança', onPress: () => Alert.alert('Em Desenvolvimento', 'Esta funcionalidade estará disponível em breve.') },
-        { icon: 'help-circle-outline', label: 'Suporte', onPress: () => Alert.alert('Em Desenvolvimento', 'Esta funcionalidade estará disponível em breve.') },
+        { icon: 'person-outline', label: 'Dados Pessoais', onPress: () => (navigation as any).navigate('EditProfile') },
+        { icon: 'shield-checkmark-outline', label: 'Segurança', onPress: () => (navigation as any).navigate('Security') },
     ];
 
     if (isAdmin) {
@@ -164,6 +182,24 @@ export default function ProfileScreen({ navigation }: Props) {
                         <Switch 
                             value={isDark} 
                             onValueChange={toggleTheme}
+                            trackColor={{ false: colors.border, true: colors.primary }}
+                            thumbColor="#FFF"
+                        />
+                    </TouchableOpacity>
+                </View>
+
+                <View style={s.section}>
+                    <TouchableOpacity 
+                        style={[s.card, s.toggleArea, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={handleToggleNotifications}
+                    >
+                        <View style={[s.iconBox, { backgroundColor: isDark ? colors.background : colors.surface }]}>
+                            <Ionicons name={notificationsGranted ? 'notifications' : 'notifications-outline'} size={18} color={colors.accent} />
+                        </View>
+                        <Text style={[s.itemLabel, { flex: 1, color: colors.textPrimary }]}>Notificações</Text>
+                        <Switch 
+                            value={notificationsGranted} 
+                            onValueChange={handleToggleNotifications}
                             trackColor={{ false: colors.border, true: colors.primary }}
                             thumbColor="#FFF"
                         />

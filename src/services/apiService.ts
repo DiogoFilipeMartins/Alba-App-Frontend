@@ -264,5 +264,63 @@ export const apiService = {
         }, false) as { reply: string };
         return data.reply;
     },
+
+    // Profile management
+    async updateProfile(data: { full_name?: string; phone?: string }): Promise<any> {
+        return apiFetch('/profile', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+    },
+
+    async changePassword(newPassword: string): Promise<void> {
+        await apiFetch('/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPassword }),
+        });
+    },
+
+    // Leave community
+    async leaveCommunity(id: string): Promise<void> {
+        await apiFetch(`/communities/${id}/leave`, {
+            method: 'DELETE',
+        });
+    },
+
+    // Admin: Users
+    async getAdminUsers(): Promise<any[]> {
+        return apiFetch('/admin/users');
+    },
+
+    async updateUserRole(id: string, role: 'user' | 'admin'): Promise<any> {
+        return apiFetch(`/admin/users/${id}/role`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role }),
+        });
+    },
+
+    // Admin: Campaigns
+    async getAdminCampaigns(): Promise<DonationCampaign[]> {
+        return apiFetch('/admin/campaigns');
+    },
+
+    async createAdminCampaign(data: { title: string; description?: string; goal_amount: number; place_id?: string }): Promise<DonationCampaign> {
+        return apiFetch('/admin/campaigns', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+    },
+
+    async updateAdminCampaign(id: string, data: { title?: string; description?: string; goal_amount?: number; is_active?: boolean }): Promise<DonationCampaign> {
+        return apiFetch(`/admin/campaigns/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+    },
 };
 

@@ -350,7 +350,17 @@ export default function MapScreen({ navigation }: Props) {
               <Ionicons name="navigate" size={20} color="#FFF" />
               <Text style={styles.mainActionText}>Como chegar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]}>
+            <TouchableOpacity 
+              style={[styles.secondaryAction, { borderColor: colors.border }]}
+              onPress={() => {
+                const phone = selectedPlace?.phone;
+                if (phone) {
+                  Linking.openURL(`tel:${phone}`);
+                } else {
+                  Alert.alert('Sem contacto', 'Este local não tem número de telefone registado.');
+                }
+              }}
+            >
               <Ionicons name="call-outline" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]} onPress={handleToggleFavorite}>

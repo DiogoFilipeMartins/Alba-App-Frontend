@@ -7,6 +7,8 @@ export type RootStackParamList = {
   CommunityChat: { communityId: string, communityName: string };
   SuggestPlace: { pickedCoords?: { lat: number; lng: number } };
   Donations: undefined;
+  EditProfile: undefined;
+  Security: undefined;
 };
 
 export type MainTabParamList = {

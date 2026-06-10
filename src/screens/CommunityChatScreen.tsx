@@ -9,6 +9,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,6 +68,28 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
         }
     };
 
+    const handleLeave = () => {
+        Alert.alert(
+            'Sair da Comunidade',
+            'Tens a certeza que queres sair desta comunidade?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Sair',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await apiService.leaveCommunity(communityId);
+                            navigation.goBack();
+                        } catch (error: any) {
+                            Alert.alert('Erro', error?.message || 'Não foi possível sair da comunidade.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const renderMessage = ({ item }: { item: CommunityMessage }) => {
         const isMine = item.user_id === user?.id;
         const name = item.profiles?.full_name || 'Utilizador';
@@ -96,6 +119,9 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                     <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>{communityName}</Text>
                     <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Comunidade Alba</Text>
                 </View>
+                <Pressable onPress={handleLeave} style={styles.leaveBtn}>
+                    <Ionicons name="exit-outline" size={22} color="#ef4444" />
+                </Pressable>
             </View>
 
             {loading ? (
@@ -141,6 +167,7 @@ const styles = StyleSheet.create({
     root: { flex: 1 },
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
     backBtn: { padding: 4, marginRight: 8 },
+    leaveBtn: { padding: 8, marginLeft: 8 },
     headerTitleWrap: { flex: 1 },
     headerTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold' },
     headerSubtitle: { fontSize: 12, fontFamily: 'Poppins_400Regular' },
