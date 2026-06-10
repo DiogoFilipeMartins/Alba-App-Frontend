@@ -259,7 +259,7 @@ export default function MapScreen({ navigation }: Props) {
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_GOOGLE}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={{
           latitude: 38.7223,
           longitude: -9.1393,
