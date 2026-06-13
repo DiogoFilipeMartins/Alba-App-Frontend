@@ -24,6 +24,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import SecurityScreen from '../screens/SecurityScreen';
 import DirectoryScreen from '../screens/DirectoryScreen';
 import PlaceProfileScreen from '../screens/PlaceProfileScreen';
+import AppearanceScreen from '../screens/AppearanceScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -114,6 +115,7 @@ export default function AppNavigator() {
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="Security" component={SecurityScreen} />
             <Stack.Screen name="PlaceProfile" component={PlaceProfileScreen} />
+            <Stack.Screen name="Appearance" component={AppearanceScreen} />
           </>
         )}
       </Stack.Navigator>

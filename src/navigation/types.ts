@@ -10,6 +10,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   Security: undefined;
   PlaceProfile: { placeId: string; place?: any };
+  Appearance: undefined;
 };
 
 export type MainTabParamList = {

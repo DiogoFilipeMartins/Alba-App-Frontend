@@ -104,6 +104,7 @@ export default function ProfileScreen({ navigation }: Props) {
         { icon: 'heart-outline', label: 'Doar e Apoiar', onPress: () => navigation.navigate('Donations') },
         { icon: 'person-outline', label: 'Dados Pessoais', onPress: () => (navigation as any).navigate('EditProfile') },
         { icon: 'shield-checkmark-outline', label: 'Segurança', onPress: () => (navigation as any).navigate('Security') },
+        { icon: 'eye-outline', label: 'Aparência', onPress: () => (navigation as any).navigate('Appearance') },
     ];
 
     if (isAdmin) {
@@ -170,23 +171,7 @@ export default function ProfileScreen({ navigation }: Props) {
                     </View>
                 </View>
 
-                <View style={s.section}>
-                    <TouchableOpacity 
-                        style={[s.card, s.toggleArea, { backgroundColor: colors.card, borderColor: colors.border }]}
-                        onPress={toggleTheme}
-                    >
-                        <View style={[s.iconBox, { backgroundColor: isDark ? colors.background : colors.surface }]}>
-                            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={18} color={colors.accent} />
-                        </View>
-                        <Text style={[s.itemLabel, { flex: 1, color: colors.textPrimary }]}>Modo {isDark ? 'Escuro' : 'Claro'}</Text>
-                        <Switch 
-                            value={isDark} 
-                            onValueChange={toggleTheme}
-                            trackColor={{ false: colors.border, true: colors.primary }}
-                            thumbColor="#FFF"
-                        />
-                    </TouchableOpacity>
-                </View>
+
 
                 <View style={s.section}>
                     <TouchableOpacity 
