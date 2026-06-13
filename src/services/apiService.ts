@@ -257,12 +257,27 @@ export const apiService = {
     },
 
     async sendChatMessage(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<string> {
-        const data = await apiFetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages }),
-        }, false) as { reply: string };
-        return data.reply;
+        // Timeout generoso (60s) para lidar com cold starts do Render free tier
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+        try {
+            const response = await fetch(`${API_URL}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages }),
+                signal: controller.signal,
+            });
+            const data = await handleResponse(response) as { reply: string };
+            return data.reply;
+        } catch (err: any) {
+            if (err.name === 'AbortError') {
+                throw new Error('O servidor demorou demasiado a responder. Tenta novamente.');
+            }
+            throw err;
+        } finally {
+            clearTimeout(timeoutId);
+        }
     },
 
     // Profile management

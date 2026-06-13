@@ -215,10 +215,13 @@ export default function ChatbotScreen({ navigation }: Props) {
         } catch (err: any) {
             setMessages(prev => {
                 const withoutTyping = prev.filter(m => m.id !== 'typing');
+                const isTimeout = err?.message?.includes('demorou demasiado');
                 return [...withoutTyping, {
                     id: Date.now().toString() + '-e',
                     role: 'bot' as const,
-                    text: 'Ocorreu um erro ao contactar a IA. Verifica a ligação e tenta novamente.',
+                    text: isTimeout
+                        ? '⏳ O servidor está a acordar... Tenta novamente em alguns segundos!'
+                        : 'Ocorreu um erro ao contactar a IA. Verifica a ligação e tenta novamente.',
                     timestamp: new Date(),
                 }];
             });
