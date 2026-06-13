@@ -54,6 +54,8 @@ export default function MapScreen({ navigation, route }: Props) {
   const [places, setPlaces] = useState<Place[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [placesLoading, setPlacesLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -88,31 +90,83 @@ export default function MapScreen({ navigation, route }: Props) {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
       console.log('[MapScreen] A pedir permissões de localização...');
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       console.log('[MapScreen] Permissão de localização:', status);
       if (status !== 'granted') {
         setErrorMsg('Permissão de acesso à localização negada.');
         setLoading(false);
+        setLocationLoading(false);
+        loadPlaces();
         return;
       }
 
-      console.log('[MapScreen] A obter localização atual...');
-      let loc = await Location.getCurrentPositionAsync({});
-      console.log('[MapScreen] Localização obtida:', loc);
-      setLocation(loc);
+      // Montar o mapa imediatamente (sem bloquear a tela com loading spinner)
+      setLoading(false);
 
-      console.log('[MapScreen] A buscar locais ao backend...');
-      const data = await apiService.getPlaces({ status: 'approved' });
-      console.log('[MapScreen] Dados recebidos do servidor:', data);
-      setPlaces(data);
+      // Carregar locais e localização em paralelo
+      Promise.all([
+        loadPlaces(),
+        loadLocation()
+      ]);
 
     } catch (error) {
-      console.error('[MapScreen] Erro ao obter localização ou dados:', error);
+      console.error('[MapScreen] Erro no carregamento inicial:', error);
       setErrorMsg('Ocorreu um erro ao carregar os dados.');
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPlaces = async () => {
+    try {
+      setPlacesLoading(true);
+      const data = await apiService.getPlaces({ status: 'approved' });
+      setPlaces(data);
+    } catch (error) {
+      console.error('[MapScreen] Erro ao buscar locais:', error);
+    } finally {
+      setPlacesLoading(false);
+    }
+  };
+
+  const loadLocation = async () => {
+    try {
+      setLocationLoading(true);
+      
+      // 1. Obter a última localização conhecida (extremamente rápido, <50ms)
+      const lastKnown = await Location.getLastKnownPositionAsync({});
+      if (lastKnown) {
+        setLocation(lastKnown);
+        // Centrar suavemente no mapa
+        if (mapRef.current) {
+          mapRef.current.animateToRegion({
+            latitude: lastKnown.coords.latitude,
+            longitude: lastKnown.coords.longitude,
+            latitudeDelta: 0.02,
+            longitudeDelta: 0.02,
+          }, 500);
+        }
+      }
+
+      // 2. Obter a localização atual precisa em background (pode demorar segundos)
+      const freshLoc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setLocation(freshLoc);
+      
+      // Centrar na localização precisa atual
+      if (mapRef.current) {
+        mapRef.current.animateToRegion({
+          latitude: freshLoc.coords.latitude,
+          longitude: freshLoc.coords.longitude,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        }, 800);
+      }
+    } catch (error) {
+      console.error('[MapScreen] Erro ao obter localização precisa:', error);
+    } finally {
+      setLocationLoading(false);
     }
   };
 
@@ -145,6 +199,7 @@ export default function MapScreen({ navigation, route }: Props) {
       }
     }
   }, [route.params?.focusPlaceId, places, navigation]);
+
 
 
   const handleSmartSearch = async () => {
@@ -439,6 +494,17 @@ export default function MapScreen({ navigation, route }: Props) {
              <Ionicons name="options" size={20} color={activeFilter !== 'Todos' ? colors.accent : colors.textSecondary} />
           </TouchableOpacity>
         </View>
+        
+        {/* Indicador de carregamento em background discreto */}
+        {(placesLoading || locationLoading) && (
+          <View style={[styles.miniLoader, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 8 }} />
+            <Text style={[styles.miniLoaderText, { color: colors.textSecondary }]}>
+              {placesLoading ? 'A obter locais...' : 'A obter localização...'}
+            </Text>
+          </View>
+        )}
+
         {(smartResults || activeFilter === 'Favoritos' || activeFilter === 'Próximos') && (
           <View style={[styles.smartHint, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.smartHintText, { color: colors.textSecondary }]}>
@@ -803,5 +869,25 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  miniLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginTop: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  miniLoaderText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
   },
 });
