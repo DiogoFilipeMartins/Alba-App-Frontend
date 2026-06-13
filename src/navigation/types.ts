@@ -9,12 +9,15 @@ export type RootStackParamList = {
   Donations: undefined;
   EditProfile: undefined;
   Security: undefined;
+  PlaceProfile: { placeId: string; place?: any };
 };
 
 export type MainTabParamList = {
-  Map: undefined;
+  Map: { focusPlaceId?: string } | undefined;
   Chatbot: undefined;
   Communities: undefined;
   Calendar: undefined;
   Profile: undefined;
+  Directory: undefined;
 };
+

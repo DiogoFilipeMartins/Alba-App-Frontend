@@ -22,6 +22,8 @@ import CommunityChatScreen from '../screens/CommunityChatScreen';
 import ChatbotScreen from '../screens/ChatbotScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import SecurityScreen from '../screens/SecurityScreen';
+import DirectoryScreen from '../screens/DirectoryScreen';
+import PlaceProfileScreen from '../screens/PlaceProfileScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -55,6 +57,7 @@ function MainTabs() {
           tabBarIcon: ({ color, size, focused }) => {
             let iconName: any;
             if (route.name === 'Map') iconName = 'map';
+            else if (route.name === 'Directory') iconName = focused ? 'search' : 'search-outline';
             else if (route.name === 'Chatbot') iconName = focused ? 'sparkles' : 'sparkles-outline';
             else if (route.name === 'Calendar') iconName = 'calendar';
             else if (route.name === 'Profile') iconName = 'person';
@@ -64,6 +67,7 @@ function MainTabs() {
         })}
       >
         <Tab.Screen name="Map" component={MapScreen} options={{ tabBarLabel: 'Mapa' }} />
+        <Tab.Screen name="Directory" component={DirectoryScreen} options={{ tabBarLabel: 'Pesquisa' }} />
         <Tab.Screen name="Chatbot" component={ChatbotScreen} options={{ tabBarLabel: 'Alba IA' }} />
         <Tab.Screen name="Communities" component={CommunitiesScreen} options={{ tabBarLabel: 'Comunidade' }} />
         <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarLabel: 'Agenda' }} />
@@ -109,6 +113,7 @@ export default function AppNavigator() {
             <Stack.Screen name="CommunityChat" component={CommunityChatScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="Security" component={SecurityScreen} />
+            <Stack.Screen name="PlaceProfile" component={PlaceProfileScreen} />
           </>
         )}
       </Stack.Navigator>

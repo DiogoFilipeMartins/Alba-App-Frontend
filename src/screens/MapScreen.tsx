@@ -48,7 +48,7 @@ const PlaceMarker = memo(({ place, colors, onPress }: { place: any, colors: any,
   );
 });
 
-export default function MapScreen({ navigation }: Props) {
+export default function MapScreen({ navigation, route }: Props) {
   const { colors, isDark } = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
@@ -120,6 +120,32 @@ export default function MapScreen({ navigation }: Props) {
     fetchData();
     loadFavorites();
   }, []);
+
+  // Efeito para focar num local específico quando navegado a partir do Perfil
+  useEffect(() => {
+    const focusPlaceId = route.params?.focusPlaceId;
+    if (focusPlaceId && places.length > 0) {
+      const foundPlace = places.find(p => p.id === focusPlaceId);
+      if (foundPlace) {
+        setSelectedPlace(foundPlace);
+        const lat = Number(foundPlace.latitude);
+        const lng = Number(foundPlace.longitude);
+        if (!isNaN(lat) && !isNaN(lng) && mapRef.current) {
+          setTimeout(() => {
+            mapRef.current?.animateToRegion({
+              latitude: lat,
+              longitude: lng,
+              latitudeDelta: 0.015,
+              longitudeDelta: 0.015,
+            }, 800);
+          }, 200);
+        }
+        // Limpar parâmetros de rota para evitar que volte a focar acidentalmente
+        navigation.setParams({ focusPlaceId: undefined } as any);
+      }
+    }
+  }, [route.params?.focusPlaceId, places, navigation]);
+
 
   const handleSmartSearch = async () => {
     if (!searchQuery.trim()) {
@@ -365,6 +391,15 @@ export default function MapScreen({ navigation }: Props) {
             </TouchableOpacity>
             <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]} onPress={handleToggleFavorite}>
               <Ionicons name={isSelectedFavorite ? 'heart' : 'heart-outline'} size={20} color={isSelectedFavorite ? '#ef4444' : colors.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.secondaryAction, { borderColor: colors.border }]}
+              onPress={() => {
+                setSelectedPlace(null);
+                navigation.navigate('PlaceProfile', { placeId: selectedPlace.id, place: selectedPlace });
+              }}
+            >
+              <Ionicons name="information-circle-outline" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>

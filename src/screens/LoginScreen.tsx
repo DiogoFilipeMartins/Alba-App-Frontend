@@ -129,7 +129,7 @@ export default function LoginScreen({ navigation }: Props) {
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="off"
-                  importantForAutofill="no-hide-descendants"
+                  importantForAutofill="noExcludeDescendants"
                   textContentType="none"
                   contextMenuHidden={true}
                 />
