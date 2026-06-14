@@ -25,7 +25,12 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.anonymous.albaapp"
+      "package": "com.anonymous.albaapp",
+      "config": {
+        "googleMaps": {
+          "apiKey": "SUA_API_KEY_DO_GOOGLE_MAPS_AQUI"
+        }
+      }
     },
     "plugins": [
       [
