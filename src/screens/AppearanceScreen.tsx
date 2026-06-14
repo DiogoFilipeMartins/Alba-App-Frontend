@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Switch,
-  ScrollView,
-  SafeAreaView
+  ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, ColorPalette } from '../contexts/ThemeContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';

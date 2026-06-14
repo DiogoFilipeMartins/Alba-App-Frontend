@@ -8,9 +8,9 @@ import {
   Linking,
   Platform,
   Alert,
-  Dimensions,
-  SafeAreaView
+  Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useTheme } from '../contexts/ThemeContext';
@@ -104,7 +104,7 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
   };
 
   const accessibility = place.place_accessibility?.[0];
-  const hasAccessibilityData = accessibility && 
+  const hasAccessibilityData = accessibility &&
     (accessibility.wheelchair_accessible || accessibility.low_noise || accessibility.soft_lighting);
 
   return (

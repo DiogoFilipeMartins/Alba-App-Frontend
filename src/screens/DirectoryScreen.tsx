@@ -8,9 +8,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  RefreshControl,
-  SafeAreaView
+  RefreshControl
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiService, Place } from '../services/apiService';
