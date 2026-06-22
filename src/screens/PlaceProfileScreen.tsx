@@ -14,7 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useTheme } from '../contexts/ThemeContext';
-import { Place } from '../services/apiService';
+import { useAuth } from '../contexts/AuthContext';
+import { apiService, Place } from '../services/apiService';
 import { favoritesService } from '../services/favoritesService';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
@@ -28,6 +29,40 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
   const [place, setPlace] = useState<Place | null>(passedPlace || null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(!passedPlace);
+
+  const { profile, isProfessional, isInstitution, refreshProfile } = useAuth();
+
+  const claimers = (place as any)?.profiles || [];
+  const claimer = claimers[0];
+  const hasClaimer = !!claimer;
+  const isClaimerVerified = claimer?.verified === true;
+
+  const handleClaimPlace = async () => {
+    if (!place) return;
+    Alert.alert(
+      'Reivindicar Local',
+      `Tens a certeza que queres associar a tua conta a "${place.name}" como local de atendimento oficial?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            try {
+              const res = await apiService.claimPlace(place.id);
+              Alert.alert('Sucesso', 'Reivindicação efetuada com sucesso! O teu perfil agora está associado a este local.');
+              await refreshProfile();
+              setPlace(prev => prev ? {
+                ...prev,
+                profiles: [res.profile || { id: profile?.id, verified: false, account_type: profile?.account_type }]
+              } : null);
+            } catch (error: any) {
+              Alert.alert('Erro', error.message || 'Não foi possível reivindicar o local.');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   // If place object wasn't passed directly, fetch it (placeholder logic, or fallback if needed)
   useEffect(() => {
@@ -195,6 +230,38 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
               <Text style={[styles.contactLabel, { color: colors.textSecondary }]}>Website</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Claim / Official Badge */}
+          {hasClaimer ? (
+            <View style={[styles.claimContainer, { borderTopColor: colors.border }]}>
+              <View style={[styles.claimBadge, { backgroundColor: isClaimerVerified ? '#22c55e12' : '#f59e0b12', borderColor: isClaimerVerified ? '#22c55e25' : '#f59e0b25' }]}>
+                <Ionicons name={isClaimerVerified ? 'shield-checkmark' : 'shield-outline'} size={15} color={isClaimerVerified ? '#22c55e' : '#f59e0b'} />
+                <Text style={[styles.claimBadgeText, { color: isClaimerVerified ? '#22c55e' : '#f59e0b' }]}>
+                  {isClaimerVerified ? 'Página Oficial Verificada' : 'Reivindicação Pendente'}
+                </Text>
+              </View>
+              <Text style={[styles.claimInfoText, { color: colors.textSecondary }]}>
+                {isClaimerVerified 
+                  ? `Este local é gerido diretamente por ${claimer.full_name || 'um profissional/instituição verificado'}.`
+                  : 'A reivindicação deste local está pendente de aprovação.'}
+              </Text>
+            </View>
+          ) : (
+            (isProfessional || isInstitution) && (
+              <View style={[styles.claimContainer, { borderTopColor: colors.border }]}>
+                <TouchableOpacity
+                  onPress={handleClaimPlace}
+                  style={[styles.claimBtn, { backgroundColor: place.type === 'professional' ? colors.primary : '#3b82f6' }]}
+                >
+                  <Ionicons name="shield-outline" size={16} color="#fff" />
+                  <Text style={styles.claimBtnText}>Reivindicar este Local</Text>
+                </TouchableOpacity>
+                <Text style={[styles.claimInfoText, { color: colors.textSecondary }]}>
+                  Se este é o teu local de atendimento oficial, podes reivindicá-lo para associá-lo ao teu perfil.
+                </Text>
+              </View>
+            )
+          )}
         </View>
 
         {/* Description */}
@@ -464,5 +531,48 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  claimContainer: {
+    width: '100%',
+    marginTop: 20,
+    borderTopWidth: 1,
+    paddingTop: 18,
+    alignItems: 'center',
+  },
+  claimBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  claimBadgeText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  claimInfoText: {
+    fontSize: 11,
+    fontFamily: 'Poppins_400Regular',
+    textAlign: 'center',
+    lineHeight: 16,
+    paddingHorizontal: 10,
+  },
+  claimBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 46,
+    borderRadius: 16,
+    width: '100%',
+    marginBottom: 10,
+  },
+  claimBtnText: {
+    color: '#fff',
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 14,
   },
 });

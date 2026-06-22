@@ -100,6 +100,15 @@ export interface Community {
     created_by: string;
     is_member?: boolean;
     member_count?: number;
+    color?: string;
+    created_at?: string;
+}
+
+export interface CommunityMember {
+    user_id: string;
+    role: string;
+    joined_at: string;
+    profiles?: { full_name: string };
 }
 
 export interface CommunityMessage {
@@ -109,6 +118,18 @@ export interface CommunityMessage {
     content: string;
     created_at: string;
     profiles?: { full_name: string };
+}
+
+export interface NewsItem {
+    id: string;
+    title: string;
+    description: string;
+    content: string;
+    category: string;
+    imageUrl?: string;
+    sourceName: string;
+    sourceUrl?: string;
+    publishedAt: string;
 }
 
 export const apiService = {
@@ -256,6 +277,16 @@ export const apiService = {
         });
     },
 
+    async deleteCommunityMessage(communityId: string, messageId: string): Promise<void> {
+        await apiFetch(`/communities/${communityId}/messages/${messageId}`, {
+            method: 'DELETE',
+        });
+    },
+
+    async getCommunityMembers(id: string): Promise<CommunityMember[]> {
+        return apiFetch(`/communities/${id}/members`);
+    },
+
     async sendChatMessage(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<string> {
         // Timeout generoso (60s) para lidar com cold starts do Render free tier
         const controller = new AbortController();
@@ -281,11 +312,17 @@ export const apiService = {
     },
 
     // Profile management
-    async updateProfile(data: { full_name?: string; phone?: string }): Promise<any> {
+    async updateProfile(data: { full_name?: string; phone?: string; specialty?: string; bio?: string; website?: string; account_type?: string }): Promise<any> {
         return apiFetch('/profile', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
+        });
+    },
+
+    async claimPlace(placeId: string): Promise<any> {
+        return apiFetch(`/places/${placeId}/claim`, {
+            method: 'POST',
         });
     },
 
@@ -317,6 +354,19 @@ export const apiService = {
         });
     },
 
+    async updateUserVerification(id: string, verified: boolean): Promise<any> {
+        return apiFetch(`/admin/users/${id}/verify`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ verified }),
+        });
+    },
+
+    async getProfessionals(filters: any = {}): Promise<any[]> {
+        const params = new URLSearchParams(filters).toString();
+        return apiFetch(`/professionals?${params}`);
+    },
+
     // Admin: Campaigns
     async getAdminCampaigns(): Promise<DonationCampaign[]> {
         return apiFetch('/admin/campaigns');
@@ -336,6 +386,12 @@ export const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         });
+    },
+
+    // News
+    async getNews(filters: { query?: string; category?: string } = {}): Promise<NewsItem[]> {
+        const params = new URLSearchParams(filters as any).toString();
+        return apiFetch(`/news?${params}`);
     },
 };
 

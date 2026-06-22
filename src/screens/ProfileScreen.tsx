@@ -20,10 +20,15 @@ type Props = CompositeScreenProps<
 >;
 
 export default function ProfileScreen({ navigation }: Props) {
-    const { profile, signOut, isAdmin } = useAuth();
+    const { profile, signOut, isAdmin, isProfessional, isInstitution } = useAuth();
     const { colors, isDark, toggleTheme } = useTheme();
     const username = profile?.full_name || profile?.username || 'Utilizador';
     const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
+
+    const isSpecialAccount = isProfessional || isInstitution;
+    const accountColor = isProfessional ? '#0f766e' : isInstitution ? '#7c3aed' : colors.primary;
+    const accountLabel = isProfessional ? 'Profissional' : isInstitution ? 'Instituição' : null;
+    const accountIcon: any = isProfessional ? 'medkit' : isInstitution ? 'business' : null;
 
     const [notificationsGranted, setNotificationsGranted] = useState(false);
 
@@ -105,7 +110,16 @@ export default function ProfileScreen({ navigation }: Props) {
         { icon: 'person-outline', label: 'Dados Pessoais', onPress: () => (navigation as any).navigate('EditProfile') },
         { icon: 'shield-checkmark-outline', label: 'Segurança', onPress: () => (navigation as any).navigate('Security') },
         { icon: 'eye-outline', label: 'Aparência', onPress: () => (navigation as any).navigate('Appearance') },
+        { icon: 'newspaper-outline', label: 'Notícias sobre Autismo', onPress: () => navigation.navigate('News') },
     ];
+
+    if (isSpecialAccount) {
+        menuItems.unshift({
+            icon: isProfessional ? 'medkit-outline' : 'business-outline',
+            label: 'Perfil Profissional',
+            onPress: () => (navigation as any).navigate('EditProfessionalProfile'),
+        });
+    }
 
     if (isAdmin) {
         menuItems.unshift({ icon: 'settings-outline', label: 'Painel Admin', onPress: () => (navigation as any).navigate('Admin') });
@@ -115,11 +129,33 @@ export default function ProfileScreen({ navigation }: Props) {
         <SafeAreaView style={[s.root, { backgroundColor: colors.background }]} edges={['top']}>
             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
                 <View style={s.header}>
-                    <View style={[s.avatar, { backgroundColor: colors.primary }]}>
+                    <View style={[s.avatar, { backgroundColor: isSpecialAccount ? accountColor : colors.primary }]}>
                         <Text style={s.avatarTxt}>{(username[0] || 'U').toUpperCase()}</Text>
+                        {/* Verified shield overlay */}
+                        {isSpecialAccount && profile?.verified && (
+                            <View style={[s.verifiedBadge, { backgroundColor: accountColor }]}>
+                                <Ionicons name="shield-checkmark" size={12} color="#fff" />
+                            </View>
+                        )}
                     </View>
                     <Text style={[s.name, { color: colors.textPrimary }]}>{username}</Text>
-                    {isAdmin && (
+
+                    {/* Account type badge */}
+                    {isSpecialAccount && (
+                        <View style={[s.accountBadge, { backgroundColor: accountColor + '18', borderColor: accountColor + '40' }]}>
+                            <Ionicons name={accountIcon} size={13} color={accountColor} />
+                            <Text style={[s.accountBadgeText, { color: accountColor }]}>
+                                {accountLabel}{profile?.verified ? ' · Verificado' : ' · Pendente'}
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Specialty line */}
+                    {isSpecialAccount && !!profile?.specialty && (
+                        <Text style={[s.specialty, { color: colors.textSecondary }]}>{profile.specialty}</Text>
+                    )}
+
+                    {isAdmin && !isSpecialAccount && (
                         <View style={[tw`px-3 py-1 rounded-full mt-2`, { backgroundColor: colors.primary + '20' }]}>
                             <Text style={[tw`text-xs font-bold uppercase tracking-wider`, { color: colors.accent }]}>Administrador</Text>
                         </View>
@@ -208,10 +244,14 @@ export default function ProfileScreen({ navigation }: Props) {
 const s = StyleSheet.create({
     root: { flex: 1 },
     scroll: { paddingBottom: 40 },
-    header: { alignItems: 'center', paddingVertical: 64 },
-    avatar: { width: 100, height: 100, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+    header: { alignItems: 'center', paddingVertical: 48 },
+    avatar: { width: 100, height: 100, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 16, position: 'relative' },
     avatarTxt: { color: '#FFF', fontSize: 42, fontWeight: '900' },
+    verifiedBadge: { position: 'absolute', bottom: -4, right: -4, width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
     name: { fontSize: 26, fontWeight: '900' },
+    accountBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginTop: 10 },
+    accountBadgeText: { fontSize: 13, fontWeight: '700' },
+    specialty: { fontSize: 14, fontWeight: '500', marginTop: 4 },
 
     section: { paddingHorizontal: 24, marginTop: 10 },
     secTitle: { fontSize: 13, fontWeight: '800', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.8 },
