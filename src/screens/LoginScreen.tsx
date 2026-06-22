@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Text,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,7 +79,14 @@ export default function LoginScreen({ navigation }: Props) {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <View style={styles.logoPlaceholder} />
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('../../assets/AlbaAppLogoSemFundo.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+                <Text style={[styles.logoText, { color: colors.textPrimary, fontFamily: colors.fontBold }]}>Alba</Text>
+              </View>
               <Text style={[styles.title, { color: colors.textPrimary, fontFamily: colors.fontBold }]}>
                 {isSignUp ? 'Criar Conta' : 'Bem-vindo'}
               </Text>
@@ -179,8 +187,10 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flexGrow: 1, paddingTop: 60 },
   content: { paddingHorizontal: 40, paddingBottom: 60 },
-  header: { marginBottom: 48 },
-  logoPlaceholder: { height: 20 },
+  header: { marginBottom: 40 },
+  logoContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 28, gap: 12 },
+  logoImage: { width: 52, height: 52, borderRadius: 14 },
+  logoText: { fontSize: 30, letterSpacing: -1 },
   title: { fontSize: 32, marginBottom: 12, letterSpacing: -0.5 },
   subtitle: { fontSize: 16, lineHeight: 24, opacity: 0.8 },
   form: { gap: 16 },

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type ColorPalette = 'teal' | 'blue' | 'warm';
+export type ColorPalette = 'teal' | 'blue' | 'warm' | 'purple';
 
 type ThemeColors = {
   background: string;
@@ -40,6 +40,10 @@ const PALETTES = {
   warm: {
     light: { primary: '#b45309', accent: '#d97706', border: '#f7e8d0' },
     dark: { primary: '#d97706', accent: '#f59e0b', border: '#2d241e' }
+  },
+  purple: {
+    light: { primary: '#6D28D9', accent: '#7C3AED', border: '#ede9fe' },
+    dark: { primary: '#7C3AED', accent: '#8B5CF6', border: '#2e1065' }
   }
 };
 
@@ -56,7 +60,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const [isDark, setIsDark] = useState(systemScheme === 'dark');
-  const [colorTheme, setColorThemeState] = useState<ColorPalette>('teal');
+  const [colorTheme, setColorThemeState] = useState<ColorPalette>('purple');
 
   useEffect(() => {
     (async () => {
