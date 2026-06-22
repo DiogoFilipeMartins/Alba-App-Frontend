@@ -21,6 +21,7 @@ import { RootStackParamList } from '../navigation/types';
 import { apiService, CommunityMessage, CommunityMember } from '../services/apiService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import * as Clipboard from 'expo-clipboard';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CommunityChat'>;
 
@@ -322,9 +323,9 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                         <View style={[styles.contextDivider, { backgroundColor: colors.border }]} />
                         <TouchableOpacity
                             style={styles.contextAction}
-                            onPress={() => {
+                            onPress={async () => {
                                 if (contextMsg) {
-                                    require('@react-native-clipboard/clipboard') ?? null;
+                                    await Clipboard.setStringAsync(contextMsg.content);
                                     setContextMsg(null);
                                 }
                             }}
