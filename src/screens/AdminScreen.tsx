@@ -145,6 +145,29 @@ export default function AdminScreen({ navigation }: Props) {
         ]);
     };
 
+    const toggleUserVerification = (user: any) => {
+        const nextStatus = !user.verified;
+        const action = nextStatus ? 'verificar' : 'remover verificação de';
+        Alert.alert(
+            nextStatus ? 'Verificar Conta' : 'Remover Verificação',
+            `Queres ${action} o perfil de "${user.full_name || user.email}"?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Confirmar',
+                    onPress: async () => {
+                        try {
+                            const updated = await apiService.updateUserVerification(user.id, nextStatus);
+                            setUsers(prev => prev.map(u => u.id === user.id ? updated : u));
+                        } catch (e: any) {
+                            Alert.alert('Erro', e.message || 'Não foi possível alterar a verificação.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const openNewCampaign = () => {
         setEditingCampaign(null);
         setCampTitle('');
@@ -241,32 +264,79 @@ export default function AdminScreen({ navigation }: Props) {
         );
     };
 
-    const renderUser = ({ item }: { item: any }) => (
-        <View style={tw`bg-[#1a1a1a] rounded-2xl border border-[#058c42]/20 p-4 mb-3 flex-row items-center`}>
-            <View style={tw`w-10 h-10 rounded-full bg-[#058c42]/20 items-center justify-center mr-3`}>
-                <Text style={tw`text-white font-bold text-base`}>
-                    {(item.full_name || item.email || '?')[0].toUpperCase()}
-                </Text>
+    const renderUser = ({ item }: { item: any }) => {
+        const isSpecial = item.account_type === 'professional' || item.account_type === 'institution';
+        return (
+            <View style={tw`bg-[#1a1a1a] rounded-2xl border border-[#058c42]/20 p-4 mb-3`}>
+                <View style={tw`flex-row items-center justify-between`}>
+                    <View style={tw`flex-row items-center flex-1 mr-2`}>
+                        <View style={tw`w-10 h-10 rounded-full bg-[#058c42]/20 items-center justify-center mr-3`}>
+                            <Text style={tw`text-white font-bold text-base`}>
+                                {(item.full_name || item.email || '?')[0].toUpperCase()}
+                            </Text>
+                        </View>
+                        <View style={tw`flex-1`}>
+                            <View style={tw`flex-row items-center gap-1.5`}>
+                                <Text style={tw`text-white font-bold text-sm`}>{item.full_name || '—'}</Text>
+                                {item.verified && (
+                                    <Ionicons name="shield-checkmark" size={16} color="#22c55e" />
+                                )}
+                            </View>
+                            <Text style={tw`text-gray-400 text-xs`}>{item.email}</Text>
+                            {isSpecial && item.specialty ? (
+                                <Text style={tw`text-[#058c42] text-xs font-semibold mt-0.5`}>
+                                    💼 {item.specialty}
+                                </Text>
+                            ) : null}
+                        </View>
+                    </View>
+
+                    <Pressable
+                        onPress={() => toggleUserRole(item)}
+                        style={[
+                            tw`px-2.5 py-1.5 rounded-xl`,
+                            item.role === 'admin'
+                                ? tw`bg-yellow-600/20 border border-yellow-600`
+                                : tw`bg-gray-800 border border-gray-700`
+                        ]}
+                    >
+                        <Text style={[tw`text-[11px] font-bold`, item.role === 'admin' ? tw`text-yellow-400` : tw`text-gray-400`]}>
+                            {item.role === 'admin' ? '⭐ Admin' : 'Utilizador'}
+                        </Text>
+                    </Pressable>
+                </View>
+
+                {isSpecial && (
+                    <View style={tw`flex-row justify-between items-center mt-3 pt-3 border-t border-gray-800`}>
+                        <View style={[
+                            tw`px-2 py-0.5 rounded-full flex-row items-center gap-1`, 
+                            { backgroundColor: item.account_type === 'professional' ? '#3b82f620' : '#8b5cf620' }
+                        ]}>
+                            <Ionicons name={item.account_type === 'professional' ? 'medkit-outline' : 'business-outline'} size={12} color={item.account_type === 'professional' ? '#3b82f6' : '#8b5cf6'} />
+                            <Text style={[tw`text-[11px] font-bold`, { color: item.account_type === 'professional' ? '#3b82f6' : '#8b5cf6' }]}>
+                                {item.account_type === 'professional' ? 'Profissional' : 'Instituição'}
+                            </Text>
+                        </View>
+
+                        <Pressable 
+                            onPress={() => toggleUserVerification(item)}
+                            style={[
+                                tw`px-3 py-1 rounded-xl flex-row items-center gap-1 border`,
+                                item.verified 
+                                    ? tw`bg-green-600/20 border-green-600` 
+                                    : tw`bg-amber-600/20 border-amber-600`
+                            ]}
+                        >
+                            <Ionicons name={item.verified ? 'shield-checkmark' : 'shield-outline'} size={12} color={item.verified ? '#22c55e' : '#f59e0b'} />
+                            <Text style={[tw`text-[11px] font-bold`, { color: item.verified ? '#22c55e' : '#f59e0b' }]}>
+                                {item.verified ? 'Verificado' : 'Verificar'}
+                            </Text>
+                        </Pressable>
+                    </View>
+                )}
             </View>
-            <View style={tw`flex-1`}>
-                <Text style={tw`text-white font-bold text-sm`}>{item.full_name || '—'}</Text>
-                <Text style={tw`text-gray-400 text-xs`}>{item.email}</Text>
-            </View>
-            <Pressable
-                onPress={() => toggleUserRole(item)}
-                style={[
-                    tw`px-3 py-1.5 rounded-xl`,
-                    item.role === 'admin'
-                        ? tw`bg-yellow-600/20 border border-yellow-600`
-                        : tw`bg-gray-600/20 border border-gray-600`
-                ]}
-            >
-                <Text style={[tw`text-xs font-bold`, item.role === 'admin' ? tw`text-yellow-400` : tw`text-gray-400`]}>
-                    {item.role === 'admin' ? '⭐ Admin' : 'Utilizador'}
-                </Text>
-            </Pressable>
-        </View>
-    );
+        );
+    };
 
     const renderCampaign = ({ item }: { item: DonationCampaign }) => {
         const progress = Math.min((Number(item.current_amount) / Number(item.goal_amount)) * 100, 100);
