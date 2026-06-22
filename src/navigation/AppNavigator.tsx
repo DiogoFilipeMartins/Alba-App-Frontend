@@ -19,12 +19,15 @@ import DonationsScreen from '../screens/DonationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CommunitiesScreen from '../screens/CommunitiesScreen';
 import CommunityChatScreen from '../screens/CommunityChatScreen';
+import CommunityDetailScreen from '../screens/CommunityDetailScreen';
 import ChatbotScreen from '../screens/ChatbotScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import EditProfessionalProfileScreen from '../screens/EditProfessionalProfileScreen';
 import SecurityScreen from '../screens/SecurityScreen';
 import DirectoryScreen from '../screens/DirectoryScreen';
 import PlaceProfileScreen from '../screens/PlaceProfileScreen';
 import AppearanceScreen from '../screens/AppearanceScreen';
+import NewsScreen from '../screens/NewsScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -112,10 +115,13 @@ export default function AppNavigator() {
             <Stack.Screen name="Donations" component={DonationsScreen} />
             <Stack.Screen name="MapPicker" component={MapPickerScreen} options={{ presentation: 'modal' }} />
             <Stack.Screen name="CommunityChat" component={CommunityChatScreen} />
+            <Stack.Screen name="CommunityDetail" component={CommunityDetailScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="EditProfessionalProfile" component={EditProfessionalProfileScreen} />
             <Stack.Screen name="Security" component={SecurityScreen} />
             <Stack.Screen name="PlaceProfile" component={PlaceProfileScreen} />
             <Stack.Screen name="Appearance" component={AppearanceScreen} />
+            <Stack.Screen name="News" component={NewsScreen} />
           </>
         )}
       </Stack.Navigator>

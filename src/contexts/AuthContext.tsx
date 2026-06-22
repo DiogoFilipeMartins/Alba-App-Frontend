@@ -9,9 +9,11 @@ interface AuthContextType {
   user: User | null;
   profile: any;
   isAdmin: boolean;
+  isProfessional: boolean;
+  isInstitution: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
-  signUp: (params: { email: string; password: string; username: string; phone?: string }) => Promise<any>;
+  signUp: (params: { email: string; password: string; username: string; phone?: string; account_type?: string; specialty?: string; bio?: string; website?: string }) => Promise<any>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -97,15 +99,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   };
 
-  const signUp = async ({ email, password, username, phone }: { email: string; password: string; username: string; phone?: string }) => {
+  const signUp = async ({ email, password, username, phone, account_type, specialty, bio, website }: { email: string; password: string; username: string; phone?: string; account_type?: string; specialty?: string; bio?: string; website?: string }) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { 
         data: { 
           username,
-          full_name: username, // Alguns triggers usam full_name
-          phone: phone || null 
+          full_name: username,
+          phone: phone || null,
+          account_type: account_type || 'user',
+          specialty: specialty || null,
+          bio: bio || null,
+          website: website || null,
         } 
       },
     });
@@ -125,6 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = profile?.role === 'admin';
+  const isProfessional = profile?.account_type === 'professional';
+  const isInstitution = profile?.account_type === 'institution';
 
   const refreshProfile = async () => {
     if (user?.id) {
@@ -134,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, isAdmin, loading, signIn, signUp, signOut, resetPassword, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin, isProfessional, isInstitution, loading, signIn, signUp, signOut, resetPassword, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
