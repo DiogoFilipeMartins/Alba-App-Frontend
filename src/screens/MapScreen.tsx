@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Modal, Pressable, Alert, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { apiService, Place } from '../services/apiService';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -340,7 +340,6 @@ export default function MapScreen({ navigation, route }: Props) {
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={{
           latitude: 38.7223,
           longitude: -9.1393,
@@ -349,7 +348,6 @@ export default function MapScreen({ navigation, route }: Props) {
         }}
         showsUserLocation={true}
         showsMyLocationButton={false}
-        customMapStyle={isDark ? darkMapStyle : []}
         onLongPress={(e) => {
           setSelectedCoords(e.nativeEvent.coordinate);
           setShowSuggestBtn(true);
@@ -359,6 +357,16 @@ export default function MapScreen({ navigation, route }: Props) {
           if (showSuggestBtn) setShowSuggestBtn(false);
         }}
       >
+        <UrlTile
+          urlTemplate={
+            isDark
+              ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png'
+              : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+          }
+          maximumZ={19}
+          flipY={false}
+          zIndex={-1}
+        />
         {selectedCoords && showSuggestBtn && (
           <Marker
             coordinate={selectedCoords}
@@ -377,22 +385,36 @@ export default function MapScreen({ navigation, route }: Props) {
       </MapView>
 
       {/* Painel de Detalhes (Bottom Sheet) */}
-      {selectedPlace && (
-        <View style={[styles.bottomSheet, { backgroundColor: colors.card }]}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeader}>
-            <View>
-              <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>{selectedPlace.name}</Text>
-              <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
-                {selectedPlace.type === 'professional' ? 'Profissional Especializado' : 'Instituição de Apoio'}
-              </Text>
+      {selectedPlace && (() => {
+        const claimer = (selectedPlace as any).profiles?.[0];
+        const isClaimedAndVerified = claimer?.verified === true;
+        return (
+          <View style={[styles.bottomSheet, { backgroundColor: colors.card }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <Text style={[styles.sheetTitle, { color: colors.textPrimary, marginBottom: 0 }]}>{selectedPlace.name}</Text>
+                  {isClaimedAndVerified && (
+                    <Ionicons name="shield-checkmark" size={18} color="#22c55e" />
+                  )}
+                </View>
+                <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+                  {selectedPlace.type === 'professional' ? 'Profissional Especializado' : 'Instituição de Apoio'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedPlace(null)} style={styles.closeSheet}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => setSelectedPlace(null)} style={styles.closeSheet}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.badgesRow}>
+            <View style={styles.badgesRow}>
+              {isClaimedAndVerified && (
+                <View style={[styles.badge, { backgroundColor: '#22c55e15' }]}>
+                  <Ionicons name="shield" size={14} color="#22c55e" />
+                  <Text style={[styles.badgeText, { color: '#22c55e' }]}>Página Oficial</Text>
+                </View>
+              )}
             {/* Distance badge when 'Próximos' filter is active */}
             {activeFilter === 'Próximos' && location && (() => {
               const dist = getDistanceKm(
@@ -458,7 +480,8 @@ export default function MapScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
         </View>
-      )}
+        );
+      })()}
 
       {/* Top UI: Search and Filters Button */}
       <View style={styles.topContainer}>

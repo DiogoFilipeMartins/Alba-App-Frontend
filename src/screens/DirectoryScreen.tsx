@@ -97,6 +97,8 @@ export default function DirectoryScreen({ navigation }: Props) {
   const renderPlaceItem = ({ item }: { item: Place }) => {
     const isFavorite = favoriteIds.includes(item.id);
     const accessibility = item.place_accessibility?.[0];
+    const claimer = (item as any).profiles?.[0];
+    const isClaimedAndVerified = claimer?.verified === true;
 
     const badges = [
       accessibility?.wheelchair_accessible && { label: 'Acesso adaptado', icon: 'accessibility' as const, color: '#6366f1' },
@@ -119,9 +121,14 @@ export default function DirectoryScreen({ navigation }: Props) {
             />
           </View>
           <View style={styles.headerInfo}>
-            <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
-              {item.name}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 }}>
+              <Text style={[styles.title, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {isClaimedAndVerified && (
+                <Ionicons name="shield-checkmark" size={16} color="#22c55e" />
+              )}
+            </View>
             <View style={styles.typeRow}>
               <Text style={[styles.typeLabel, { color: item.type === 'professional' ? colors.accent : '#3b82f6' }]}>
                 {item.type === 'professional' ? 'Profissional' : 'Instituição'}
