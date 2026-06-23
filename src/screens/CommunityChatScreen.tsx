@@ -12,7 +12,7 @@ import {
     Alert,
     Modal,
     TouchableOpacity,
-    Animated,
+    ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -96,7 +96,6 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
         return () => clearInterval(interval);
     }, [communityId]);
 
-    // Build messages with date separators
     const messagesWithSeparators = React.useMemo<MessageWithSeparator[]>(() => {
         const result: MessageWithSeparator[] = [];
         let lastDate = '';
@@ -129,7 +128,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
     };
 
     const handleDelete = async (msg: CommunityMessage) => {
-        Alert.alert('Apagar mensagem', 'Tens a certeza?', [
+        Alert.alert('Apagar mensagem', 'Tens a certeza que queres apagar esta mensagem?', [
             { text: 'Cancelar', style: 'cancel' },
             {
                 text: 'Apagar', style: 'destructive',
@@ -147,7 +146,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
     };
 
     const handleLeave = () => {
-        Alert.alert('Sair da Comunidade', 'Tens a certeza que queres sair?', [
+        Alert.alert('Sair da Comunidade', 'Tens a certeza que queres sair desta comunidade?', [
             { text: 'Cancelar', style: 'cancel' },
             {
                 text: 'Sair', style: 'destructive',
@@ -166,10 +165,10 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
     const renderItem = ({ item }: { item: MessageWithSeparator }) => {
         if (item.type === 'separator') {
             return (
-                <View style={styles.dateSeparator}>
-                    <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
-                    <Text style={[styles.dateLabel, { color: colors.textMuted, backgroundColor: colors.background }]}>{item.date}</Text>
-                    <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
+                <View style={styles.dateSeparatorContainer}>
+                    <View style={[styles.dateSeparatorPill, { backgroundColor: isDark ? '#1C1C1E' : '#E1E1E6' }]}>
+                        <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>{item.date}</Text>
+                    </View>
                 </View>
             );
         }
@@ -184,51 +183,70 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                 onLongPress={() => setContextMsg(msg)}
                 style={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowOther]}
             >
-                {!isMine && (
-                    <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-                        <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+                <View style={[
+                    styles.msgBubble,
+                    isMine
+                        ? { 
+                            backgroundColor: isDark ? '#005C4B' : '#E7FFDB',
+                            borderBottomRightRadius: 2,
+                            alignSelf: 'flex-end',
+                          }
+                        : { 
+                            backgroundColor: isDark ? '#202C33' : '#FFFFFF',
+                            borderBottomLeftRadius: 2,
+                            alignSelf: 'flex-start',
+                          },
+                    styles.bubbleShadow
+                ]}>
+                    {!isMine && (
+                        <Text style={[styles.senderName, { color: avatarColor }]}>{name}</Text>
+                    )}
+                    <View style={styles.messageContentRow}>
+                        <Text style={[styles.msgText, { color: isDark ? '#E9EDEF' : '#303030' }]}>
+                            {msg.content}
+                        </Text>
+                        <Text style={[styles.msgTime, { color: isDark ? '#8696A0' : '#667781' }]}>
+                            {formatTime(msg.created_at)}
+                        </Text>
                     </View>
-                )}
-                <View style={styles.msgGroup}>
-                    {!isMine && <Text style={[styles.senderName, { color: avatarColor }]}>{name}</Text>}
-                    <View style={[
-                        styles.msgBubble,
-                        isMine
-                            ? { backgroundColor: accentColor, borderBottomRightRadius: 4 }
-                            : { backgroundColor: isDark ? '#2C2C2E' : '#E9E9EB', borderBottomLeftRadius: 4 }
-                    ]}>
-                        <Text style={[styles.msgText, { color: isMine ? '#fff' : colors.textPrimary }]}>{msg.content}</Text>
-                    </View>
-                    <Text style={[styles.msgTime, { color: colors.textMuted, alignSelf: isMine ? 'flex-end' : 'flex-start' }]}>
-                        {formatTime(msg.created_at)}
-                    </Text>
                 </View>
-                {isMine && <View style={{ width: 32 }} />}
             </Pressable>
         );
     };
+    const chatBgColor = isDark ? '#0B141A' : '#efeae2';
+    const headerBg = isDark ? '#202C33' : '#F0F2F5';
 
     return (
-        <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
-                <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
-                    <Ionicons name="chevron-back" size={24} color={accentColor} />
-                </Pressable>
-                <View style={[styles.headerEmoji, { backgroundColor: accentColor + '20' }]}>
-                    <Ionicons name="people" size={20} color={accentColor} />
+        <View style={[styles.root, { backgroundColor: chatBgColor }]}>
+            {/* Header Safe Area */}
+            <SafeAreaView style={{ backgroundColor: headerBg }} edges={['top']}>
+                <View style={[styles.header, { borderBottomColor: isDark ? '#222E35' : '#E9E9EB', backgroundColor: headerBg }]}>
+                    <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
+                        <Ionicons name="arrow-back" size={24} color={isDark ? '#E9EDEF' : '#54656F'} />
+                    </Pressable>
+                    
+                    <View style={[styles.headerEmoji, { backgroundColor: accentColor }]}>
+                        <Ionicons name="people" size={20} color="#fff" />
+                    </View>
+                    
+                    <View style={styles.headerTitleWrap}>
+                        <Text style={[styles.headerTitle, { color: isDark ? '#E9EDEF' : '#111B21' }]} numberOfLines={1}>
+                            {communityName}
+                        </Text>
+                        <Text style={[styles.headerSub, { color: isDark ? '#8696A0' : '#667781' }]}>
+                            {members.length} membros
+                        </Text>
+                    </View>
+
+                    <Pressable onPress={() => { fetchMembers(); setMembersVisible(true); }} style={styles.headerBtn}>
+                        <Ionicons name="people-outline" size={22} color={isDark ? '#E9EDEF' : '#54656F'} />
+                    </Pressable>
+                    
+                    <Pressable onPress={handleLeave} style={styles.headerBtn}>
+                        <Ionicons name="exit-outline" size={22} color="#ef4444" />
+                    </Pressable>
                 </View>
-                <View style={styles.headerTitleWrap}>
-                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>{communityName}</Text>
-                    <Text style={[styles.headerSub, { color: colors.textSecondary }]}>{members.length} membros</Text>
-                </View>
-                <Pressable onPress={() => { fetchMembers(); setMembersVisible(true); }} style={styles.headerBtn}>
-                    <Ionicons name="people-outline" size={22} color={accentColor} />
-                </Pressable>
-                <Pressable onPress={handleLeave} style={styles.headerBtn}>
-                    <Ionicons name="exit-outline" size={22} color="#ef4444" />
-                </Pressable>
-            </View>
+            </SafeAreaView>
 
             {loading ? (
                 <View style={styles.centered}>
@@ -244,38 +262,60 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                     onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
                     ListEmptyComponent={
                         <View style={styles.empty}>
-                            <Ionicons name="chatbubbles-outline" size={48} color={accentColor + '60'} />
+                            <Ionicons name="chatbubbles-outline" size={48} color={accentColor + '80'} />
                             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Sê o primeiro a dizer olá! 👋</Text>
                         </View>
                     }
                 />
             )}
 
-            {/* Input */}
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-                <View style={[styles.inputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-                    <TextInput
-                        style={[styles.input, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', color: colors.textPrimary }]}
-                        placeholder="Escreve uma mensagem..."
-                        placeholderTextColor={colors.textMuted}
-                        value={text}
-                        onChangeText={setText}
-                        multiline
-                    />
+            {/* Input Bar - WhatsApp Style */}
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
+                <SafeAreaView style={[styles.inputContainer, { backgroundColor: chatBgColor }]} edges={['bottom']}>
+                    <View style={[styles.inputCapsule, { backgroundColor: isDark ? '#2A3942' : '#FFFFFF' }]}>
+                        <Pressable style={styles.inputIcon}>
+                            <Ionicons name="happy-outline" size={24} color={isDark ? '#8696A0' : '#54656F'} />
+                        </Pressable>
+                        <TextInput
+                            style={[styles.input, { color: isDark ? '#E9EDEF' : '#111B21' }]}
+                            placeholder="Mensagem"
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={text}
+                            onChangeText={setText}
+                            multiline
+                        />
+                        <Pressable style={styles.inputIcon}>
+                            <Ionicons name="attach-outline" size={24} color={isDark ? '#8696A0' : '#54656F'} />
+                        </Pressable>
+                    </View>
+                    
                     <Pressable
                         onPress={handleSend}
-                        style={[styles.sendBtn, { backgroundColor: accentColor, opacity: text.trim() ? 1 : 0.4 }]}
+                        style={[
+                            styles.sendCircle, 
+                            { 
+                                backgroundColor: text.trim() ? '#00A884' : (isDark ? '#8696A0' : '#54656F'), 
+                                opacity: text.trim() ? 1 : 0.6 
+                            }
+                        ]}
                         disabled={!text.trim() || sending}
                     >
-                        {sending ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={18} color="#fff" />}
+                        {sending ? (
+                            <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                            <Ionicons name="send" size={18} color="#fff" style={{ marginLeft: 2 }} />
+                        )}
                     </Pressable>
-                </View>
+                </SafeAreaView>
             </KeyboardAvoidingView>
 
             {/* Members Panel Modal */}
             <Modal visible={membersVisible} transparent animationType="slide" onRequestClose={() => setMembersVisible(false)}>
                 <View style={styles.membersOverlay}>
-                    <View style={[styles.membersPanel, { backgroundColor: colors.card }]}>
+                    <View style={[styles.membersPanel, { backgroundColor: isDark ? '#222E35' : '#FFFFFF' }]}>
                         <View style={styles.modalHandle} />
                         <View style={styles.membersPanelHeader}>
                             <Text style={[styles.membersPanelTitle, { color: colors.textPrimary }]}>Membros ({members.length})</Text>
@@ -297,12 +337,12 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                                         <View style={{ flex: 1 }}>
                                             <Text style={[styles.memberName, { color: colors.textPrimary }]}>{name}</Text>
                                             {item.role === 'admin' && (
-                                                <Text style={[styles.memberRole, { color: accentColor }]}>Administrador</Text>
+                                                <Text style={[styles.memberRole, { color: '#00A884' }]}>Administrador</Text>
                                             )}
                                         </View>
                                         {item.user_id === user?.id && (
-                                            <View style={[styles.meBadge, { backgroundColor: accentColor + '20' }]}>
-                                                <Text style={[styles.meBadgeText, { color: accentColor }]}>Tu</Text>
+                                            <View style={[styles.meBadge, { backgroundColor: 'rgba(0,168,132,0.15)' }]}>
+                                                <Text style={[styles.meBadgeText, { color: '#00A884' }]}>Tu</Text>
                                             </View>
                                         )}
                                     </View>
@@ -316,7 +356,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
             {/* Message Context Menu Modal */}
             <Modal visible={!!contextMsg} transparent animationType="fade" onRequestClose={() => setContextMsg(null)}>
                 <Pressable style={styles.contextOverlay} onPress={() => setContextMsg(null)}>
-                    <View style={[styles.contextMenu, { backgroundColor: colors.card }]}>
+                    <View style={[styles.contextMenu, { backgroundColor: isDark ? '#222E35' : '#FFFFFF' }]}>
                         <Text style={[styles.contextMsgPreview, { color: colors.textSecondary }]} numberOfLines={2}>
                             {contextMsg?.content}
                         </Text>
@@ -349,42 +389,98 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                     </View>
                 </Pressable>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     root: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 10, borderBottomWidth: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 0.5 },
     headerBtn: { padding: 8 },
-    headerEmoji: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+    headerEmoji: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
     headerTitleWrap: { flex: 1 },
     headerTitle: { fontSize: 16, fontFamily: 'Poppins_700Bold' },
-    headerSub: { fontSize: 11, fontFamily: 'Poppins_400Regular' },
+    headerSub: { fontSize: 11, fontFamily: 'Poppins_400Regular', marginTop: 1 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    list: { padding: 16, paddingBottom: 8 },
+    list: { paddingHorizontal: 12, paddingVertical: 10, paddingBottom: 16 },
 
-    dateSeparator: { flexDirection: 'row', alignItems: 'center', marginVertical: 16, gap: 8 },
-    dateLine: { flex: 1, height: 1 },
-    dateLabel: { fontSize: 12, fontFamily: 'Poppins_500Medium', paddingHorizontal: 8 },
+    // Separators
+    dateSeparatorContainer: { alignItems: 'center', marginVertical: 16 },
+    dateSeparatorPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
+    dateLabel: { fontSize: 11, fontFamily: 'Poppins_600SemiBold' },
 
-    msgRow: { flexDirection: 'row', marginBottom: 4, maxWidth: '85%' },
-    msgRowMine: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
-    msgRowOther: { alignSelf: 'flex-start' },
-    avatar: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginRight: 8, alignSelf: 'flex-end' },
-    avatarText: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#fff' },
-    msgGroup: { maxWidth: '100%' },
-    senderName: { fontSize: 11, fontFamily: 'Poppins_700Bold', marginBottom: 2, marginLeft: 2 },
-    msgBubble: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18 },
-    msgText: { fontSize: 14, fontFamily: 'Poppins_400Regular', lineHeight: 20 },
-    msgTime: { fontSize: 10, fontFamily: 'Poppins_400Regular', marginTop: 3, marginHorizontal: 4 },
+    // Message Rows
+    msgRow: { flexDirection: 'row', marginVertical: 3, maxWidth: '85%' },
+    msgRowMine: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
+    msgRowOther: { alignSelf: 'flex-start', justifyContent: 'flex-start' },
+    
+    // Bubble design
+    msgBubble: { 
+        paddingHorizontal: 12, 
+        paddingTop: 6, 
+        paddingBottom: 6, 
+        borderRadius: 10,
+        position: 'relative',
+        minWidth: 80,
+    },
+    bubbleShadow: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 1,
+        elevation: 1,
+    },
+    senderName: { fontSize: 12, fontFamily: 'Poppins_700Bold', marginBottom: 2 },
+    messageContentRow: { 
+        flexDirection: 'row', 
+        alignItems: 'flex-end', 
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+    },
+    msgText: { fontSize: 14, fontFamily: 'Poppins_400Regular', lineHeight: 19, paddingRight: 45 },
+    msgTime: { 
+        fontSize: 10, 
+        fontFamily: 'Poppins_400Regular', 
+        position: 'absolute', 
+        right: 4, 
+        bottom: 2,
+    },
 
-    empty: { alignItems: 'center', marginTop: 80, gap: 12 },
+    empty: { alignItems: 'center', marginTop: 120, gap: 12 },
     emptyText: { fontSize: 15, fontFamily: 'Poppins_500Medium', textAlign: 'center' },
 
-    inputContainer: { flexDirection: 'row', alignItems: 'flex-end', padding: 10, borderTopWidth: 1 },
-    input: { flex: 1, minHeight: 44, maxHeight: 100, borderRadius: 22, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, fontSize: 15, fontFamily: 'Poppins_400Regular' },
-    sendBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
+    // Custom WhatsApp input row
+    inputContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6, gap: 6 },
+    inputCapsule: { 
+        flex: 1, 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        borderRadius: 24, 
+        paddingHorizontal: 8,
+        minHeight: 48,
+        maxHeight: 120,
+    },
+    input: { 
+        flex: 1, 
+        fontSize: 15, 
+        fontFamily: 'Poppins_400Regular', 
+        paddingVertical: 8,
+        paddingHorizontal: 6,
+    },
+    inputIcon: { padding: 6 },
+    
+    sendCircle: { 
+        width: 48, 
+        height: 48, 
+        borderRadius: 24, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 2,
+    },
 
     membersOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
     membersPanel: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, maxHeight: '70%' },

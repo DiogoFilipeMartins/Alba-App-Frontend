@@ -102,6 +102,11 @@ export interface Community {
     member_count?: number;
     color?: string;
     created_at?: string;
+    last_message?: {
+        content: string;
+        created_at: string;
+        sender_name: string;
+    } | null;
 }
 
 export interface CommunityMember {
