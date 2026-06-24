@@ -8,7 +8,7 @@ import {
     Alert,
     Platform,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, Region, MapPressEvent } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, Region, MapPressEvent, UrlTile } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import tw from 'twrnc';
@@ -18,6 +18,7 @@ import { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'MapPicker'>;
 
 export default function MapPickerScreen({ navigation, route }: Props) {
+    const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
     const initial = route.params?.initialCoords ?? null;
 
     const [marker, setMarker] = useState<{ latitude: number; longitude: number } | null>(
@@ -104,6 +105,13 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 showsUserLocation
                 showsMyLocationButton={false}
             >
+                {mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (
+                    <UrlTile
+                        urlTemplate={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`}
+                        maximumZ={19}
+                        tileSize={256}
+                    />
+                ) : null}
                 {marker && (
                     <Marker coordinate={marker} pinColor="#16db65" />
                 )}

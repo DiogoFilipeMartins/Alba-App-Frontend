@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Modal, Pressable, Alert, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { apiService, Place } from '../services/apiService';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -50,6 +50,7 @@ const PlaceMarker = memo(({ place, colors, onPress }: { place: any, colors: any,
 });
 
 export default function MapScreen({ navigation, route }: Props) {
+  const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
   const { colors, isDark } = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
@@ -360,6 +361,13 @@ export default function MapScreen({ navigation, route }: Props) {
           if (showSuggestBtn) setShowSuggestBtn(false);
         }}
       >
+        {mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (
+          <UrlTile
+            urlTemplate={`https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`}
+            maximumZ={19}
+            tileSize={256}
+          />
+        ) : null}
         {selectedCoords && showSuggestBtn && (
           <Marker
             coordinate={selectedCoords}

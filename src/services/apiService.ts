@@ -301,7 +301,7 @@ export const apiService = {
         return apiFetch(`/communities/${id}/members`);
     },
 
-    async sendChatMessage(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<string> {
+    async sendChatMessage(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<{ reply: string; results?: Place[] }> {
         // Timeout generoso (60s) para lidar com cold starts do Render free tier
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -313,8 +313,8 @@ export const apiService = {
                 body: JSON.stringify({ messages }),
                 signal: controller.signal,
             });
-            const data = await handleResponse(response) as { reply: string };
-            return data.reply;
+            const data = await handleResponse(response) as { reply: string; results?: Place[] };
+            return data;
         } catch (err: any) {
             if (err.name === 'AbortError') {
                 throw new Error('O servidor demorou demasiado a responder. Tenta novamente.');

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, Place } from '../services/apiService';
@@ -23,6 +23,7 @@ import { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'PlaceProfile'>;
 
 export default function PlaceProfileScreen({ route, navigation }: Props) {
+  const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
   const { colors, isDark } = useTheme();
   const { place: passedPlace, placeId } = route.params;
 
@@ -343,6 +344,13 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
                   longitudeDelta: 0.005,
                 }}
               >
+                {mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (
+                  <UrlTile
+                    urlTemplate={`https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`}
+                    maximumZ={19}
+                    tileSize={256}
+                  />
+                ) : null}
                 <Marker
                   coordinate={{
                     latitude: Number(place.latitude),

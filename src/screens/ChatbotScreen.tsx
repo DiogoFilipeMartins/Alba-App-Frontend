@@ -194,11 +194,11 @@ export default function ChatbotScreen({ navigation }: Props) {
         ];
 
         try {
-            const reply = await apiService.sendChatMessage(newHistory);
+            const chatRes = await apiService.sendChatMessage(newHistory);
 
             const updatedHistory: { role: 'user' | 'assistant'; content: string }[] = [
                 ...newHistory,
-                { role: 'assistant', content: reply },
+                { role: 'assistant', content: chatRes.reply },
             ];
             setHistory(updatedHistory);
 
@@ -207,7 +207,8 @@ export default function ChatbotScreen({ navigation }: Props) {
                 const botReply: Message = {
                     id: Date.now().toString() + '-r',
                     role: 'bot',
-                    text: reply,
+                    text: chatRes.reply,
+                    results: chatRes.results,
                     timestamp: new Date(),
                 };
                 return [...withoutTyping, botReply];
