@@ -11,6 +11,7 @@ import {
     RefreshControl,
     FlatList,
     Platform,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { apiService, Community } from '../services/apiService';
 import { useTheme } from '../contexts/ThemeContext';
+import { FontSize, FontFamily } from '../theme/font';
 
 type Props = CompositeScreenProps<
     BottomTabScreenProps<MainTabParamList, 'Communities'>,
@@ -147,6 +149,7 @@ export default function CommunitiesScreen({ navigation }: Props) {
             communityColor: community.color || colors.primary,
             description: community.description,
             memberCount: community.member_count,
+            photoUrl: community.photo_url,
         });
     };
 
@@ -168,7 +171,11 @@ export default function CommunitiesScreen({ navigation }: Props) {
                     onLongPress={() => openDetail(item)}
                 >
                     <View style={[styles.avatar, { backgroundColor: accentColor }]}>
-                        <Ionicons name="people" size={24} color="#fff" />
+                        {item.photo_url ? (
+                            <Image source={{ uri: item.photo_url }} style={styles.avatarImage} />
+                        ) : (
+                            <Ionicons name="people" size={24} color="#fff" />
+                        )}
                     </View>
                     <View style={styles.chatInfo}>
                         <View style={styles.chatHeader}>
@@ -214,7 +221,11 @@ export default function CommunitiesScreen({ navigation }: Props) {
                     onLongPress={() => openDetail(item)}
                 >
                     <View style={[styles.avatar, { backgroundColor: accentColor }]}>
-                        <Ionicons name="people" size={24} color="#fff" />
+                        {item.photo_url ? (
+                            <Image source={{ uri: item.photo_url }} style={styles.avatarImage} />
+                        ) : (
+                            <Ionicons name="people" size={24} color="#fff" />
+                        )}
                     </View>
                     <View style={styles.chatInfo}>
                         <View style={styles.chatHeader}>
@@ -456,18 +467,18 @@ export default function CommunitiesScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
     root: { flex: 1 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-    headerTitle: { fontSize: 26, fontFamily: 'Poppins_700Bold' },
-    headerSub: { fontSize: 13, fontFamily: 'Poppins_400Regular', marginTop: -2 },
+    headerTitle: { fontSize: FontSize.huge, fontFamily: FontFamily.poppinsBold },
+    headerSub: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsRegular, marginTop: -2 },
     addBtn: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
     
     // Tab Segmented Control
     tabContainer: { flexDirection: 'row', borderBottomWidth: 1, paddingHorizontal: 20, marginBottom: 12 },
     tabButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: 'transparent' },
-    tabText: { fontSize: 13, fontFamily: 'Poppins_600SemiBold' },
-    tabTextActive: { fontFamily: 'Poppins_700Bold' },
+    tabText: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsSemiBold },
+    tabTextActive: { fontFamily: FontFamily.poppinsBold },
 
     searchBar: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 14 },
-    searchInput: { flex: 1, fontSize: 14, fontFamily: 'Poppins_400Regular', paddingVertical: 0 },
+    searchInput: { flex: 1, fontSize: FontSize.s, fontFamily: FontFamily.poppinsRegular, paddingVertical: 0 },
     
     listContainer: { paddingHorizontal: 20, paddingBottom: 80 },
     
@@ -492,24 +503,25 @@ const styles = StyleSheet.create({
         }),
     },
     avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+    avatarImage: { width: '100%', height: '100%', borderRadius: 25 },
     chatInfo: { flex: 1, justifyContent: 'center' },
     chatHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    chatTitle: { fontSize: 15, fontFamily: 'Poppins_700Bold', flex: 1 },
-    chatTime: { fontSize: 11, fontFamily: 'Poppins_400Regular' },
+    chatTitle: { fontSize: FontSize.m, fontFamily: FontFamily.poppinsBold, flex: 1 },
+    chatTime: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsRegular },
     chatFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 },
-    chatDesc: { fontSize: 12, fontFamily: 'Poppins_400Regular', flex: 1, paddingRight: 10 },
+    chatDesc: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsRegular, flex: 1, paddingRight: 10 },
     
     badge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-    badgeText: { fontSize: 10, fontFamily: 'Poppins_600SemiBold' },
+    badgeText: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsSemiBold },
 
     exploreFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
     memberCountContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    memberCountText: { fontSize: 12, fontFamily: 'Poppins_400Regular' },
+    memberCountText: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsRegular },
     joinBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-    joinText: { color: '#fff', fontSize: 11, fontFamily: 'Poppins_700Bold' },
+    joinText: { color: '#fff', fontSize: FontSize.s, fontFamily: FontFamily.poppinsBold },
 
     empty: { alignItems: 'center', marginTop: 100, gap: 12, paddingHorizontal: 20 },
-    emptyText: { fontSize: 14, fontFamily: 'Poppins_500Medium', textAlign: 'center', lineHeight: 20 },
+    emptyText: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsMedium, textAlign: 'center', lineHeight: 20 },
     
     // FAB
     fab: { width: 56, height: 56, borderRadius: 28, position: 'absolute', right: 20, bottom: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 6 },
@@ -517,36 +529,36 @@ const styles = StyleSheet.create({
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '85%' },
     modalHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#C7C7CC', alignSelf: 'center', marginBottom: 20 },
-    modalTitle: { fontSize: 22, fontFamily: 'Poppins_700Bold', marginBottom: 20 },
-    fieldLabel: { fontSize: 11, fontFamily: 'Poppins_700Bold', letterSpacing: 0.5, marginBottom: 8 },
+    modalTitle: { fontSize: FontSize.xxxl, fontFamily: FontFamily.poppinsBold, marginBottom: 20 },
+    fieldLabel: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsBold, letterSpacing: 0.5, marginBottom: 8 },
     colorRow: { flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' },
     colorBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
     colorBtnSelected: { borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
-    input: { borderRadius: 16, padding: 16, fontSize: 15, fontFamily: 'Poppins_400Regular', marginBottom: 12 },
+    input: { borderRadius: 16, padding: 16, fontSize: FontSize.m, fontFamily: FontFamily.poppinsRegular, marginBottom: 12 },
     textArea: { height: 80, textAlignVertical: 'top' },
     previewCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, padding: 16, marginBottom: 20 },
-    previewName: { color: '#fff', fontSize: 16, fontFamily: 'Poppins_700Bold', flex: 1 },
+    previewName: { color: '#fff', fontSize: FontSize.l, fontFamily: FontFamily.poppinsBold, flex: 1 },
     modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
     cancelBtn: { paddingHorizontal: 16, paddingVertical: 14, justifyContent: 'center' },
-    cancelText: { fontSize: 15, fontFamily: 'Poppins_600SemiBold' },
+    cancelText: { fontSize: FontSize.m, fontFamily: FontFamily.poppinsSemiBold },
     createBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14, minWidth: 100, alignItems: 'center' },
-    createText: { color: '#fff', fontSize: 15, fontFamily: 'Poppins_700Bold' },
+    createText: { color: '#fff', fontSize: FontSize.m, fontFamily: FontFamily.poppinsBold },
 
     // Fullscreen creation styles
     modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 0.5 },
     modalHeaderBtn: { padding: 8 },
-    modalHeaderTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold' },
+    modalHeaderTitle: { fontSize: FontSize.xl, fontFamily: FontFamily.poppinsBold },
     modalScroll: { padding: 24, paddingBottom: 60 },
     avatarSelectionContainer: { alignItems: 'center', marginBottom: 24 },
     bigAvatar: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', position: 'relative' },
     bigAvatarEmoji: { fontSize: 48 },
     cameraOverlay: { position: 'absolute', bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 3 },
-    avatarTip: { fontSize: 12, fontFamily: 'Poppins_400Regular', marginTop: 8 },
+    avatarTip: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsRegular, marginTop: 8 },
     fieldContainer: { marginBottom: 20 },
     inputUnderline: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1.5, paddingVertical: 4 },
-    underlineInput: { flex: 1, fontSize: 16, fontFamily: 'Poppins_500Medium', paddingVertical: 6 },
-    charCount: { fontSize: 12, fontFamily: 'Poppins_500Medium', marginLeft: 8 },
-    descriptionInput: { fontSize: 14, fontFamily: 'Poppins_400Regular' },
+    underlineInput: { flex: 1, fontSize: FontSize.l, fontFamily: FontFamily.poppinsMedium, paddingVertical: 6 },
+    charCount: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsMedium, marginLeft: 8 },
+    descriptionInput: { fontSize: FontSize.s, fontFamily: FontFamily.poppinsRegular },
     largeCreateBtn: { paddingVertical: 14, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
-    largeCreateText: { color: '#fff', fontSize: 16, fontFamily: 'Poppins_700Bold' },
+    largeCreateText: { color: '#fff', fontSize: FontSize.l, fontFamily: FontFamily.poppinsBold },
 });

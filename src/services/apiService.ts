@@ -101,6 +101,7 @@ export interface Community {
     is_member?: boolean;
     member_count?: number;
     color?: string;
+    photo_url?: string;
     created_at?: string;
     last_message?: {
         content: string;
@@ -259,6 +260,14 @@ export const apiService = {
     async createCommunity(data: { name: string, description: string }): Promise<Community> {
         return apiFetch('/communities', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+    },
+
+    async updateCommunity(id: string, data: { name?: string; description?: string; color?: string; photo_url?: string }): Promise<Community> {
+        return apiFetch(`/communities/${id}`, {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         });

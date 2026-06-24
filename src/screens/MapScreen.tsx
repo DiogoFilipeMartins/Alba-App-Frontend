@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Modal, Pressable, Alert, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { apiService, Place } from '../services/apiService';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { favoritesService } from '../services/favoritesService';
+import { FontSize, FontFamily } from '../theme/font';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Map'>,
@@ -340,6 +341,8 @@ export default function MapScreen({ navigation, route }: Props) {
       <MapView
         ref={mapRef}
         style={styles.map}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        customMapStyle={isDark ? darkMapStyle : undefined}
         initialRegion={{
           latitude: 38.7223,
           longitude: -9.1393,
@@ -357,16 +360,6 @@ export default function MapScreen({ navigation, route }: Props) {
           if (showSuggestBtn) setShowSuggestBtn(false);
         }}
       >
-        <UrlTile
-          urlTemplate={
-            isDark
-              ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png'
-              : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-          }
-          maximumZ={19}
-          flipY={false}
-          zIndex={-1}
-        />
         {selectedCoords && showSuggestBtn && (
           <Marker
             coordinate={selectedCoords}
@@ -640,8 +633,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: '100%', height: '100%' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 15, fontSize: 16, fontFamily: 'Poppins_600SemiBold' },
-  errorText: { fontSize: 16, color: '#FF5252', textAlign: 'center', padding: 30, fontFamily: 'Poppins_400Regular' },
+  loadingText: { marginTop: 15, fontSize: FontSize.l, fontFamily: FontFamily.poppinsSemiBold },
+  errorText: { fontSize: FontSize.l, color: '#FF5252', textAlign: 'center', padding: 30, fontFamily: FontFamily.poppinsRegular },
   
   topContainer: {
     position: 'absolute',
@@ -673,14 +666,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   smartHintText: {
-    fontSize: 12,
-    fontFamily: 'Poppins_500Medium',
+    fontSize: FontSize.s,
+    fontFamily: FontFamily.poppinsMedium,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: FontSize.l,
     paddingVertical: 10,
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: FontFamily.poppinsRegular,
   },
   filtersScroll: {
     marginTop: 12,
@@ -693,8 +686,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   filterText: {
-    fontSize: 13,
-    fontFamily: 'Poppins_600SemiBold',
+    fontSize: FontSize.s,
+    fontFamily: FontFamily.poppinsSemiBold,
   },
   sideActions: {
     position: 'absolute',
@@ -745,8 +738,8 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
   },
   modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Poppins_700Bold',
+    fontSize: FontSize.xl,
+    fontFamily: FontFamily.poppinsBold,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -760,8 +753,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   filterOptionText: {
-    fontSize: 16,
-    fontFamily: 'Poppins_600SemiBold',
+    fontSize: FontSize.l,
+    fontFamily: FontFamily.poppinsSemiBold,
   },
   suggestContainer: {
     position: 'absolute',
@@ -787,8 +780,8 @@ const styles = StyleSheet.create({
   },
   suggestButtonText: {
     color: '#FFF',
-    fontSize: 15,
-    fontFamily: 'Poppins_700Bold',
+    fontSize: FontSize.m,
+    fontFamily: FontFamily.poppinsBold,
   },
   closeSuggest: {
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -830,13 +823,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sheetTitle: {
-    fontSize: 22,
-    fontFamily: 'Poppins_700Bold',
+    fontSize: FontSize.xxxl,
+    fontFamily: FontFamily.poppinsBold,
     marginBottom: 4,
   },
   sheetSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Poppins_500Medium',
+    fontSize: FontSize.s,
+    fontFamily: FontFamily.poppinsMedium,
     opacity: 0.7,
   },
   closeSheet: {
@@ -857,13 +850,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   badgeText: {
-    fontSize: 12,
-    fontFamily: 'Poppins_600SemiBold',
+    fontSize: FontSize.s,
+    fontFamily: FontFamily.poppinsSemiBold,
   },
   sheetDesc: {
-    fontSize: 14,
+    fontSize: FontSize.s,
     lineHeight: 22,
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: FontFamily.poppinsRegular,
     marginBottom: 24,
   },
   sheetActions: {
@@ -882,8 +875,8 @@ const styles = StyleSheet.create({
   },
   mainActionText: {
     color: '#FFF',
-    fontSize: 16,
-    fontFamily: 'Poppins_700Bold',
+    fontSize: FontSize.l,
+    fontFamily: FontFamily.poppinsBold,
   },
   secondaryAction: {
     width: 56,
@@ -910,7 +903,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   miniLoaderText: {
-    fontSize: 12,
-    fontFamily: 'Poppins_500Medium',
+    fontSize: FontSize.s,
+    fontFamily: FontFamily.poppinsMedium,
   },
 });

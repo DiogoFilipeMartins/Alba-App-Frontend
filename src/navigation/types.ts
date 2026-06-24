@@ -5,7 +5,7 @@ export type RootStackParamList = {
   Admin: undefined;
   MapPicker: { initialCoords?: { lat: number; lng: number } | null };
   CommunityChat: { communityId: string; communityName: string; communityColor?: string };
-  CommunityDetail: { communityId: string; communityName: string; communityColor?: string; description?: string; memberCount?: number };
+  CommunityDetail: { communityId: string; communityName: string; communityColor?: string; description?: string; memberCount?: number; photoUrl?: string };
   SuggestPlace: { pickedCoords?: { lat: number; lng: number } };
   Donations: undefined;
   EditProfile: undefined;

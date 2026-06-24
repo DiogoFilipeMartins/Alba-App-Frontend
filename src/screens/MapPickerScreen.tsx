@@ -6,6 +6,7 @@ import {
     StyleSheet,
     ActivityIndicator,
     Alert,
+    Platform,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region, MapPressEvent } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,7 +96,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
         <View style={tw`flex-1`}>
             <MapView
                 ref={mapRef}
-                provider={PROVIDER_GOOGLE}
+                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                 style={StyleSheet.absoluteFillObject}
                 region={region}
                 onRegionChangeComplete={setRegion}

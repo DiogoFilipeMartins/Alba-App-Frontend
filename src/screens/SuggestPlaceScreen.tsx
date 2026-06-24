@@ -9,7 +9,7 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
-    Switch,
+    StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +17,6 @@ import * as Location from 'expo-location';
 import tw from 'twrnc';
 import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -26,14 +25,10 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SuggestPlace'>;
 
 export default function SuggestPlaceScreen({ navigation, route }: Props) {
     const { user } = useAuth();
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
     const [loading, setLoading] = useState(false);
-
-    const FIELD_STYLE = [
-        tw`rounded-xl px-4 py-3 text-sm mb-3 border`,
-        { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }
-    ];
-    const LABEL_STYLE = [tw`text-xs mb-1`, { color: colors.textSecondary }];
+    const [currentStep, setCurrentStep] = useState(1);
+    const [focusedField, setFocusedField] = useState<string | null>(null);
     const [locLoading, setLocLoading] = useState(false);
 
     const [form, setForm] = useState({
@@ -63,6 +58,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                 lat: String(coords.lat),
                 lng: String(coords.lng),
             }));
+            // Automatically advance or stay in step 2
         }
     }, [route.params?.pickedCoords]);
 
@@ -88,10 +84,6 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
     };
 
     const handleSubmit = async () => {
-        if (!form.name.trim() || !form.lat.trim() || !form.lng.trim()) {
-            Alert.alert('Campos obrigatórios', 'Preenche pelo menos o nome e as coordenadas.');
-            return;
-        }
         const lat = parseFloat(form.lat);
         const lng = parseFloat(form.lng);
         if (isNaN(lat) || isNaN(lng)) {
@@ -134,169 +126,593 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
         }
     };
 
-    const TypeButton = ({ value, label, icon, color }: { value: 'professional' | 'institution', label: string, icon: any, color: string }) => (
-        <Pressable
-            onPress={() => setForm(f => ({ ...f, type: value }))}
-            style={[
-                tw`flex-1 flex-row items-center justify-center py-3 rounded-xl border mr-2`,
-                form.type === value
-                    ? { backgroundColor: color + '30', borderColor: color }
-                    : { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-        >
-            <Ionicons name={icon} size={18} color={form.type === value ? color : colors.textMuted} />
-            <Text style={[tw`ml-2 font-medium text-sm`, { color: form.type === value ? color : colors.textMuted }]}>
-                {label}
-            </Text>
-        </Pressable>
-    );
+    const isStepValid = () => {
+        if (currentStep === 1) {
+            return form.name.trim().length > 0;
+        }
+        if (currentStep === 2) {
+            const latNum = parseFloat(form.lat);
+            const lngNum = parseFloat(form.lng);
+            return form.lat.trim().length > 0 && form.lng.trim().length > 0 && !isNaN(latNum) && !isNaN(lngNum);
+        }
+        return true;
+    };
+
+    const handleNext = () => {
+        if (isStepValid()) {
+            if (currentStep < 3) {
+                setCurrentStep(currentStep + 1);
+            } else {
+                handleSubmit();
+            }
+        }
+    };
+
+    const handleBack = () => {
+        if (currentStep > 1) {
+            setCurrentStep(currentStep - 1);
+        } else {
+            navigation.goBack();
+        }
+    };
+
+    const getInputStyle = (field: string) => [
+        styles.input,
+        {
+            backgroundColor: colors.card,
+            color: colors.textPrimary,
+            borderColor: focusedField === field ? colors.primary : colors.border,
+        }
+    ];
+
+    const steps = [
+        { label: 'Básico', description: 'Dados Gerais' },
+        { label: 'Morada & Mapa', description: 'Onde Encontrar' },
+        { label: 'Acessos', description: 'Características' }
+    ];
 
     return (
         <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]} edges={['top']}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={tw`flex-1`}>
-                <View style={[tw`flex-row items-center px-5 pt-4 pb-4`, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-                    <Pressable onPress={() => navigation.goBack()} style={tw`mr-4`}>
+                {/* Header */}
+                <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                    <Pressable onPress={handleBack} style={styles.backBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.primary} />
                     </Pressable>
-                    <Text style={[tw`text-xl font-bold`, { color: colors.textPrimary }]}>Sugerir Local</Text>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Sugerir Local</Text>
+                    <View style={{ width: 40 }} />
                 </View>
 
-                <ScrollView style={tw`flex-1 px-5`} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                    <Text style={tw`text-white font-semibold mb-2`}>Tipo de local *</Text>
-                    <View style={tw`flex-row mb-4`}>
-                        <TypeButton value="professional" label="Profissional" icon="person" color="#16db65" />
-                        <TypeButton value="institution" label="Instituição" icon="business" color="#22c55e" />
-                    </View>
+                {/* Wizard Steps Bar */}
+                <View style={[styles.stepsContainer, { borderBottomColor: colors.border }]}>
+                    {steps.map((step, idx) => {
+                        const stepNum = idx + 1;
+                        const isCompleted = currentStep > stepNum;
+                        const isActive = currentStep === stepNum;
+                        return (
+                            <React.Fragment key={step.label}>
+                                {idx > 0 && (
+                                    <View style={[styles.stepLine, { backgroundColor: currentStep >= stepNum ? colors.primary : colors.border }]} />
+                                )}
+                                <View style={styles.stepBubbleContainer}>
+                                    <View style={[
+                                        styles.stepBubble,
+                                        isActive && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+                                        isCompleted && { borderColor: colors.primary, backgroundColor: colors.primary }
+                                    ]}>
+                                        {isCompleted ? (
+                                            <Ionicons name="checkmark" size={14} color="#FFF" />
+                                        ) : (
+                                            <Text style={[
+                                                styles.stepNumber,
+                                                { color: isActive ? colors.primary : colors.textMuted }
+                                            ]}>
+                                                {stepNum}
+                                            </Text>
+                                        )}
+                                    </View>
+                                    <Text style={[
+                                        styles.stepLabel,
+                                        { color: isActive ? colors.primary : colors.textMuted }
+                                    ]}>
+                                        {step.label}
+                                    </Text>
+                                </View>
+                            </React.Fragment>
+                        );
+                    })}
+                </View>
 
-                    <Text style={LABEL_STYLE}>Nome *</Text>
-                    <TextInput
-                        style={FIELD_STYLE as any}
-                        placeholder="Nome do local"
-                        placeholderTextColor="#6b7280"
-                        value={form.name}
-                        onChangeText={set('name')}
-                    />
+                {/* Form Panels */}
+                <ScrollView 
+                    style={tw`flex-1`}
+                    contentContainerStyle={tw`px-6 pt-6 pb-28`}
+                    showsVerticalScrollIndicator={false} 
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* STEP 1: BASIC INFO */}
+                    {currentStep === 1 && (
+                        <View style={tw`gap-4`}>
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Selecione o Tipo de Local</Text>
+                            
+                            <View style={tw`flex-row mb-4 gap-3`}>
+                                {/* Professional Card */}
+                                <Pressable
+                                    onPress={() => setForm(f => ({ ...f, type: 'professional' }))}
+                                    style={[
+                                        styles.typeCard,
+                                        { backgroundColor: colors.card, borderColor: form.type === 'professional' ? '#16db65' : colors.border },
+                                        form.type === 'professional' && { backgroundColor: 'rgba(22, 219, 101, 0.08)' }
+                                    ]}
+                                >
+                                    <View style={[styles.typeIconContainer, { backgroundColor: form.type === 'professional' ? '#16db65' : colors.border + '30' }]}>
+                                        <Ionicons name="person" size={22} color={form.type === 'professional' ? '#FFF' : colors.textSecondary} />
+                                    </View>
+                                    <Text style={[styles.typeTitle, { color: colors.textPrimary }]}>Profissional</Text>
+                                    <Text style={[styles.typeDesc, { color: colors.textSecondary }]}>Terapeutas, médicos e especialistas individuais.</Text>
+                                </Pressable>
 
-                    <Text style={LABEL_STYLE}>Descrição</Text>
-                    <TextInput
-                        style={[FIELD_STYLE, tw`h-24`] as any}
-                        placeholder="Breve descrição..."
-                        placeholderTextColor="#6b7280"
-                        value={form.description}
-                        onChangeText={set('description')}
-                        multiline
-                        textAlignVertical="top"
-                    />
+                                {/* Institution Card */}
+                                <Pressable
+                                    onPress={() => setForm(f => ({ ...f, type: 'institution' }))}
+                                    style={[
+                                        styles.typeCard,
+                                        { backgroundColor: colors.card, borderColor: form.type === 'institution' ? '#22c55e' : colors.border },
+                                        form.type === 'institution' && { backgroundColor: 'rgba(34, 197, 94, 0.08)' }
+                                    ]}
+                                >
+                                    <View style={[styles.typeIconContainer, { backgroundColor: form.type === 'institution' ? '#22c55e' : colors.border + '30' }]}>
+                                        <Ionicons name="business" size={22} color={form.type === 'institution' ? '#FFF' : colors.textSecondary} />
+                                    </View>
+                                    <Text style={[styles.typeTitle, { color: colors.textPrimary }]}>Instituição</Text>
+                                    <Text style={[styles.typeDesc, { color: colors.textSecondary }]}>Escolas, associações, clínicas e centros de apoio.</Text>
+                                </Pressable>
+                            </View>
 
-                    <Text style={tw`text-white font-semibold mb-2 mt-1`}>Contactos</Text>
-                    <Text style={LABEL_STYLE}>Telefone</Text>
-                    <TextInput style={FIELD_STYLE as any} placeholder="Ex: 213 000 000" placeholderTextColor="#6b7280" value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>NOME DO LOCAL OU PROFISSIONAL *</Text>
+                            <TextInput
+                                style={getInputStyle('name') as any}
+                                placeholder="Ex: Dr. António Silva ou Centro de Apoio X"
+                                placeholderTextColor={colors.textMuted}
+                                value={form.name}
+                                onChangeText={set('name')}
+                                onFocus={() => setFocusedField('name')}
+                                onBlur={() => setFocusedField(null)}
+                            />
 
-                    <Text style={LABEL_STYLE}>Email</Text>
-                    <TextInput style={FIELD_STYLE as any} placeholder="email@exemplo.com" placeholderTextColor="#6b7280" value={form.email} onChangeText={set('email')} keyboardType="email-address" autoCapitalize="none" />
-
-                    <Text style={LABEL_STYLE}>Website</Text>
-                    <TextInput style={FIELD_STYLE as any} placeholder="https://..." placeholderTextColor="#6b7280" value={form.website} onChangeText={set('website')} autoCapitalize="none" />
-
-                    <Text style={tw`text-white font-semibold mb-2 mt-1`}>Morada</Text>
-                    <Text style={LABEL_STYLE}>Rua / Número</Text>
-                    <TextInput style={FIELD_STYLE as any} placeholder="Rua Exemplo, 10" placeholderTextColor="#6b7280" value={form.address_line} onChangeText={set('address_line')} />
-
-                    <View style={tw`flex-row`}>
-                        <View style={tw`flex-1 mr-2`}>
-                            <Text style={LABEL_STYLE}>Cidade</Text>
-                            <TextInput style={FIELD_STYLE as any} placeholder="Lisboa" placeholderTextColor="#6b7280" value={form.city} onChangeText={set('city')} />
-                        </View>
-                        <View style={tw`flex-1`}>
-                            <Text style={LABEL_STYLE}>Cód. Postal</Text>
-                            <TextInput style={FIELD_STYLE as any} placeholder="1000-001" placeholderTextColor="#6b7280" value={form.postal_code} onChangeText={set('postal_code')} />
-                        </View>
-                    </View>
-
-                    <Text style={[tw`font-semibold mb-2 mt-1`, { color: colors.textPrimary }]}>Localização *</Text>
-
-                    <Pressable
-                        onPress={() => (navigation as any).navigate('MapPicker', {
-                            initialCoords: form.lat && form.lng
-                                ? { lat: parseFloat(form.lat), lng: parseFloat(form.lng) }
-                                : null,
-                        })}
-                        style={tw`flex-row items-center justify-center bg-[#058c42]/20 border border-[#058c42] rounded-xl py-3 mb-3`}
-                    >
-                        <Ionicons name="map" size={18} color="#16db65" />
-                        <Text style={tw`text-[#16db65] font-medium ml-2`}>Escolher no mapa</Text>
-                    </Pressable>
-
-                    <Pressable
-                        onPress={useMyLocation}
-                        style={tw`flex-row items-center justify-center bg-gray-700/60 border border-gray-600 rounded-xl py-3 mb-3`}
-                    >
-                        {locLoading ? (
-                            <ActivityIndicator size="small" color="#9ca3af" />
-                        ) : (
-                            <>
-                                <Ionicons name="locate" size={18} color="#9ca3af" />
-                                <Text style={tw`text-gray-400 font-medium ml-2`}>Usar a minha localização (GPS)</Text>
-                            </>
-                        )}
-                    </Pressable>
-
-                    {form.lat && form.lng ? (
-                        <View style={tw`flex-row items-center bg-green-600/15 border border-green-700 rounded-xl px-4 py-3 mb-3`}>
-                            <Ionicons name="checkmark-circle" size={18} color="#22c55e" />
-                            <Text style={tw`text-green-400 text-xs ml-2 flex-1`} numberOfLines={1}>
-                                {parseFloat(form.lat).toFixed(6)}, {parseFloat(form.lng).toFixed(6)}
-                            </Text>
-                            <Pressable onPress={() => setForm(f => ({ ...f, lat: '', lng: '' }))} style={tw`ml-2`}>
-                                <Ionicons name="close-circle" size={18} color="#6b7280" />
-                            </Pressable>
-                        </View>
-                    ) : (
-                        <View style={tw`flex-row items-center bg-gray-700/40 border border-gray-600 rounded-xl px-4 py-3 mb-3`}>
-                            <Ionicons name="location-outline" size={18} color="#6b7280" />
-                            <Text style={tw`text-gray-500 text-xs ml-2`}>Nenhuma localização definida</Text>
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>DESCRIÇÃO / BIOGRAFIA</Text>
+                            <TextInput
+                                style={[getInputStyle('description'), tw`h-32`] as any}
+                                placeholder="Descreva os serviços oferecidos, especialidades e abordagem..."
+                                placeholderTextColor={colors.textMuted}
+                                value={form.description}
+                                onChangeText={set('description')}
+                                multiline
+                                textAlignVertical="top"
+                                onFocus={() => setFocusedField('description')}
+                                onBlur={() => setFocusedField(null)}
+                            />
                         </View>
                     )}
 
-                    <View style={tw`flex-row`}>
-                        <View style={tw`flex-1 mr-2`}>
-                            <Text style={LABEL_STYLE}>Latitude (manual)</Text>
-                            <TextInput style={FIELD_STYLE as any} placeholder="38.7169" placeholderTextColor="#6b7280" value={form.lat} onChangeText={set('lat')} keyboardType="decimal-pad" />
-                        </View>
-                        <View style={tw`flex-1`}>
-                            <Text style={LABEL_STYLE}>Longitude (manual)</Text>
-                            <TextInput style={FIELD_STYLE as any} placeholder="-9.1399" placeholderTextColor="#6b7280" value={form.lng} onChangeText={set('lng')} keyboardType="decimal-pad" />
-                        </View>
-                    </View>
+                    {/* STEP 2: ADDRESS & LOCATION & CONTACTS */}
+                    {currentStep === 2 && (
+                        <View style={tw`gap-4`}>
+                            {/* Map Coords Picker Card */}
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Localização no Mapa *</Text>
+                            
+                            <View style={tw`flex-row gap-3 mb-2`}>
+                                <Pressable
+                                    onPress={() => navigation.navigate('MapPicker', {
+                                        initialCoords: form.lat && form.lng
+                                            ? { lat: parseFloat(form.lat), lng: parseFloat(form.lng) }
+                                            : null,
+                                    })}
+                                    style={[styles.locationBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                >
+                                    <Ionicons name="map-outline" size={20} color={colors.primary} />
+                                    <Text style={[styles.locationBtnText, { color: colors.textPrimary }]}>Escolher no Mapa</Text>
+                                </Pressable>
 
-                    <Text style={[tw`font-semibold mb-2 mt-1`, { color: colors.textPrimary }]}>Acessibilidade</Text>
-                    {[
-                        { key: 'wheelchair_accessible', label: 'Acesso adaptado a mobilidade reduzida' },
-                        { key: 'low_noise', label: 'Ambiente com ruído reduzido' },
-                        { key: 'soft_lighting', label: 'Iluminação suave' },
-                    ].map((item) => (
-                        <View key={item.key} style={[tw`flex-row items-center justify-between rounded-xl px-4 py-3 mb-3 border`, { borderColor: colors.border, backgroundColor: colors.card }]}> 
-                            <Text style={[tw`text-sm flex-1 mr-4`, { color: colors.textPrimary }]}>{item.label}</Text>
-                            <Switch
-                                value={form[item.key as keyof typeof form] as boolean}
-                                onValueChange={(value) => setForm((f) => ({ ...f, [item.key]: value }))}
-                                trackColor={{ false: colors.border, true: colors.primary }}
-                                thumbColor="#fff"
-                            />
-                        </View>
-                    ))}
+                                <Pressable
+                                    onPress={useMyLocation}
+                                    style={[styles.locationBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                >
+                                    {locLoading ? (
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="locate-outline" size={20} color={colors.primary} />
+                                            <Text style={[styles.locationBtnText, { color: colors.textPrimary }]}>Usar o meu GPS</Text>
+                                        </>
+                                    )}
+                                </Pressable>
+                            </View>
 
-                    <Pressable onPress={handleSubmit} disabled={loading} style={tw`mb-10 mt-2`}>
-                        <View style={[tw`rounded-xl py-4 items-center`, { backgroundColor: loading ? '#374151' : '#058c42' }]}>
-                            {loading ? (
-                                <ActivityIndicator color="white" />
+                            {/* Coordinates Status Card */}
+                            {form.lat && form.lng ? (
+                                <View style={[styles.coordsCard, { backgroundColor: 'rgba(34, 197, 94, 0.08)', borderColor: '#22c55e' }]}>
+                                    <Ionicons name="checkmark-circle" size={20} color="#22c55e" style={tw`mr-2`} />
+                                    <View style={tw`flex-1`}>
+                                        <Text style={tw`text-green-500 font-bold text-xs`}>LOCALIZAÇÃO DEFINIDA</Text>
+                                        <Text style={[tw`text-[11px]`, { color: colors.textSecondary }]}>
+                                            Lat: {parseFloat(form.lat).toFixed(6)} | Lng: {parseFloat(form.lng).toFixed(6)}
+                                        </Text>
+                                    </View>
+                                    <Pressable onPress={() => setForm(f => ({ ...f, lat: '', lng: '' }))} style={tw`p-1`}>
+                                        <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                                    </Pressable>
+                                </View>
                             ) : (
-                                <Text style={tw`text-white font-bold text-base`}>Enviar Sugestão</Text>
+                                <View style={[styles.coordsCard, { backgroundColor: colors.card, borderColor: colors.border, borderStyle: 'dashed' }]}>
+                                    <Ionicons name="location-outline" size={20} color={colors.textMuted} style={tw`mr-2`} />
+                                    <Text style={[tw`text-xs flex-1`, { color: colors.textMuted }]}>
+                                        Nenhuma coordenada geográfica definida. Toque acima para escolher no mapa.
+                                    </Text>
+                                </View>
                             )}
+
+                            {/* Manual Coords Collapsible inputs */}
+                            <View style={tw`flex-row gap-3 mb-2`}>
+                                <View style={tw`flex-1`}>
+                                    <Text style={[styles.label, { color: colors.textSecondary }]}>LATITUDE</Text>
+                                    <TextInput style={getInputStyle('lat') as any} placeholder="Ex: 38.7169" placeholderTextColor={colors.textMuted} value={form.lat} onChangeText={set('lat')} keyboardType="decimal-pad" onFocus={() => setFocusedField('lat')} onBlur={() => setFocusedField(null)} />
+                                </View>
+                                <View style={tw`flex-1`}>
+                                    <Text style={[styles.label, { color: colors.textSecondary }]}>LONGITUDE</Text>
+                                    <TextInput style={getInputStyle('lng') as any} placeholder="Ex: -9.1399" placeholderTextColor={colors.textMuted} value={form.lng} onChangeText={set('lng')} keyboardType="decimal-pad" onFocus={() => setFocusedField('lng')} onBlur={() => setFocusedField(null)} />
+                                </View>
+                            </View>
+
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 10 }]}>Morada Física</Text>
+                            
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>RUA E NÚMERO</Text>
+                            <TextInput style={getInputStyle('address_line') as any} placeholder="Ex: Rua Garrett, nº 12, 3º Dto" placeholderTextColor={colors.textMuted} value={form.address_line} onChangeText={set('address_line')} onFocus={() => setFocusedField('address_line')} onBlur={() => setFocusedField(null)} />
+
+                            <View style={tw`flex-row gap-3`}>
+                                <View style={tw`flex-2`}>
+                                    <Text style={[styles.label, { color: colors.textSecondary }]}>CIDADE</Text>
+                                    <TextInput style={getInputStyle('city') as any} placeholder="Ex: Lisboa" placeholderTextColor={colors.textMuted} value={form.city} onChangeText={set('city')} onFocus={() => setFocusedField('city')} onBlur={() => setFocusedField(null)} />
+                                </View>
+                                <View style={tw`flex-1`}>
+                                    <Text style={[styles.label, { color: colors.textSecondary }]}>CÓD. POSTAL</Text>
+                                    <TextInput style={getInputStyle('postal_code') as any} placeholder="1000-001" placeholderTextColor={colors.textMuted} value={form.postal_code} onChangeText={set('postal_code')} onFocus={() => setFocusedField('postal_code')} onBlur={() => setFocusedField(null)} />
+                                </View>
+                            </View>
+
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 10 }]}>Contactos do Local</Text>
+                            
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>NÚMERO DE TELEFONE</Text>
+                            <TextInput style={getInputStyle('phone') as any} placeholder="Ex: 213 000 000" placeholderTextColor={colors.textMuted} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" onFocus={() => setFocusedField('phone')} onBlur={() => setFocusedField(null)} />
+
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>EMAIL DE CONTACTO</Text>
+                            <TextInput style={getInputStyle('email') as any} placeholder="email@exemplo.com" placeholderTextColor={colors.textMuted} value={form.email} onChangeText={set('email')} keyboardType="email-address" autoCapitalize="none" onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)} />
+
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>WEBSITE</Text>
+                            <TextInput style={getInputStyle('website') as any} placeholder="https://exemplo.com" placeholderTextColor={colors.textMuted} value={form.website} onChangeText={set('website')} autoCapitalize="none" onFocus={() => setFocusedField('website')} onBlur={() => setFocusedField(null)} />
                         </View>
-                    </Pressable>
+                    )}
+
+                    {/* STEP 3: ACCESSIBILITY */}
+                    {currentStep === 3 && (
+                        <View style={tw`gap-4`}>
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Acessibilidade e Condições</Text>
+                            <Text style={[tw`text-sm -mt-2 mb-2`, { color: colors.textSecondary }]}>
+                                Selecione as opções que se aplicam a este local para ajudar os utilizadores a encontrar ambientes adequados.
+                            </Text>
+
+                            {/* Wheelchair Card */}
+                            <Pressable
+                                onPress={() => setForm(f => ({ ...f, wheelchair_accessible: !f.wheelchair_accessible }))}
+                                style={[
+                                    styles.accessCard,
+                                    { backgroundColor: colors.card, borderColor: form.wheelchair_accessible ? colors.primary : colors.border },
+                                    form.wheelchair_accessible && { backgroundColor: colors.primary + '08' }
+                                ]}
+                            >
+                                <View style={[styles.accessIconWrap, { backgroundColor: form.wheelchair_accessible ? colors.primary : colors.border + '30' }]}>
+                                    <Ionicons name="accessibility" size={20} color={form.wheelchair_accessible ? '#FFF' : colors.textSecondary} />
+                                </View>
+                                <View style={tw`flex-1 mr-3`}>
+                                    <Text style={[styles.accessTitle, { color: colors.textPrimary }]}>Acesso Adaptado</Text>
+                                    <Text style={[styles.accessDesc, { color: colors.textSecondary }]}>Espaço livre de degraus, com rampas de acesso ou elevador adequado.</Text>
+                                </View>
+                                <View style={[styles.accessCheck, form.wheelchair_accessible && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                                    {form.wheelchair_accessible && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                                </View>
+                            </Pressable>
+
+                            {/* Low Noise Card */}
+                            <Pressable
+                                onPress={() => setForm(f => ({ ...f, low_noise: !f.low_noise }))}
+                                style={[
+                                    styles.accessCard,
+                                    { backgroundColor: colors.card, borderColor: form.low_noise ? colors.primary : colors.border },
+                                    form.low_noise && { backgroundColor: colors.primary + '08' }
+                                ]}
+                            >
+                                <View style={[styles.accessIconWrap, { backgroundColor: form.low_noise ? colors.primary : colors.border + '30' }]}>
+                                    <Ionicons name="volume-mute" size={20} color={form.low_noise ? '#FFF' : colors.textSecondary} />
+                                </View>
+                                <View style={tw`flex-1 mr-3`}>
+                                    <Text style={[styles.accessTitle, { color: colors.textPrimary }]}>Ruído Reduzido</Text>
+                                    <Text style={[styles.accessDesc, { color: colors.textSecondary }]}>Ambiente calmo, silencioso e sem ruídos intensos ou disruptivos.</Text>
+                                </View>
+                                <View style={[styles.accessCheck, form.low_noise && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                                    {form.low_noise && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                                </View>
+                            </Pressable>
+
+                            {/* Soft Lighting Card */}
+                            <Pressable
+                                onPress={() => setForm(f => ({ ...f, soft_lighting: !f.soft_lighting }))}
+                                style={[
+                                    styles.accessCard,
+                                    { backgroundColor: colors.card, borderColor: form.soft_lighting ? colors.primary : colors.border },
+                                    form.soft_lighting && { backgroundColor: colors.primary + '08' }
+                                ]}
+                            >
+                                <View style={[styles.accessIconWrap, { backgroundColor: form.soft_lighting ? colors.primary : colors.border + '30' }]}>
+                                    <Ionicons name="sunny" size={20} color={form.soft_lighting ? '#FFF' : colors.textSecondary} />
+                                </View>
+                                <View style={tw`flex-1 mr-3`}>
+                                    <Text style={[styles.accessTitle, { color: colors.textPrimary }]}>Iluminação Suave</Text>
+                                    <Text style={[styles.accessDesc, { color: colors.textSecondary }]}>Sem luzes fluorescentes fortes ou oscilantes; iluminação indireta/suave.</Text>
+                                </View>
+                                <View style={[styles.accessCheck, form.soft_lighting && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                                    {form.soft_lighting && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                                </View>
+                            </Pressable>
+                        </View>
+                    )}
                 </ScrollView>
+
+                {/* Floating Bottom Navigation Bar */}
+                <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+                    <Pressable
+                        onPress={handleBack}
+                        style={[styles.footerBtnSecondary, { borderColor: colors.border }]}
+                    >
+                        <Text style={[styles.footerBtnSecondaryText, { color: colors.textSecondary }]}>
+                            {currentStep === 1 ? 'Cancelar' : 'Voltar'}
+                        </Text>
+                    </Pressable>
+
+                    <Pressable
+                        onPress={handleNext}
+                        disabled={!isStepValid() || loading}
+                        style={[
+                            styles.footerBtnPrimary,
+                            { backgroundColor: isStepValid() ? colors.primary : colors.border }
+                        ]}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="white" size="small" />
+                        ) : (
+                            <>
+                                <Text style={styles.footerBtnPrimaryText}>
+                                    {currentStep === 3 ? 'Submeter' : 'Seguinte'}
+                                </Text>
+                                {currentStep < 3 && (
+                                    <Ionicons name="arrow-forward" size={16} color="white" style={tw`ml-2`} />
+                                )}
+                            </>
+                        )}
+                    </Pressable>
+                </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
+
+const styles = StyleSheet.create({
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        borderBottomWidth: 0.5,
+    },
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontFamily: 'Poppins_700Bold',
+    },
+    stepsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 28,
+        paddingVertical: 14,
+        borderBottomWidth: 0.5,
+    },
+    stepBubbleContainer: {
+        alignItems: 'center',
+        width: 60,
+    },
+    stepBubble: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: '#e5e7eb',
+        backgroundColor: 'transparent',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
+    },
+    stepNumber: {
+        fontSize: 11,
+        fontFamily: 'Poppins_700Bold',
+    },
+    stepLabel: {
+        fontSize: 9,
+        fontFamily: 'Poppins_600SemiBold',
+        textAlign: 'center',
+    },
+    stepLine: {
+        flex: 1,
+        height: 2,
+        marginBottom: 16,
+        borderRadius: 1,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontFamily: 'Poppins_700Bold',
+        marginBottom: 8,
+    },
+    typeCard: {
+        flex: 1,
+        borderRadius: 18,
+        borderWidth: 1.5,
+        padding: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 145,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.02,
+        shadowRadius: 6,
+        elevation: 1,
+    },
+    typeIconContainer: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
+    },
+    typeTitle: {
+        fontSize: 14,
+        fontFamily: 'Poppins_700Bold',
+        marginBottom: 4,
+    },
+    typeDesc: {
+        fontSize: 10,
+        fontFamily: 'Poppins_400Regular',
+        textAlign: 'center',
+        lineHeight: 13,
+    },
+    label: {
+        fontSize: 11,
+        fontFamily: 'Poppins_700Bold',
+        letterSpacing: 0.5,
+        marginBottom: 6,
+    },
+    input: {
+        borderRadius: 14,
+        borderWidth: 1.5,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 14,
+        fontFamily: 'Poppins_400Regular',
+    },
+    locationBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        gap: 8,
+    },
+    locationBtnText: {
+        fontSize: 13,
+        fontFamily: 'Poppins_600SemiBold',
+    },
+    coordsCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 16,
+        borderWidth: 1.5,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        marginBottom: 8,
+    },
+    accessCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 18,
+        borderWidth: 1.5,
+        padding: 16,
+        marginBottom: 10,
+    },
+    accessIconWrap: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 14,
+    },
+    accessTitle: {
+        fontSize: 14,
+        fontFamily: 'Poppins_700Bold',
+        marginBottom: 2,
+    },
+    accessDesc: {
+        fontSize: 11,
+        fontFamily: 'Poppins_400Regular',
+        lineHeight: 14,
+    },
+    accessCheck: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        borderWidth: 2,
+        borderColor: '#d1d5db',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    footer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 80,
+        borderTopWidth: 0.5,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        justifyContent: 'space-between',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 8,
+    },
+    footerBtnSecondary: {
+        flex: 1,
+        marginRight: 12,
+        height: 48,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    footerBtnSecondaryText: {
+        fontSize: 14,
+        fontFamily: 'Poppins_700Bold',
+    },
+    footerBtnPrimary: {
+        flex: 2,
+        height: 48,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+    },
+    footerBtnPrimaryText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontFamily: 'Poppins_700Bold',
+    },
+});
