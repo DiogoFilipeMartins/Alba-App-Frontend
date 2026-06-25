@@ -466,36 +466,61 @@ export default function MapScreen({ navigation, route }: Props) {
             {selectedPlace.description || 'Este local está preparado para receber pessoas com necessidades específicas, garantindo um ambiente seguro e acolhedor.'}
           </Text>
 
-          <View style={styles.sheetActions}>
-            <TouchableOpacity style={[styles.mainAction, { backgroundColor: colors.primary }] } onPress={openDirections}>
-              <Ionicons name="navigate" size={20} color="#FFF" />
-              <Text style={styles.mainActionText}>Como chegar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.secondaryAction, { borderColor: colors.border }]}
-              onPress={() => {
-                const phone = selectedPlace?.phone;
-                if (phone) {
-                  Linking.openURL(`tel:${phone}`);
-                } else {
-                  Alert.alert('Sem contacto', 'Este local não tem número de telefone registado.');
-                }
-              }}
-            >
-              <Ionicons name="call-outline" size={20} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.secondaryAction, { borderColor: colors.border }]} onPress={handleToggleFavorite}>
-              <Ionicons name={isSelectedFavorite ? 'heart' : 'heart-outline'} size={20} color={isSelectedFavorite ? '#ef4444' : colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.secondaryAction, { borderColor: colors.border }]}
-              onPress={() => {
-                setSelectedPlace(null);
-                navigation.navigate('PlaceProfile', { placeId: selectedPlace.id, place: selectedPlace });
-              }}
-            >
-              <Ionicons name="information-circle-outline" size={22} color={colors.textPrimary} />
-            </TouchableOpacity>
+          <View style={styles.sheetActionsContainer}>
+            {/* Row 1: Directions and View Profile */}
+            <View style={styles.sheetActionsRow}>
+              <TouchableOpacity 
+                style={[styles.mainActionBtn, { backgroundColor: colors.primary }]} 
+                onPress={openDirections}
+              >
+                <Ionicons name="navigate" size={18} color="#FFF" style={{ marginRight: 6 }} />
+                <Text style={styles.mainActionBtnText}>Como chegar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.outlineActionBtn, { borderColor: colors.border }]} 
+                onPress={() => {
+                  setSelectedPlace(null);
+                  navigation.navigate('PlaceProfile', { placeId: selectedPlace.id, place: selectedPlace });
+                }}
+              >
+                <Ionicons name="information-circle-outline" size={18} color={colors.textPrimary} style={{ marginRight: 6 }} />
+                <Text style={[styles.outlineActionBtnText, { color: colors.textPrimary }]}>Ver Perfil</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Row 2: Contact & Favorite */}
+            <View style={styles.sheetActionsRow}>
+              <TouchableOpacity 
+                style={[styles.outlineActionBtn, { borderColor: colors.border }]} 
+                onPress={() => {
+                  const phone = selectedPlace?.phone;
+                  if (phone) {
+                    Linking.openURL(`tel:${phone}`);
+                  } else {
+                    Alert.alert('Sem contacto', 'Este local não tem número de telefone registado.');
+                  }
+                }}
+              >
+                <Ionicons name="call-outline" size={18} color={colors.textPrimary} style={{ marginRight: 6 }} />
+                <Text style={[styles.outlineActionBtnText, { color: colors.textPrimary }]}>Ligar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.outlineActionBtn, { borderColor: colors.border }]} 
+                onPress={handleToggleFavorite}
+              >
+                <Ionicons 
+                  name={isSelectedFavorite ? 'heart' : 'heart-outline'} 
+                  size={18} 
+                  color={isSelectedFavorite ? '#ef4444' : colors.textPrimary} 
+                  style={{ marginRight: 6 }} 
+                />
+                <Text style={[styles.outlineActionBtnText, { color: colors.textPrimary }]}>
+                  {isSelectedFavorite ? 'Favorito' : 'Favoritar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
         );
@@ -884,32 +909,41 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.poppinsRegular,
     marginBottom: 24,
   },
-  sheetActions: {
-    flexDirection: 'row',
-    gap: 12,
+  sheetActionsContainer: {
+    gap: 10,
     marginBottom: 12,
+    width: '100%',
   },
-  mainAction: {
+  sheetActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  mainActionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 56,
-    borderRadius: 16,
-    gap: 10,
+    height: 48,
+    borderRadius: 14,
   },
-  mainActionText: {
+  mainActionBtnText: {
     color: '#FFF',
-    fontSize: FontSize.l,
+    fontSize: FontSize.s,
     fontFamily: FontFamily.poppinsBold,
   },
-  secondaryAction: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 1.5,
+  outlineActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  outlineActionBtnText: {
+    fontSize: FontSize.s,
+    fontFamily: FontFamily.poppinsSemiBold,
   },
   miniLoader: {
     flexDirection: 'row',
