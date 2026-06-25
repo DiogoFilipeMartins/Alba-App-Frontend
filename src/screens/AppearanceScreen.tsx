@@ -23,8 +23,8 @@ export default function AppearanceScreen({ navigation }: Props) {
       id: 'teal' as ColorPalette,
       name: 'Floresta Calma',
       description: 'Verde e azul-petróleo suaves. Promove equilíbrio e relaxamento mental.',
-      primaryColor: '#0f766e',
-      accentColor: '#14b8a6',
+      primaryColor: '#0ebd5f',
+      accentColor: '#13cf75',
     },
     {
       id: 'blue' as ColorPalette,

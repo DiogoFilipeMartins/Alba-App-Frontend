@@ -318,7 +318,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                                         1.4 MB · PDF
                                     </Text>
                                 </View>
-                                <Ionicons name="arrow-down-circle" size={24} color="#00A884" />
+                                <Ionicons name="arrow-down-circle" size={24} color="#13CF75" />
                             </Pressable>
                             <Text style={[styles.msgTimeNormal, { color: isDark ? '#8696A0' : '#667781' }]}>
                                 {formatTime(msg.created_at)}
@@ -339,7 +339,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                                 onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parsed.name)}`)}
                                 style={[styles.locBtn, { borderColor: isDark ? '#222E35' : '#E9E9EB' }]}
                             >
-                                <Text style={{ color: '#00A884', fontFamily: 'Poppins_700Bold', fontSize: 13 }}>Ver no Mapa</Text>
+                                <Text style={{ color: '#13CF75', fontFamily: 'Poppins_700Bold', fontSize: 13 }}>Ver no Mapa</Text>
                             </Pressable>
                             <Text style={[styles.msgTimeNormal, { color: isDark ? '#8696A0' : '#667781' }]}>
                                 {formatTime(msg.created_at)}
@@ -367,8 +367,8 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                                 onPress={() => Linking.openURL(`tel:${parsed.phone}`)}
                                 style={[styles.contactBtn, { borderColor: isDark ? '#222E35' : '#E9E9EB' }]}
                             >
-                                <Ionicons name="call" size={14} color="#00A884" style={{ marginRight: 8 }} />
-                                <Text style={{ color: '#00A884', fontFamily: 'Poppins_700Bold', fontSize: 13 }}>Ligar</Text>
+                                <Ionicons name="call" size={14} color="#13CF75" style={{ marginRight: 8 }} />
+                                <Text style={{ color: '#13CF75', fontFamily: 'Poppins_700Bold', fontSize: 13 }}>Ligar</Text>
                             </Pressable>
                             <Text style={[styles.msgTimeNormal, { color: isDark ? '#8696A0' : '#667781' }]}>
                                 {formatTime(msg.created_at)}
@@ -394,7 +394,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
 
     const chatBgColor = isDark ? '#0B141A' : '#efeae2';
     const headerBg = isDark ? '#202C33' : '#F0F2F5';
-    const accentGreen = '#00A884';
+    const accentGreen = '#13CF75';
 
     return (
         <KeyboardAvoidingView 

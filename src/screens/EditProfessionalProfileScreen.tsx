@@ -25,7 +25,7 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
     const accountType = profile?.account_type;
     const verified = profile?.verified === true;
 
-    const accentColor = isProfessional ? '#0f766e' : '#7c3aed';
+    const accentColor = isProfessional ? '#0ebd5f' : '#7c3aed';
     const iconName: any = isProfessional ? 'medkit' : 'business';
 
     const handleSave = async () => {
@@ -67,15 +67,15 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
                 <View style={[
                     styles.verificationBanner,
                     {
-                        backgroundColor: verified ? '#0f766e15' : '#b4530915',
-                        borderColor: verified ? '#0f766e30' : '#b4530930',
+                        backgroundColor: verified ? '#0ebd5f15' : '#b4530915',
+                        borderColor: verified ? '#0ebd5f30' : '#b4530930',
                     }
                 ]}>
-                    <View style={[styles.verificationIcon, { backgroundColor: verified ? '#0f766e' : '#b45309' }]}>
+                    <View style={[styles.verificationIcon, { backgroundColor: verified ? '#0ebd5f' : '#b45309' }]}>
                         <Ionicons name={verified ? 'shield-checkmark' : 'time'} size={20} color="#fff" />
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={[styles.verificationTitle, { color: verified ? '#0f766e' : '#b45309' }]}>
+                        <Text style={[styles.verificationTitle, { color: verified ? '#0ebd5f' : '#b45309' }]}>
                             {verified ? 'Conta Verificada' : 'Verificação Pendente'}
                         </Text>
                         <Text style={[styles.verificationDesc, { color: colors.textSecondary }]}>

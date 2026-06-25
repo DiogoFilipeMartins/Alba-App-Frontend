@@ -26,7 +26,7 @@ export default function ProfileScreen({ navigation }: Props) {
     const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
 
     const isSpecialAccount = isProfessional || isInstitution;
-    const accountColor = isProfessional ? '#0f766e' : isInstitution ? '#7c3aed' : colors.primary;
+    const accountColor = isProfessional ? '#0ebd5f' : isInstitution ? '#7c3aed' : colors.primary;
     const accountLabel = isProfessional ? 'Profissional' : isInstitution ? 'Instituição' : null;
     const accountIcon: any = isProfessional ? 'medkit' : isInstitution ? 'business' : null;
 

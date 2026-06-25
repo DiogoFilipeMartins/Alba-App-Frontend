@@ -26,7 +26,7 @@ const ACCOUNT_TYPES: { type: AccountType; icon: any; label: string; description:
     icon: 'medkit',
     label: 'Profissional',
     description: 'Terapeuta, psicólogo, médico ou outro profissional de saúde.',
-    color: '#0f766e',
+    color: '#0ebd5f',
   },
   {
     type: 'institution',

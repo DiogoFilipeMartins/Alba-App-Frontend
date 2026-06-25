@@ -133,7 +133,7 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
     const textPrimary = isDark ? '#E9EDEF' : '#111B21';
     const textSecondary = isDark ? '#8696A0' : '#667781';
     const borderCol = isDark ? '#222E35' : '#E9E9EB';
-    const accentGreen = '#00A884'; // WhatsApp green
+    const accentGreen = '#13CF75'; // WhatsApp green
     const iconMuted = isDark ? '#8696A0' : '#667781';
 
     const creatorMember = members.find(m => m.user_id === createdBy);

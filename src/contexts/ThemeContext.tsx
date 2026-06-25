@@ -30,8 +30,8 @@ const commonFonts = {
 // Sensory-friendly palettes: muted, non-fluorescent, comforting shades
 const PALETTES = {
   teal: {
-    light: { primary: '#0f766e', accent: '#14b8a6', border: '#e2e8f0' },
-    dark: { primary: '#14b8a6', accent: '#2dd4bf', border: '#1e293b' }
+    light: { primary: '#0ebd5f', accent: '#13cf75', border: '#e2e8f0' },
+    dark: { primary: '#13cf75', accent: '#05d577', border: '#1e293b' }
   },
   blue: {
     light: { primary: '#0369a1', accent: '#0ea5e9', border: '#e2e8f0' },
@@ -60,7 +60,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const [isDark, setIsDark] = useState(systemScheme === 'dark');
-  const [colorTheme, setColorThemeState] = useState<ColorPalette>('purple');
+  const [colorTheme, setColorThemeState] = useState<ColorPalette>('teal');
 
   useEffect(() => {
     (async () => {
