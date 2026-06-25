@@ -185,40 +185,41 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
 
                 {/* Wizard Steps Bar */}
                 <View style={[styles.stepsContainer, { borderBottomColor: colors.border }]}>
+                    <View style={styles.stepsLinesContainer}>
+                        <View style={[styles.absoluteStepLine, { left: 0, right: '50%', backgroundColor: currentStep >= 2 ? colors.primary : colors.border }]} />
+                        <View style={[styles.absoluteStepLine, { left: '50%', right: 0, backgroundColor: currentStep >= 3 ? colors.primary : colors.border }]} />
+                    </View>
+
                     {steps.map((step, idx) => {
                         const stepNum = idx + 1;
                         const isCompleted = currentStep > stepNum;
                         const isActive = currentStep === stepNum;
                         return (
-                            <React.Fragment key={step.label}>
-                                {idx > 0 && (
-                                    <View style={[styles.stepLine, { backgroundColor: currentStep >= stepNum ? colors.primary : colors.border }]} />
-                                )}
-                                <View style={styles.stepBubbleContainer}>
-                                    <View style={[
-                                        styles.stepBubble,
-                                        isActive && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
-                                        isCompleted && { borderColor: colors.primary, backgroundColor: colors.primary }
-                                    ]}>
-                                        {isCompleted ? (
-                                            <Ionicons name="checkmark" size={14} color="#FFF" />
-                                        ) : (
-                                            <Text style={[
-                                                styles.stepNumber,
-                                                { color: isActive ? colors.primary : colors.textMuted }
-                                            ]}>
-                                                {stepNum}
-                                            </Text>
-                                        )}
-                                    </View>
-                                    <Text style={[
-                                        styles.stepLabel,
-                                        { color: isActive ? colors.primary : colors.textMuted }
-                                    ]}>
-                                        {step.label}
-                                    </Text>
+                            <View key={step.label} style={styles.stepBubbleContainer}>
+                                <View style={[
+                                    styles.stepBubble,
+                                    { backgroundColor: colors.background },
+                                    isActive && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+                                    isCompleted && { borderColor: colors.primary, backgroundColor: colors.primary }
+                                ]}>
+                                    {isCompleted ? (
+                                        <Ionicons name="checkmark" size={14} color="#FFF" />
+                                    ) : (
+                                        <Text style={[
+                                            styles.stepNumber,
+                                            { color: isActive ? colors.primary : colors.textMuted }
+                                        ]}>
+                                            {stepNum}
+                                        </Text>
+                                    )}
                                 </View>
-                            </React.Fragment>
+                                <Text style={[
+                                    styles.stepLabel,
+                                    { color: isActive ? colors.primary : colors.textMuted }
+                                ]}>
+                                    {step.label}
+                                </Text>
+                            </View>
                         );
                     })}
                 </View>
@@ -525,16 +526,31 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins_700Bold',
     },
     stepsContainer: {
+        position: 'relative',
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
         paddingHorizontal: 28,
         paddingVertical: 14,
         borderBottomWidth: 0.5,
     },
+    stepsLinesContainer: {
+        position: 'absolute',
+        top: 28,
+        left: 58,
+        right: 58,
+        height: 2,
+        zIndex: 0,
+    },
+    absoluteStepLine: {
+        position: 'absolute',
+        height: 2,
+        top: 0,
+    },
     stepBubbleContainer: {
         alignItems: 'center',
         width: 60,
+        zIndex: 2,
     },
     stepBubble: {
         width: 28,
@@ -542,10 +558,10 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         borderWidth: 2,
         borderColor: '#e5e7eb',
-        backgroundColor: 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 4,
+        zIndex: 2,
     },
     stepNumber: {
         fontSize: 11,
@@ -555,12 +571,6 @@ const styles = StyleSheet.create({
         fontSize: 9,
         fontFamily: 'Poppins_600SemiBold',
         textAlign: 'center',
-    },
-    stepLine: {
-        flex: 1,
-        height: 2,
-        marginBottom: 16,
-        borderRadius: 1,
     },
     sectionTitle: {
         fontSize: 16,
@@ -677,12 +687,12 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        height: 80,
+        paddingBottom: Platform.OS === 'ios' ? 24 : 14,
+        paddingTop: 12,
         borderTopWidth: 0.5,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        justifyContent: 'space-between',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -3 },
         shadowOpacity: 0.05,
@@ -703,7 +713,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins_700Bold',
     },
     footerBtnPrimary: {
-        flex: 2,
+        flex: 1,
         height: 48,
         borderRadius: 14,
         alignItems: 'center',
