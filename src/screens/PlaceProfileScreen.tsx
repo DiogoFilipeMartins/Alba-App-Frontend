@@ -351,7 +351,7 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
               <MapView
                 style={styles.miniMap}
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                mapType={mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (Platform.OS === 'android' ? 'none' : 'standard') : 'standard'}
+                mapType={Platform.OS === 'android' ? 'none' : 'standard'}
                 scrollEnabled={false}
                 zoomEnabled={false}
                 rotateEnabled={false}
@@ -363,14 +363,18 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
                   longitudeDelta: 0.005,
                 }}
               >
-                {mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (
-                  <UrlTile
-                    urlTemplate={`https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`}
-                    maximumZ={19}
-                    tileSize={256}
-                    shouldReplaceMapContent={true}
-                  />
-                ) : null}
+                <UrlTile
+                  urlTemplate={mapboxToken && !mapboxToken.startsWith('pk.mock_')
+                    ? `https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`
+                    : (isDark 
+                        ? `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png`
+                        : `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png`
+                      )
+                  }
+                  maximumZ={19}
+                  tileSize={256}
+                  shouldReplaceMapContent={true}
+                />
                 <Marker
                   coordinate={{
                     latitude: Number(place.latitude),

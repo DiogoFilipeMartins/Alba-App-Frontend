@@ -117,7 +117,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
             <MapView
                 ref={mapRef}
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                mapType={mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (Platform.OS === 'android' ? 'none' : 'standard') : 'standard'}
+                mapType={Platform.OS === 'android' ? 'none' : 'standard'}
                 style={StyleSheet.absoluteFillObject}
                 region={region}
                 onRegionChangeComplete={setRegion}
@@ -125,14 +125,15 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 showsUserLocation
                 showsMyLocationButton={false}
             >
-                {mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (
-                    <UrlTile
-                        urlTemplate={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`}
-                        maximumZ={19}
-                        tileSize={256}
-                        shouldReplaceMapContent={true}
-                    />
-                ) : null}
+                <UrlTile
+                    urlTemplate={mapboxToken && !mapboxToken.startsWith('pk.mock_')
+                        ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`
+                        : `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png`
+                    }
+                    maximumZ={19}
+                    tileSize={256}
+                    shouldReplaceMapContent={true}
+                />
                 {marker && (
                     <Marker coordinate={marker} pinColor="#16db65" />
                 )}

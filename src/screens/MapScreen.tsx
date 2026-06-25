@@ -361,7 +361,7 @@ export default function MapScreen({ navigation, route }: Props) {
         ref={mapRef}
         style={styles.map}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        mapType={mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (Platform.OS === 'android' ? 'none' : 'standard') : 'standard'}
+        mapType={Platform.OS === 'android' ? 'none' : 'standard'}
         customMapStyle={isDark ? darkMapStyle : undefined}
         initialRegion={{
           latitude: 38.7223,
@@ -380,14 +380,15 @@ export default function MapScreen({ navigation, route }: Props) {
           if (showSuggestBtn) setShowSuggestBtn(false);
         }}
       >
-        {mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (
-          <UrlTile
-            urlTemplate={`https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`}
-            maximumZ={19}
-            tileSize={256}
-            shouldReplaceMapContent={true}
-          />
-        ) : null}
+        <UrlTile
+          urlTemplate={mapboxToken && !mapboxToken.startsWith('pk.mock_')
+            ? `https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`
+            : `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png`
+          }
+          maximumZ={19}
+          tileSize={256}
+          shouldReplaceMapContent={true}
+        />
         {selectedCoords && showSuggestBtn && (
           <Marker
             coordinate={selectedCoords}
