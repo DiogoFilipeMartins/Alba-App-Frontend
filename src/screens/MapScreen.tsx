@@ -60,6 +60,7 @@ export default function MapScreen({ navigation, route }: Props) {
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const cameraRef = React.useRef<CameraRef | null>(null);
+  const lastMarkerPressRef = React.useRef<number>(0);
 
   const FILTERS = ['Todos', 'Profissional', 'Instituição', 'Favoritos', 'Próximos'];
 
@@ -372,6 +373,10 @@ export default function MapScreen({ navigation, route }: Props) {
           setShowSuggestBtn(true);
         }}
         onPress={() => {
+          if (Date.now() - lastMarkerPressRef.current < 500) {
+            console.log('[MapScreen] Ignorando onPress do mapa devido a click recente no marcador');
+            return;
+          }
           setSelectedPlace(null);
           if (showSuggestBtn) setShowSuggestBtn(false);
         }}
@@ -397,7 +402,10 @@ export default function MapScreen({ navigation, route }: Props) {
             key={p.id} 
             place={p} 
             colors={colors} 
-            onPress={() => setSelectedPlace(p)}
+            onPress={() => {
+              lastMarkerPressRef.current = Date.now();
+              setSelectedPlace(p);
+            }}
           />
         ))}
       </Map>
