@@ -14,11 +14,12 @@ import * as Location from 'expo-location';
 import tw from 'twrnc';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
+import { apiService } from '../services/apiService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MapPicker'>;
 
 export default function MapPickerScreen({ navigation, route }: Props) {
-    const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    const [mapboxToken, setMapboxToken] = useState<string | null>(null);
     const initial = route.params?.initialCoords ?? null;
 
     const [marker, setMarker] = useState<{ latitude: number; longitude: number } | null>(
@@ -32,6 +33,19 @@ export default function MapPickerScreen({ navigation, route }: Props) {
     });
     const [locLoading, setLocLoading] = useState(false);
     const mapRef = useRef<MapView>(null);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await apiService.getMapboxToken();
+                if (res && res.token && !res.token.startsWith('pk.mock_')) {
+                    setMapboxToken(res.token);
+                }
+            } catch (e) {
+                console.error('Error fetching mapbox token', e);
+            }
+        })();
+    }, []);
 
     useEffect(() => {
         if (initial) return;

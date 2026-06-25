@@ -23,13 +23,26 @@ import { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'PlaceProfile'>;
 
 export default function PlaceProfileScreen({ route, navigation }: Props) {
-  const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const { colors, isDark } = useTheme();
   const { place: passedPlace, placeId } = route.params;
 
   const [place, setPlace] = useState<Place | null>(passedPlace || null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(!passedPlace);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiService.getMapboxToken();
+        if (res && res.token && !res.token.startsWith('pk.mock_')) {
+          setMapboxToken(res.token);
+        }
+      } catch (err) {
+        console.error('Error fetching Mapbox token in PlaceProfileScreen:', err);
+      }
+    })();
+  }, []);
 
   const { profile, isProfessional, isInstitution, refreshProfile } = useAuth();
 

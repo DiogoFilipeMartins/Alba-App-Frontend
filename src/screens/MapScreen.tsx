@@ -50,7 +50,7 @@ const PlaceMarker = memo(({ place, colors, onPress }: { place: any, colors: any,
 });
 
 export default function MapScreen({ navigation, route }: Props) {
-  const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const { colors, isDark } = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
@@ -100,22 +100,35 @@ export default function MapScreen({ navigation, route }: Props) {
         setLoading(false);
         setLocationLoading(false);
         loadPlaces();
+        loadMapboxToken();
         return;
       }
 
       // Montar o mapa imediatamente (sem bloquear a tela com loading spinner)
       setLoading(false);
 
-      // Carregar locais e localização em paralelo
+      // Carregar locais, localização e token em paralelo
       Promise.all([
         loadPlaces(),
-        loadLocation()
+        loadLocation(),
+        loadMapboxToken()
       ]);
 
     } catch (error) {
       console.error('[MapScreen] Erro no carregamento inicial:', error);
       setErrorMsg('Ocorreu um erro ao carregar os dados.');
       setLoading(false);
+    }
+  };
+
+  const loadMapboxToken = async () => {
+    try {
+      const res = await apiService.getMapboxToken();
+      if (res && res.token && !res.token.startsWith('pk.mock_')) {
+        setMapboxToken(res.token);
+      }
+    } catch (error) {
+      console.error('[MapScreen] Erro ao buscar token do Mapbox:', error);
     }
   };
 

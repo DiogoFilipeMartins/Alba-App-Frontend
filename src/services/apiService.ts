@@ -325,6 +325,10 @@ export const apiService = {
         }
     },
 
+    async getMapboxToken(): Promise<{ token: string }> {
+        return apiFetch('/mapbox-token', {}, false);
+    },
+
     // Profile management
     async updateProfile(data: { full_name?: string; phone?: string; specialty?: string; bio?: string; website?: string; account_type?: string }): Promise<any> {
         return apiFetch('/profile', {
