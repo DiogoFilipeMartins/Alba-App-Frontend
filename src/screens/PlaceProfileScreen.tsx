@@ -351,7 +351,7 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
               <MapView
                 style={styles.miniMap}
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                mapType={Platform.OS === 'android' ? 'none' : 'standard'}
+                mapType="standard"
                 scrollEnabled={false}
                 zoomEnabled={false}
                 rotateEnabled={false}

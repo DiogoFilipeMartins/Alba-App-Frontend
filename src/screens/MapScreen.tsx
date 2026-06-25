@@ -361,7 +361,7 @@ export default function MapScreen({ navigation, route }: Props) {
         ref={mapRef}
         style={styles.map}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        mapType={Platform.OS === 'android' ? 'none' : 'standard'}
+        mapType="standard"
         customMapStyle={isDark ? darkMapStyle : undefined}
         initialRegion={{
           latitude: 38.7223,

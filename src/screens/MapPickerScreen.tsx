@@ -117,7 +117,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
             <MapView
                 ref={mapRef}
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                mapType={Platform.OS === 'android' ? 'none' : 'standard'}
+                mapType="standard"
                 style={StyleSheet.absoluteFillObject}
                 region={region}
                 onRegionChangeComplete={setRegion}
