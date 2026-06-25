@@ -123,12 +123,17 @@ export default function MapScreen({ navigation, route }: Props) {
 
   const loadMapboxToken = async () => {
     try {
+      console.log('[MapboxDebug] A buscar token do Mapbox...');
       const res = await apiService.getMapboxToken();
+      console.log('[MapboxDebug] Resposta do backend:', res);
       if (res && res.token && !res.token.startsWith('pk.mock_')) {
+        console.log('[MapboxDebug] Token válido obtido com sucesso!');
         setMapboxToken(res.token);
+      } else {
+        console.warn('[MapboxDebug] Token recebido é inválido ou mock:', res?.token);
       }
     } catch (error) {
-      console.error('[MapScreen] Erro ao buscar token do Mapbox:', error);
+      console.error('[MapboxDebug] Erro ao obter token do Mapbox:', error);
     }
   };
 
@@ -356,6 +361,7 @@ export default function MapScreen({ navigation, route }: Props) {
         ref={mapRef}
         style={styles.map}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        mapType={mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (Platform.OS === 'android' ? 'none' : 'standard') : 'standard'}
         customMapStyle={isDark ? darkMapStyle : undefined}
         initialRegion={{
           latitude: 38.7223,

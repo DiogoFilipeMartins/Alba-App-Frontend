@@ -37,12 +37,17 @@ export default function MapPickerScreen({ navigation, route }: Props) {
     useEffect(() => {
         (async () => {
             try {
+                console.log('[MapPickerDebug] A buscar token do Mapbox...');
                 const res = await apiService.getMapboxToken();
+                console.log('[MapPickerDebug] Resposta do backend:', res);
                 if (res && res.token && !res.token.startsWith('pk.mock_')) {
+                    console.log('[MapPickerDebug] Token válido obtido com sucesso!');
                     setMapboxToken(res.token);
+                } else {
+                    console.warn('[MapPickerDebug] Token recebido é inválido ou mock:', res?.token);
                 }
             } catch (e) {
-                console.error('Error fetching mapbox token', e);
+                console.error('[MapPickerDebug] Erro ao buscar token do Mapbox:', e);
             }
         })();
     }, []);
@@ -112,6 +117,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
             <MapView
                 ref={mapRef}
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                mapType={mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (Platform.OS === 'android' ? 'none' : 'standard') : 'standard'}
                 style={StyleSheet.absoluteFillObject}
                 region={region}
                 onRegionChangeComplete={setRegion}

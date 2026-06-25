@@ -34,12 +34,17 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
   useEffect(() => {
     (async () => {
       try {
+        console.log('[PlaceProfileDebug] A buscar token do Mapbox...');
         const res = await apiService.getMapboxToken();
+        console.log('[PlaceProfileDebug] Resposta do backend:', res);
         if (res && res.token && !res.token.startsWith('pk.mock_')) {
+          console.log('[PlaceProfileDebug] Token válido obtido com sucesso!');
           setMapboxToken(res.token);
+        } else {
+          console.warn('[PlaceProfileDebug] Token recebido é inválido ou mock:', res?.token);
         }
       } catch (err) {
-        console.error('Error fetching Mapbox token in PlaceProfileScreen:', err);
+        console.error('[PlaceProfileDebug] Erro ao buscar token do Mapbox:', err);
       }
     })();
   }, []);
@@ -346,6 +351,7 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
               <MapView
                 style={styles.miniMap}
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                mapType={mapboxToken && !mapboxToken.startsWith('pk.mock_') ? (Platform.OS === 'android' ? 'none' : 'standard') : 'standard'}
                 scrollEnabled={false}
                 zoomEnabled={false}
                 rotateEnabled={false}
