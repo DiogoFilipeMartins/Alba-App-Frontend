@@ -5,13 +5,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Text,
   Image,
 } from 'react-native';
+import CustomAlertModal from '../components/CustomAlertModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,44 +23,60 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { colors, isDark } = useTheme();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: keyof typeof Ionicons.glyphMap;
+    iconColor?: string;
+    primaryButton?: { text: string; onPress: () => void; destructive?: boolean };
+    secondaryButton?: { text: string; onPress: () => void };
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    icon?: keyof typeof Ionicons.glyphMap,
+    iconColor?: string,
+    primaryButton?: { text: string; onPress: () => void; destructive?: boolean },
+    secondaryButton?: { text: string; onPress: () => void }
+  ) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      icon,
+      iconColor,
+      primaryButton,
+      secondaryButton,
+    });
+  };
 
   const handleAuth = async () => {
     if (!email.trim() || !email.includes('@')) {
-      Alert.alert('Erro', 'Insira um email válido.');
+      showAlert('Erro', 'Insira um email válido.', 'alert-circle-outline', '#ef4444');
       return;
     }
     if (!password.trim()) {
-      Alert.alert('Erro', 'Insira a sua palavra-passe.');
-      return;
-    }
-
-    if (isSignUp && (!name.trim() || !phone.trim())) {
-      Alert.alert('Erro', 'Preencha o seu nome e telemóvel.');
+      showAlert('Erro', 'Insira a sua palavra-passe.', 'alert-circle-outline', '#ef4444');
       return;
     }
 
     setLoading(true);
     try {
-      if (isSignUp) {
-        await signUp({
-          email: email.trim(),
-          password,
-          username: name.trim(),
-          phone: phone.trim(),
-        });
-      } else {
-        await signIn(email.trim(), password);
-      }
+      await signIn(email.trim(), password);
     } catch (error: any) {
-      Alert.alert('Erro', error.message || 'Falha na autenticação.');
+      showAlert('Erro', error.message || 'Falha na autenticação.', 'alert-circle-outline', '#ef4444');
     } finally {
       setLoading(false);
     }
@@ -88,33 +104,14 @@ export default function LoginScreen({ navigation }: Props) {
                 <Text style={[styles.logoText, { color: colors.textPrimary, fontFamily: colors.fontBold }]}>Alba</Text>
               </View>
               <Text style={[styles.title, { color: colors.textPrimary, fontFamily: colors.fontBold }]}>
-                {isSignUp ? 'Criar Conta' : 'Bem-vindo'}
+                Bem-vindo
               </Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: colors.fontRegular }]}>
-                {isSignUp ? 'Registe-se para começar a usar a Alba.' : 'Insira os seus dados para continuar.'}
+                Insira os seus dados para continuar.
               </Text>
             </View>
 
             <View style={styles.form}>
-              {isSignUp && (
-                <>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border, fontFamily: colors.fontRegular }]}
-                    placeholder="Nome completo"
-                    placeholderTextColor={colors.textMuted}
-                    value={name}
-                    onChangeText={setName}
-                  />
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border, fontFamily: colors.fontRegular }]}
-                    placeholder="Telemóvel"
-                    placeholderTextColor={colors.textMuted}
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                  />
-                </>
-              )}
               <TextInput
                 style={[styles.input, { backgroundColor: colors.card, color: colors.textPrimary, borderColor: colors.border, fontFamily: colors.fontRegular }]}
                 placeholder="Endereço de email"
@@ -160,18 +157,18 @@ export default function LoginScreen({ navigation }: Props) {
                 {loading ? (
                   <ActivityIndicator color="#FFF" />
                 ) : (
-                  <Text style={[styles.buttonText, { fontFamily: colors.fontBold }]}>{isSignUp ? 'Registar' : 'Entrar'}</Text>
+                  <Text style={[styles.buttonText, { fontFamily: colors.fontBold }]}>Entrar</Text>
                 )}
               </TouchableOpacity>
 
               <View style={styles.switchBtn}>
                 <Text style={[styles.switchText, { color: colors.textSecondary, fontFamily: colors.fontRegular }]}>
-                  {isSignUp ? 'Já tem uma conta? ' : 'Ainda não tem conta? '}
+                  Ainda não tem conta?{' '}
                   <Text
                     style={{ color: colors.primary, fontFamily: colors.fontBold }}
-                    onPress={() => setIsSignUp(!isSignUp)}
+                    onPress={() => navigation.navigate('SignUp')}
                   >
-                    {isSignUp ? 'Entrar' : 'Registar'}
+                    Registar
                   </Text>
                 </Text>
               </View>
@@ -179,6 +176,16 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <CustomAlertModal
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        icon={alertConfig.icon}
+        iconColor={alertConfig.iconColor}
+        primaryButton={alertConfig.primaryButton}
+        secondaryButton={alertConfig.secondaryButton}
+        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
     </SafeAreaView>
   );
 }

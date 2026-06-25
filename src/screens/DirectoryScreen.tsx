@@ -37,8 +37,55 @@ export default function DirectoryScreen({ navigation }: Props) {
   const fetchPlaces = async (showLoadingIndicator = true) => {
     try {
       if (showLoadingIndicator) setLoading(true);
-      const data = await apiService.getPlaces({ status: 'approved' });
-      setPlaces(data);
+      
+      // Fetch approved physical places
+      const placesData = await apiService.getPlaces({ status: 'approved' });
+
+      // Fetch all professional and institution profiles
+      let profsData: any[] = [];
+      try {
+        profsData = await apiService.getProfessionals();
+      } catch (err) {
+        console.warn('[DirectoryScreen] Erro ao buscar profissionais:', err);
+      }
+
+      // Evitar duplicar profissionais que já têm locais aprovados no diretório
+      const placeIds = new Set(placesData.map(p => p.id));
+      
+      const virtualPlaces: Place[] = profsData
+        .filter(prof => !prof.claimed_place_id || !placeIds.has(prof.claimed_place_id))
+        .map(prof => ({
+          id: prof.id,
+          name: prof.full_name || 'Profissional/Instituição',
+          type: prof.account_type as 'professional' | 'institution',
+          description: prof.bio || undefined,
+          phone: prof.phone || undefined,
+          email: prof.email || undefined,
+          website: prof.website || undefined,
+          address_line: undefined,
+          city: (prof.claimed_place && prof.claimed_place.city) || undefined,
+          latitude: NaN,
+          longitude: NaN,
+          status: 'approved' as const,
+          created_at: prof.created_at || new Date().toISOString(),
+          profiles: [
+            {
+              id: prof.id,
+              full_name: prof.full_name,
+              email: prof.email,
+              role: prof.role,
+              phone: prof.phone,
+              account_type: prof.account_type,
+              verified: prof.verified,
+              specialty: prof.specialty,
+              bio: prof.bio,
+              website: prof.website
+            }
+          ]
+        }));
+
+      setPlaces([...placesData, ...virtualPlaces]);
+
       const favs = await favoritesService.getIds();
       setFavoriteIds(favs);
     } catch (error) {
@@ -78,10 +125,14 @@ export default function DirectoryScreen({ navigation }: Props) {
   const filteredPlaces = places.filter(place => {
     // Search query match
     const query = searchQuery.toLowerCase().trim();
+    const claimer = (place as any).profiles?.[0];
+    const specialtyMatch = (claimer?.specialty?.toLowerCase().includes(query) ?? false);
+    
     const matchesSearch =
       place.name.toLowerCase().includes(query) ||
       (place.description?.toLowerCase().includes(query) ?? false) ||
-      (place.city?.toLowerCase().includes(query) ?? false);
+      (place.city?.toLowerCase().includes(query) ?? false) ||
+      specialtyMatch;
 
     // Active filter match
     const isFavorite = favoriteIds.includes(place.id);

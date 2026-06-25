@@ -13,6 +13,7 @@ import { FavoritePlace, favoritesService } from '../services/favoritesService';
 import { apiService } from '../services/apiService';
 import { notificationService } from '../services/notificationService';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 type Props = CompositeScreenProps<
     BottomTabScreenProps<MainTabParamList, 'Profile'>,
@@ -21,7 +22,7 @@ type Props = CompositeScreenProps<
 
 export default function ProfileScreen({ navigation }: Props) {
     const { profile, signOut, isAdmin, isProfessional, isInstitution } = useAuth();
-    const { colors, isDark, toggleTheme } = useTheme();
+    const { colors, isDark } = useTheme();
     const username = profile?.full_name || profile?.username || 'Utilizador';
     const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
 
@@ -31,6 +32,39 @@ export default function ProfileScreen({ navigation }: Props) {
     const accountIcon: any = isProfessional ? 'medkit' : isInstitution ? 'business' : null;
 
     const [notificationsGranted, setNotificationsGranted] = useState(false);
+
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        icon?: keyof typeof Ionicons.glyphMap;
+        iconColor?: string;
+        primaryButton?: { text: string; onPress: () => void; destructive?: boolean };
+        secondaryButton?: { text: string; onPress: () => void };
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showAlert = (
+        title: string,
+        message: string,
+        icon?: keyof typeof Ionicons.glyphMap,
+        iconColor?: string,
+        primaryButton?: { text: string; onPress: () => void; destructive?: boolean },
+        secondaryButton?: { text: string; onPress: () => void }
+    ) => {
+        setAlertConfig({
+            visible: true,
+            title,
+            message,
+            icon,
+            iconColor,
+            primaryButton,
+            secondaryButton,
+        });
+    };
 
     useEffect(() => {
         const loadFavorites = async () => {
@@ -54,58 +88,79 @@ export default function ProfileScreen({ navigation }: Props) {
         const granted = await notificationService.requestPermissions();
         setNotificationsGranted(granted);
         if (!granted) {
-            Alert.alert(
+            showAlert(
                 'Permissão necessária',
-                'Para ativar notificações, vai às Definições do teu telemóvel e ativa as notificações para a Alba App.'
+                'Para ativar notificações, vai às Definições do teu telemóvel e ativa as notificações para a Alba App.',
+                'notifications-off-outline',
+                colors.textMuted
             );
         }
     };
 
     const handleLogout = async () => {
-        Alert.alert(
+        showAlert(
             'Terminar Sessão',
-            'Tens a certeza que queres sair?',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                { 
-                    text: 'Sair', 
-                    style: 'destructive', 
-                    onPress: async () => {
-                        try {
-                            await signOut();
-                        } catch (error: any) {
-                            Alert.alert('Erro', error?.message || 'Não foi possível terminar a sessão.');
-                        }
-                    } 
-                },
-            ]
+            'Tens a certeza que queres sair da tua conta?',
+            'log-out-outline',
+            '#ef4444',
+            {
+                text: 'Sair',
+                destructive: true,
+                onPress: async () => {
+                    try {
+                        await signOut();
+                    } catch (error: any) {
+                        showAlert('Erro', error?.message || 'Não foi possível terminar a sessão.', 'alert-circle-outline', '#ef4444');
+                    }
+                }
+            },
+            {
+                text: 'Cancelar',
+                onPress: () => {}
+            }
         );
     };
 
     const handleDeleteAccount = async () => {
-        Alert.alert(
+        showAlert(
             'Eliminar Conta',
-            'Esta ação é definitiva e remove o teu perfil e os teus eventos. Queres continuar?',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Eliminar',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await apiService.deleteMyAccount();
-                            await signOut();
-                        } catch (error: any) {
-                            Alert.alert('Erro', error?.message || 'Não foi possível eliminar a conta.');
-                        }
-                    },
-                },
-            ]
+            'Esta ação é definitiva e removerá o teu perfil e todos os teus dados permanentemente. Tens a certeza?',
+            'trash-outline',
+            '#ef4444',
+            {
+                text: 'Eliminar',
+                destructive: true,
+                onPress: async () => {
+                    try {
+                        await apiService.deleteMyAccount();
+                        await signOut();
+                    } catch (error: any) {
+                        showAlert('Erro', error?.message || 'Não foi possível eliminar a conta.', 'alert-circle-outline', '#ef4444');
+                    }
+                }
+            },
+            {
+                text: 'Cancelar',
+                onPress: () => {}
+            }
         );
     };
 
+    const handleSuggestPlace = () => {
+        if (isInstitution && profile?.verified !== true) {
+            showAlert(
+                'Acesso Restrito',
+                'O seu perfil de Instituição ainda está pendente de aprovação por um administrador. Não pode sugerir locais até que a sua conta seja aprovada.',
+                'lock-closed-outline',
+                '#f59e0b'
+            );
+            return;
+        }
+        navigation.navigate('SuggestPlace', {});
+    };
+
     const menuItems = [
-        { icon: 'add-circle-outline', label: 'Sugerir Local', onPress: () => navigation.navigate('SuggestPlace', {}) },
+        { icon: 'add-circle-outline', label: 'Sugerir Local', onPress: handleSuggestPlace },
         { icon: 'heart-outline', label: 'Doar e Apoiar', onPress: () => navigation.navigate('Donations') },
         { icon: 'person-outline', label: 'Dados Pessoais', onPress: () => (navigation as any).navigate('EditProfile') },
         { icon: 'shield-checkmark-outline', label: 'Segurança', onPress: () => (navigation as any).navigate('Security') },
@@ -116,7 +171,7 @@ export default function ProfileScreen({ navigation }: Props) {
     if (isSpecialAccount) {
         menuItems.unshift({
             icon: isProfessional ? 'medkit-outline' : 'business-outline',
-            label: 'Perfil Profissional',
+            label: isProfessional ? 'Perfil Profissional' : 'Perfil da Instituição',
             onPress: () => (navigation as any).navigate('EditProfessionalProfile'),
         });
     }
@@ -237,6 +292,16 @@ export default function ProfileScreen({ navigation }: Props) {
                     <Text style={s.deleteTxt}>Eliminar Conta</Text>
                 </TouchableOpacity>
             </ScrollView>
+            <CustomAlertModal
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                primaryButton={alertConfig.primaryButton}
+                secondaryButton={alertConfig.secondaryButton}
+                onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+            />
         </SafeAreaView>
     );
 }

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useCallback } from 'react';
 import {
-  View, Text, TextInput, Pressable, Alert,
+  View, Text, TextInput, Pressable,
   ActivityIndicator, ScrollView, StyleSheet, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import CustomAlertModal from '../components/CustomAlertModal';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,7 +18,7 @@ const ACCOUNT_TYPES: { type: AccountType; icon: any; label: string; description:
   {
     type: 'user',
     icon: 'person',
-    label: 'Utilizador',
+    label: 'Padrão',
     description: 'Familiar, pessoa autista ou cuidador à procura de recursos e comunidade.',
     color: '#0369a1',
   },
@@ -40,6 +41,8 @@ const ACCOUNT_TYPES: { type: AccountType; icon: any; label: string; description:
 export default function RegisterScreen({ navigation }: Props) {
   const { signUp } = useAuth();
   const { colors, isDark } = useTheme();
+
+  const [successModal, setSuccessModal] = useState(false);
 
   // Step 1: Account type
   const [step, setStep] = useState<1 | 2>(1);
@@ -103,13 +106,7 @@ export default function RegisterScreen({ navigation }: Props) {
         bio: bio.trim() || undefined,
         website: website.trim() || undefined,
       });
-      Alert.alert(
-        'Conta criada! 🎉',
-        accountType === 'user'
-          ? 'Verifica a tua caixa de entrada para confirmar o email.'
-          : 'Conta criada com sucesso! A tua verificação será analisada pela nossa equipa em breve.',
-        [{ text: 'OK', onPress: () => navigation.replace('Login') }]
-      );
+      setSuccessModal(true);
     } catch (e: any) {
       setError(e?.message || 'Ocorreu um erro inesperado. Tenta novamente.');
     } finally {
@@ -379,6 +376,26 @@ export default function RegisterScreen({ navigation }: Props) {
           </View>
         </View>
       </ScrollView>
+      <CustomAlertModal
+        visible={successModal}
+        title="Conta Criada!"
+        message={accountType === 'user'
+          ? "A tua conta foi criada com sucesso. Verifica o teu email para confirmar o registo."
+          : "A tua conta foi criada com sucesso e está a aguardar aprovação pela nossa equipa. Por favor, verifica o teu email para confirmar o registo."}
+        icon="checkmark-circle-outline"
+        iconColor={selectedType.color}
+        primaryButton={{
+          text: "OK",
+          onPress: () => {
+            setSuccessModal(false);
+            const state = navigation.getState();
+            if (state?.routeNames?.includes('Login')) {
+              navigation.navigate('Login');
+            }
+          }
+        }}
+        onClose={() => setSuccessModal(false)}
+      />
     </SafeAreaView>
   );
 }

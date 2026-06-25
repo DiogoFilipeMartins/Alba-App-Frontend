@@ -1,6 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Modal, Pressable, Alert, Linking } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Modal, Pressable, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import CustomAlertModal from '../components/CustomAlertModal';
 import { Map, Camera, UserLocation, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 import { resolveMapboxStyle } from '../utils/mapUtils';
 import * as Location from 'expo-location';
@@ -10,6 +11,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { favoritesService } from '../services/favoritesService';
 import { FontSize, FontFamily } from '../theme/font';
 
@@ -44,6 +46,7 @@ export default function MapScreen({ navigation, route }: Props) {
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [styleJSON, setStyleJSON] = useState<any>(null);
   const { colors, isDark } = useTheme();
+  const { profile, isInstitution } = useAuth();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -63,6 +66,39 @@ export default function MapScreen({ navigation, route }: Props) {
   const lastMarkerPressRef = React.useRef<number>(0);
 
   const FILTERS = ['Todos', 'Profissional', 'Instituição', 'Favoritos', 'Próximos'];
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: keyof typeof Ionicons.glyphMap;
+    iconColor?: string;
+    primaryButton?: { text: string; onPress: () => void; destructive?: boolean };
+    secondaryButton?: { text: string; onPress: () => void };
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    icon?: keyof typeof Ionicons.glyphMap,
+    iconColor?: string,
+    primaryButton?: { text: string; onPress: () => void; destructive?: boolean },
+    secondaryButton?: { text: string; onPress: () => void }
+  ) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      icon,
+      iconColor,
+      primaryButton,
+      secondaryButton,
+    });
+  };
 
   const loadFavorites = async () => {
     const ids = await favoritesService.getIds();
@@ -241,7 +277,7 @@ export default function MapScreen({ navigation, route }: Props) {
       const results = await apiService.searchPlaces(searchQuery.trim());
       setSmartResults(results);
     } catch (error: any) {
-      Alert.alert('Erro', error?.message || 'Não foi possível executar a pesquisa inteligente.');
+      showAlert('Erro', error?.message || 'Não foi possível executar a pesquisa inteligente.', 'alert-circle-outline', '#ef4444');
     } finally {
       setSmartSearching(false);
     }
@@ -254,9 +290,11 @@ export default function MapScreen({ navigation, route }: Props) {
 
     const isFavoriteNow = await favoritesService.toggle(selectedPlace);
     await loadFavorites();
-    Alert.alert(
+    showAlert(
       isFavoriteNow ? 'Local guardado' : 'Local removido',
-      isFavoriteNow ? 'Este local foi adicionado aos teus favoritos.' : 'Este local foi removido dos teus favoritos.'
+      isFavoriteNow ? 'Este local foi adicionado aos teus favoritos.' : 'Este local foi removido dos teus favoritos.',
+      isFavoriteNow ? 'heart' : 'heart-dislike-outline',
+      isFavoriteNow ? '#ef4444' : colors.textMuted
     );
   };
 
@@ -506,7 +544,7 @@ export default function MapScreen({ navigation, route }: Props) {
                   if (phone) {
                     Linking.openURL(`tel:${phone}`);
                   } else {
-                    Alert.alert('Sem contacto', 'Este local não tem número de telefone registado.');
+                    showAlert('Sem contacto', 'Este local não tem número de telefone registado.', 'call-outline', colors.textMuted);
                   }
                 }}
               >
@@ -644,6 +682,15 @@ export default function MapScreen({ navigation, route }: Props) {
             style={[styles.suggestButton, { backgroundColor: colors.accent }]}
             onPress={() => {
               setShowSuggestBtn(false);
+              if (isInstitution && profile?.verified !== true) {
+                showAlert(
+                  'Acesso Restrito',
+                  'O seu perfil de Instituição ainda está pendente de aprovação por um administrador. Não pode sugerir locais até que a sua conta seja aprovada.',
+                  'lock-closed-outline',
+                  '#f59e0b'
+                );
+                return;
+              }
               navigation.navigate('SuggestPlace', {
                 pickedCoords: { lat: selectedCoords.latitude, lng: selectedCoords.longitude }
               });
@@ -660,6 +707,16 @@ export default function MapScreen({ navigation, route }: Props) {
           </TouchableOpacity>
         </View>
       )}
+      <CustomAlertModal
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        icon={alertConfig.icon}
+        iconColor={alertConfig.iconColor}
+        primaryButton={alertConfig.primaryButton}
+        secondaryButton={alertConfig.secondaryButton}
+        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }

@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   Linking,
   Platform,
-  Alert,
   Dimensions,
   ActivityIndicator
 } from 'react-native';
+import CustomAlertModal from '../components/CustomAlertModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Map, Camera, Marker } from '@maplibre/maplibre-react-native';
@@ -28,6 +28,39 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [styleJSON, setStyleJSON] = useState<any>(null);
   const { colors, isDark } = useTheme();
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: keyof typeof Ionicons.glyphMap;
+    iconColor?: string;
+    primaryButton?: { text: string; onPress: () => void; destructive?: boolean };
+    secondaryButton?: { text: string; onPress: () => void };
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    icon?: keyof typeof Ionicons.glyphMap,
+    iconColor?: string,
+    primaryButton?: { text: string; onPress: () => void; destructive?: boolean },
+    secondaryButton?: { text: string; onPress: () => void }
+  ) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      icon,
+      iconColor,
+      primaryButton,
+      secondaryButton,
+    });
+  };
 
   // MapLibre does not require setAccessToken. Tokens are embedded in style URLs.
   const { place: passedPlace, placeId } = route.params;
@@ -81,28 +114,40 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
 
   const handleClaimPlace = async () => {
     if (!place) return;
-    Alert.alert(
+    if (isInstitution && profile?.verified !== true) {
+      showAlert(
+        'Acesso Restrito',
+        'O seu perfil de Instituição ainda está pendente de aprovação por um administrador. Não pode reivindicar locais até que a sua conta seja aprovada.',
+        'lock-closed-outline',
+        '#f59e0b'
+      );
+      return;
+    }
+    showAlert(
       'Reivindicar Local',
       `Tens a certeza que queres associar a tua conta a "${place.name}" como local de atendimento oficial?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            try {
-              const res = await apiService.claimPlace(place.id);
-              Alert.alert('Sucesso', 'Reivindicação efetuada com sucesso! O teu perfil agora está associado a este local.');
-              await refreshProfile();
-              setPlace(prev => prev ? {
-                ...prev,
-                profiles: [res.profile || { id: profile?.id, verified: false, account_type: profile?.account_type }]
-              } : null);
-            } catch (error: any) {
-              Alert.alert('Erro', error.message || 'Não foi possível reivindicar o local.');
-            }
+      'business-outline',
+      colors.primary,
+      {
+        text: 'Confirmar',
+        onPress: async () => {
+          try {
+            const res = await apiService.claimPlace(place.id);
+            showAlert('Sucesso', 'Reivindicação efetuada com sucesso! O teu perfil agora está associado a este local.', 'checkmark-circle-outline', colors.primary);
+            await refreshProfile();
+            setPlace(prev => prev ? {
+              ...prev,
+              profiles: [res.profile || { id: profile?.id, verified: false, account_type: profile?.account_type }]
+            } : null);
+          } catch (error: any) {
+            showAlert('Erro', error.message || 'Não foi possível reivindicar o local.', 'alert-circle-outline', '#ef4444');
           }
         }
-      ]
+      },
+      {
+        text: 'Cancelar',
+        onPress: () => {}
+      }
     );
   };
 
@@ -136,11 +181,13 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
     try {
       const isFav = await favoritesService.toggle(place);
       setIsFavorite(isFav);
-      Alert.alert(
+      showAlert(
         isFav ? 'Adicionado aos Favoritos' : 'Removido dos Favoritos',
         isFav
           ? 'Este local foi adicionado à tua lista de favoritos.'
-          : 'Este local foi removido da tua lista de favoritos.'
+          : 'Este local foi removido da tua lista de favoritos.',
+        isFav ? 'heart' : 'heart-dislike-outline',
+        isFav ? '#ef4444' : colors.textMuted
       );
     } catch (error) {
       console.error('[PlaceProfileScreen] Erro ao alternar favorito:', error);
@@ -151,7 +198,7 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
     if (place.phone) {
       Linking.openURL(`tel:${place.phone}`);
     } else {
-      Alert.alert('Sem contacto', 'Este profissional/instituição não tem telefone registado.');
+      showAlert('Sem contacto', 'Este profissional/instituição não tem telefone registado.', 'call-outline', colors.textMuted);
     }
   };
 
@@ -159,7 +206,7 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
     if (place.email) {
       Linking.openURL(`mailto:${place.email}`);
     } else {
-      Alert.alert('Sem e-mail', 'Este profissional/instituição não tem e-mail registado.');
+      showAlert('Sem e-mail', 'Este profissional/instituição não tem e-mail registado.', 'mail-outline', colors.textMuted);
     }
   };
 
@@ -168,7 +215,7 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
       const url = place.website.startsWith('http') ? place.website : `https://${place.website}`;
       Linking.openURL(url);
     } else {
-      Alert.alert('Sem website', 'Este profissional/instituição não tem website registado.');
+      showAlert('Sem website', 'Este profissional/instituição não tem website registado.', 'globe-outline', colors.textMuted);
     }
   };
 
@@ -417,6 +464,16 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
           </View>
         ) : null}
       </ScrollView>
+      <CustomAlertModal
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        icon={alertConfig.icon}
+        iconColor={alertConfig.iconColor}
+        primaryButton={alertConfig.primaryButton}
+        secondaryButton={alertConfig.secondaryButton}
+        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
     </SafeAreaView>
   );
 }

@@ -6,11 +6,11 @@ import {
     Pressable,
     ScrollView,
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
 } from 'react-native';
+import CustomAlertModal from '../components/CustomAlertModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -24,8 +24,54 @@ import { useTheme } from '../contexts/ThemeContext';
 type Props = NativeStackScreenProps<RootStackParamList, 'SuggestPlace'>;
 
 export default function SuggestPlaceScreen({ navigation, route }: Props) {
-    const { user } = useAuth();
+    const { user, profile, isInstitution } = useAuth();
     const { colors } = useTheme();
+
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        icon?: keyof typeof Ionicons.glyphMap;
+        iconColor?: string;
+        primaryButton?: { text: string; onPress: () => void; destructive?: boolean };
+        secondaryButton?: { text: string; onPress: () => void };
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showAlert = (
+        title: string,
+        message: string,
+        icon?: keyof typeof Ionicons.glyphMap,
+        iconColor?: string,
+        primaryButton?: { text: string; onPress: () => void; destructive?: boolean },
+        secondaryButton?: { text: string; onPress: () => void }
+    ) => {
+        setAlertConfig({
+            visible: true,
+            title,
+            message,
+            icon,
+            iconColor,
+            primaryButton,
+            secondaryButton,
+        });
+    };
+
+    useEffect(() => {
+        if (isInstitution && profile?.verified !== true) {
+            showAlert(
+                'Acesso Restrito',
+                'O seu perfil de Instituição ainda está pendente de aprovação por um administrador. Não pode sugerir locais até que a sua conta seja aprovada.',
+                'lock-closed-outline',
+                '#f59e0b',
+                { text: 'OK', onPress: () => navigation.goBack() }
+            );
+        }
+    }, [isInstitution, profile, navigation]);
+
     const [loading, setLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -67,7 +113,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
             setLocLoading(true);
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('Permissão negada', 'Precisamos de acesso à localização.');
+                showAlert('Permissão negada', 'Precisamos de acesso à localização.', 'location-outline', colors.textMuted);
                 return;
             }
             const loc = await Location.getCurrentPositionAsync({});
@@ -77,7 +123,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                 lng: String(loc.coords.longitude),
             }));
         } catch (e) {
-            Alert.alert('Erro', 'Não foi possível obter a localização.');
+            showAlert('Erro', 'Não foi possível obter a localização.', 'alert-circle-outline', '#ef4444');
         } finally {
             setLocLoading(false);
         }
@@ -87,7 +133,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
         const lat = parseFloat(form.lat);
         const lng = parseFloat(form.lng);
         if (isNaN(lat) || isNaN(lng)) {
-            Alert.alert('Coordenadas inválidas', 'Latitude e longitude devem ser números.');
+            showAlert('Coordenadas inválidas', 'Latitude e longitude devem ser números.', 'alert-circle-outline', '#ef4444');
             return;
         }
 
@@ -113,14 +159,16 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                 },
             });
 
-            Alert.alert(
+            showAlert(
                 'Sugestão enviada! 🎉',
                 'O teu local foi submetido e será revisto por um administrador.',
-                [{ text: 'OK', onPress: () => navigation.goBack() }]
+                'checkmark-circle-outline',
+                colors.primary,
+                { text: 'OK', onPress: () => navigation.goBack() }
             );
         } catch (e: any) {
             console.error('Erro ao sugerir local:', e);
-            Alert.alert('Erro', e.message || 'Não foi possível enviar a sugestão.');
+            showAlert('Erro', e.message || 'Não foi possível enviar a sugestão.', 'alert-circle-outline', '#ef4444');
         } finally {
             setLoading(false);
         }
@@ -502,6 +550,16 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                     </Pressable>
                 </View>
             </KeyboardAvoidingView>
+            <CustomAlertModal
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                primaryButton={alertConfig.primaryButton}
+                secondaryButton={alertConfig.secondaryButton}
+                onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+            />
         </SafeAreaView>
     );
 }

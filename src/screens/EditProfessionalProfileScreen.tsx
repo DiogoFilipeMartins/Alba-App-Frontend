@@ -53,7 +53,9 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
                 <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="chevron-back" size={24} color={accentColor} />
                 </Pressable>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Perfil Profissional</Text>
+                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+                    {isProfessional ? 'Perfil Profissional' : 'Perfil da Instituição'}
+                </Text>
                 <Pressable onPress={handleSave} disabled={saving} style={styles.saveBtn}>
                     {saving
                         ? <ActivityIndicator size="small" color={accentColor} />
