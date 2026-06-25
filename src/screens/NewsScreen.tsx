@@ -13,6 +13,7 @@ import {
     Linking,
     Dimensions,
     RefreshControl,
+    TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +21,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { apiService, NewsItem } from '../services/apiService';
+import { savedNewsService } from '../services/savedNewsService';
 import { useTheme } from '../contexts/ThemeContext';
+import { FontSize, FontFamily } from '../theme/font';
 import tw from 'twrnc';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'News'>;
@@ -69,12 +72,25 @@ export default function NewsScreen({}: Props) {
     const navigation = useNavigation<any>();
     
     const [news, setNews] = useState<NewsItem[]>([]);
+    const [savedNewsIds, setSavedNewsIds] = useState<string[]>([]);
+    const [savedArticles, setSavedArticles] = useState<NewsItem[]>([]);
+    const [activeTab, setActiveTab] = useState<'all' | 'saved'>('all');
+    
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('Todos');
     const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
+
+    const loadSavedNews = async () => {
+        try {
+            const list = await savedNewsService.list();
+            setSavedArticles(list);
+            setSavedNewsIds(list.map(item => item.id));
+        } catch (error) {
+            console.error('Error loading saved news:', error);
+        }
+    };
 
     const fetchNews = async (isRefresh = false) => {
         try {
@@ -82,11 +98,12 @@ export default function NewsScreen({}: Props) {
             else setLoading(true);
 
             const filters = {
-                category: selectedCategory,
                 query: searchQuery.trim() !== '' ? searchQuery : undefined
             };
 
             const data = await apiService.getNews(filters);
+            // Sort from most recent to oldest
+            data.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
             setNews(data);
         } catch (error) {
             console.error('Error fetching news:', error);
@@ -98,24 +115,50 @@ export default function NewsScreen({}: Props) {
 
     useEffect(() => {
         fetchNews();
-    }, [selectedCategory]);
+        loadSavedNews();
+    }, []);
+
+    const handleToggleSave = async (item: NewsItem) => {
+        const isSavedNow = await savedNewsService.toggle(item);
+        await loadSavedNews();
+    };
 
     // Handle search query submission
     const handleSearchSubmit = () => {
-        fetchNews();
+        if (activeTab === 'all') {
+            fetchNews();
+        }
     };
 
     // Clear search
     const handleClearSearch = () => {
         setSearchQuery('');
-        // We need to fetch again with empty query
-        setTimeout(() => {
-            fetchNews();
-        }, 100);
+        if (activeTab === 'all') {
+            setTimeout(() => {
+                fetchNews();
+            }, 100);
+        }
     };
+
+    const displayedNews = (() => {
+        let list = activeTab === 'all' ? news : savedArticles;
+        
+        // Dynamic search filter in client-side (reactive search)
+        if (searchQuery.trim() !== '') {
+            const queryLower = searchQuery.toLowerCase();
+            list = list.filter(item => 
+                (item.title || '').toLowerCase().includes(queryLower) ||
+                (item.description || '').toLowerCase().includes(queryLower) ||
+                (item.content || '').toLowerCase().includes(queryLower)
+            );
+        }
+        
+        return list;
+    })();
 
     const renderNewsItem = ({ item }: { item: NewsItem }) => {
         const catColor = getCategoryColor(item.category);
+        const isSaved = savedNewsIds.includes(item.id);
         return (
             <Pressable 
                 onPress={() => setSelectedArticle(item)}
@@ -137,9 +180,25 @@ export default function NewsScreen({}: Props) {
                         <View style={[styles.catBadge, { backgroundColor: catColor + '15' }]}>
                             <Text style={[styles.catBadgeText, { color: catColor }]}>{item.category}</Text>
                         </View>
-                        <Text style={[styles.cardMetaText, { color: colors.textMuted }]}>
-                            {getReadingTime(item.content)}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <Text style={[styles.cardMetaText, { color: colors.textMuted }]}>
+                                {getReadingTime(item.content)}
+                            </Text>
+                            <Pressable 
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleSave(item);
+                                }}
+                                hitSlop={12}
+                                style={styles.bookmarkBtn}
+                            >
+                                <Ionicons 
+                                    name={isSaved ? "bookmark" : "bookmark-outline"} 
+                                    size={20} 
+                                    color={isSaved ? colors.primary : colors.textSecondary} 
+                                />
+                            </Pressable>
+                        </View>
                     </View>
 
                     <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={2}>
@@ -192,7 +251,7 @@ export default function NewsScreen({}: Props) {
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         onSubmitEditing={handleSearchSubmit}
-                        placeholder="Pesquisar notícias..."
+                        placeholder={activeTab === 'all' ? "Pesquisar notícias..." : "Pesquisar guardadas..."}
                         placeholderTextColor={colors.textMuted}
                         style={[styles.searchInput, { color: colors.textPrimary }]}
                         returnKeyType="search"
@@ -205,67 +264,67 @@ export default function NewsScreen({}: Props) {
                 </View>
             </View>
 
-            {/* Horizontal Categories Scroll */}
-            <View style={styles.categoriesContainer}>
-                <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.categoriesScrollContent}
+            {/* Tab/Segment Control */}
+            <View style={styles.tabContainer}>
+                <Pressable
+                    onPress={() => setActiveTab('all')}
+                    style={[
+                        styles.tabButton,
+                        activeTab === 'all'
+                            ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                            : { backgroundColor: colors.card, borderColor: colors.border }
+                    ]}
                 >
-                    {CATEGORIES.map((cat) => {
-                        const isSelected = selectedCategory === cat;
-                        return (
-                            <Pressable
-                                key={cat}
-                                onPress={() => setSelectedCategory(cat)}
-                                style={[
-                                    styles.categoryChip,
-                                    isSelected 
-                                        ? { backgroundColor: colors.primary } 
-                                        : { backgroundColor: colors.card, borderColor: colors.border }
-                                ]}
-                            >
-                                <Text 
-                                    style={[
-                                        styles.categoryChipText,
-                                        isSelected 
-                                            ? { color: '#FFFFFF', fontWeight: '700' } 
-                                            : { color: colors.textSecondary }
-                                    ]}
-                                >
-                                    {cat}
-                                </Text>
-                            </Pressable>
-                        );
-                    })}
-                </ScrollView>
+                    <Ionicons name="newspaper-outline" size={18} color={activeTab === 'all' ? '#FFF' : colors.textSecondary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.tabButtonText, { color: activeTab === 'all' ? '#FFF' : colors.textSecondary }]}>Todas</Text>
+                </Pressable>
+                <Pressable
+                    onPress={() => setActiveTab('saved')}
+                    style={[
+                        styles.tabButton,
+                        activeTab === 'saved'
+                            ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                            : { backgroundColor: colors.card, borderColor: colors.border }
+                    ]}
+                >
+                    <Ionicons name="bookmark-outline" size={18} color={activeTab === 'saved' ? '#FFF' : colors.textSecondary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.tabButtonText, { color: activeTab === 'saved' ? '#FFF' : colors.textSecondary }]}>Guardadas</Text>
+                </Pressable>
             </View>
 
             {/* News List */}
-            {loading && !refreshing ? (
+            {loading && !refreshing && activeTab === 'all' ? (
                 <View style={styles.centered}>
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             ) : (
                 <FlatList
-                    data={news}
+                    data={displayedNews}
                     keyExtractor={(item) => item.id}
                     renderItem={renderNewsItem}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={() => fetchNews(true)}
-                            tintColor={colors.primary}
-                            colors={[colors.primary]}
-                        />
+                        activeTab === 'all' ? (
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={() => fetchNews(true)}
+                                tintColor={colors.primary}
+                                colors={[colors.primary]}
+                            />
+                        ) : undefined
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyWrap}>
-                            <Ionicons name="newspaper-outline" size={64} color={colors.border} />
+                            <Ionicons 
+                                name={activeTab === 'saved' ? "bookmark-outline" : "newspaper-outline"} 
+                                size={64} 
+                                color={colors.border} 
+                            />
                             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                                Nenhuma notícia encontrada com estes filtros.
+                                {activeTab === 'saved' 
+                                    ? "Ainda não tens nenhuma notícia guardada." 
+                                    : "Nenhuma notícia encontrada."}
                             </Text>
                         </View>
                     }
@@ -292,16 +351,26 @@ export default function NewsScreen({}: Props) {
                             <Text style={[styles.modalHeaderTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                                 {selectedArticle.sourceName}
                             </Text>
-                            {selectedArticle.sourceUrl ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                 <Pressable 
-                                    onPress={() => Linking.openURL(selectedArticle.sourceUrl!)}
+                                    onPress={() => handleToggleSave(selectedArticle)}
                                     style={[styles.modalOpenBtn, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
                                 >
-                                    <Ionicons name="open-outline" size={20} color={colors.primary} />
+                                    <Ionicons 
+                                        name={savedNewsIds.includes(selectedArticle.id) ? "bookmark" : "bookmark-outline"} 
+                                        size={20} 
+                                        color={savedNewsIds.includes(selectedArticle.id) ? colors.primary : colors.textPrimary} 
+                                    />
                                 </Pressable>
-                            ) : (
-                                <View style={{ width: 40 }} />
-                            )}
+                                {selectedArticle.sourceUrl && (
+                                    <Pressable 
+                                        onPress={() => Linking.openURL(selectedArticle.sourceUrl!)}
+                                        style={[styles.modalOpenBtn, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                                    >
+                                        <Ionicons name="open-outline" size={20} color={colors.primary} />
+                                    </Pressable>
+                                )}
+                            </View>
                         </View>
 
                         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
@@ -612,5 +681,28 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontFamily: 'Poppins_700Bold',
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+        gap: 12,
+    },
+    tabButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 48,
+        borderRadius: 14,
+        borderWidth: 1.5,
+    },
+    tabButtonText: {
+        fontSize: FontSize.s,
+        fontFamily: 'Poppins_700Bold',
+    },
+    bookmarkBtn: {
+        padding: 6,
+        margin: -6,
     },
 });
