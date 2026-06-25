@@ -126,8 +126,9 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 showsMyLocationButton={false}
             >
                 <UrlTile
+                    key={mapboxToken || 'fallback'}
                     urlTemplate={mapboxToken && !mapboxToken.startsWith('pk.mock_')
-                        ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`
+                        ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}&ext=.png`
                         : `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png`
                     }
                     maximumZ={19}

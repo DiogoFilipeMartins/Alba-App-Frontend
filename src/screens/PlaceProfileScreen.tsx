@@ -364,8 +364,9 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
                 }}
               >
                 <UrlTile
+                  key={mapboxToken || 'fallback'}
                   urlTemplate={mapboxToken && !mapboxToken.startsWith('pk.mock_')
-                    ? `https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`
+                    ? `https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}&ext=.png`
                     : (isDark 
                         ? `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png`
                         : `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png`
