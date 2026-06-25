@@ -37,12 +37,7 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.anonymous.albaapp",
-      "config": {
-        "googleMaps": {
-          "apiKey": "SUA_API_KEY_DO_GOOGLE_MAPS_AQUI"
-        }
-      }
+      "package": "com.anonymous.albaapp"
     },
     "plugins": [
       [
@@ -54,12 +49,13 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/AlbaAppLogoSemFundo.png",
           "color": "#6366f1",
           "sounds": []
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "@rnmapbox/maps"
     ]
   }
 }

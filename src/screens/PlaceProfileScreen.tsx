@@ -8,11 +8,12 @@ import {
   Linking,
   Platform,
   Alert,
-  Dimensions
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
+import Mapbox from '@rnmapbox/maps';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, Place } from '../services/apiService';
@@ -25,6 +26,12 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PlaceProfile'>;
 export default function PlaceProfileScreen({ route, navigation }: Props) {
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const { colors, isDark } = useTheme();
+
+  useEffect(() => {
+    if (mapboxToken) {
+      Mapbox.setAccessToken(mapboxToken);
+    }
+  }, [mapboxToken]);
   const { place: passedPlace, placeId } = route.params;
 
   const [place, setPlace] = useState<Place | null>(passedPlace || null);
@@ -348,42 +355,37 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
 
             {/* Map Preview Container */}
             <View style={[styles.mapContainer, { borderColor: colors.border }]}>
-              <MapView
-                style={styles.miniMap}
-                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                mapType="standard"
-                scrollEnabled={false}
-                zoomEnabled={false}
-                rotateEnabled={false}
-                pitchEnabled={false}
-                initialRegion={{
-                  latitude: Number(place.latitude),
-                  longitude: Number(place.longitude),
-                  latitudeDelta: 0.005,
-                  longitudeDelta: 0.005,
-                }}
-              >
-                <UrlTile
-                  key={mapboxToken || 'fallback'}
-                  urlTemplate={mapboxToken && !mapboxToken.startsWith('pk.mock_')
-                    ? `https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}&ext=.png`
-                    : (isDark 
-                        ? `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png`
-                        : `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png`
-                      )
-                  }
-                  maximumZ={19}
-                  tileSize={256}
-                  shouldReplaceMapContent={true}
-                />
-                <Marker
-                  coordinate={{
-                    latitude: Number(place.latitude),
-                    longitude: Number(place.longitude),
-                  }}
-                  pinColor={place.type === 'professional' ? colors.primary : '#3b82f6'}
-                />
-              </MapView>
+              {!mapboxToken ? (
+                <View style={[styles.miniMap, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : (
+                <Mapbox.MapView
+                  style={styles.miniMap}
+                  styleURL={isDark ? Mapbox.StyleURL.Dark : Mapbox.StyleURL.Street}
+                  zoomEnabled={false}
+                  scrollEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}
+                >
+                  <Mapbox.Camera
+                    defaultSettings={{
+                      centerCoordinate: [Number(place.longitude), Number(place.latitude)],
+                      zoomLevel: 14,
+                    }}
+                  />
+                  <Mapbox.MarkerView
+                    id="place-marker"
+                    coordinate={[Number(place.longitude), Number(place.latitude)]}
+                  >
+                    <Ionicons 
+                      name={place.type === 'professional' ? 'medical' : 'business'} 
+                      size={24} 
+                      color={place.type === 'professional' ? colors.primary : '#3b82f6'} 
+                    />
+                  </Mapbox.MarkerView>
+                </Mapbox.MapView>
+              )}
             </View>
 
             {/* Action to show on main Map */}

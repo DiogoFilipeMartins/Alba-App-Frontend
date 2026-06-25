@@ -8,7 +8,7 @@ import {
     Alert,
     Platform,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, Region, MapPressEvent, UrlTile } from 'react-native-maps';
+import Mapbox from '@rnmapbox/maps';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import tw from 'twrnc';
@@ -25,14 +25,14 @@ export default function MapPickerScreen({ navigation, route }: Props) {
     const [marker, setMarker] = useState<{ latitude: number; longitude: number } | null>(
         initial ? { latitude: initial.lat, longitude: initial.lng } : null
     );
-    const [region, setRegion] = useState<Region>({
-        latitude: initial?.lat ?? 39.5,
-        longitude: initial?.lng ?? -8.0,
-        latitudeDelta: initial ? 0.05 : 3.5,
-        longitudeDelta: initial ? 0.05 : 3.5,
-    });
     const [locLoading, setLocLoading] = useState(false);
-    const mapRef = useRef<MapView>(null);
+    const cameraRef = useRef<Mapbox.Camera>(null);
+
+    useEffect(() => {
+        if (mapboxToken) {
+            Mapbox.setAccessToken(mapboxToken);
+        }
+    }, [mapboxToken]);
 
     useEffect(() => {
         (async () => {
@@ -59,20 +59,18 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted') return;
                 const loc = await Location.getCurrentPositionAsync({});
-                const userRegion = {
-                    latitude: loc.coords.latitude,
-                    longitude: loc.coords.longitude,
-                    latitudeDelta: 0.1,
-                    longitudeDelta: 0.1,
-                };
-                setRegion(userRegion);
-                mapRef.current?.animateToRegion(userRegion, 800);
+                cameraRef.current?.setCamera({
+                    centerCoordinate: [loc.coords.longitude, loc.coords.latitude],
+                    zoomLevel: 14,
+                    animationDuration: 800,
+                });
             } catch (_) { }
         })();
     }, []);
 
-    const handleMapPress = (e: MapPressEvent) => {
-        setMarker(e.nativeEvent.coordinate);
+    const handleMapPress = (feature: any) => {
+        const [longitude, latitude] = feature.geometry.coordinates;
+        setMarker({ latitude, longitude });
     };
 
     const centerOnUser = async () => {
@@ -84,14 +82,11 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 return;
             }
             const loc = await Location.getCurrentPositionAsync({});
-            const userRegion = {
-                latitude: loc.coords.latitude,
-                longitude: loc.coords.longitude,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-            };
-            setRegion(userRegion);
-            mapRef.current?.animateToRegion(userRegion, 500);
+            cameraRef.current?.setCamera({
+                centerCoordinate: [loc.coords.longitude, loc.coords.latitude],
+                zoomLevel: 14,
+                animationDuration: 500,
+            });
         } catch (e) {
             Alert.alert('Erro', 'Não foi possível obter a localização.');
         } finally {
@@ -112,33 +107,39 @@ export default function MapPickerScreen({ navigation, route }: Props) {
         });
     };
 
+    if (!mapboxToken) {
+        return (
+            <View style={tw`flex-1 items-center justify-center bg-gray-900`}>
+                <ActivityIndicator size="large" color="#16db65" />
+                <Text style={tw`text-white font-medium mt-4`}>A carregar credenciais do mapa...</Text>
+            </View>
+        );
+    }
+
     return (
         <View style={tw`flex-1`}>
-            <MapView
-                ref={mapRef}
-                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                mapType="standard"
+            <Mapbox.MapView
                 style={StyleSheet.absoluteFillObject}
-                region={region}
-                onRegionChangeComplete={setRegion}
+                styleURL={Mapbox.StyleURL.Street}
                 onPress={handleMapPress}
-                showsUserLocation
-                showsMyLocationButton={false}
             >
-                <UrlTile
-                    key={mapboxToken || 'fallback'}
-                    urlTemplate={mapboxToken && !mapboxToken.startsWith('pk.mock_')
-                        ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}&ext=.png`
-                        : `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png`
-                    }
-                    maximumZ={19}
-                    tileSize={256}
-                    shouldReplaceMapContent={true}
+                <Mapbox.Camera
+                    ref={cameraRef}
+                    defaultSettings={{
+                        centerCoordinate: initial ? [initial.lng, initial.lat] : [-8.0, 39.5],
+                        zoomLevel: initial ? 14 : 6,
+                    }}
                 />
+                <Mapbox.UserLocation />
                 {marker && (
-                    <Marker coordinate={marker} pinColor="#16db65" />
+                    <Mapbox.MarkerView
+                        id="marker-suggested"
+                        coordinate={[marker.longitude, marker.latitude]}
+                    >
+                        <Ionicons name="location" size={36} color="#16db65" />
+                    </Mapbox.MarkerView>
                 )}
-            </MapView>
+            </Mapbox.MapView>
 
             <View style={tw`absolute top-0 left-0 right-0 pt-12 px-5`}>
                 <View style={[tw`rounded-2xl flex-row items-center px-4 py-3`, { backgroundColor: 'rgba(17,24,39,0.97)' }]}>
