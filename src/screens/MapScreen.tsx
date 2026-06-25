@@ -379,6 +379,7 @@ export default function MapScreen({ navigation, route }: Props) {
             urlTemplate={`https://api.mapbox.com/styles/v1/mapbox/${isDark ? 'dark-v11' : 'streets-v12'}/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`}
             maximumZ={19}
             tileSize={256}
+            shouldReplaceMapContent={true}
           />
         ) : null}
         {selectedCoords && showSuggestBtn && (

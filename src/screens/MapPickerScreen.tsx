@@ -124,6 +124,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                         urlTemplate={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=${mapboxToken}`}
                         maximumZ={19}
                         tileSize={256}
+                        shouldReplaceMapContent={true}
                     />
                 ) : null}
                 {marker && (
