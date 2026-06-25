@@ -8,7 +8,8 @@ import {
     Alert,
     Platform,
 } from 'react-native';
-import Mapbox from '@rnmapbox/maps';
+import { Map, Camera, UserLocation, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
+import { resolveMapboxStyle } from '../utils/mapUtils';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import tw from 'twrnc';
@@ -20,22 +21,20 @@ type Props = NativeStackScreenProps<RootStackParamList, 'MapPicker'>;
 
 export default function MapPickerScreen({ navigation, route }: Props) {
     const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+    const [styleJSON, setStyleJSON] = useState<any>(null);
     const initial = route.params?.initialCoords ?? null;
 
     const [marker, setMarker] = useState<{ latitude: number; longitude: number } | null>(
         initial ? { latitude: initial.lat, longitude: initial.lng } : null
     );
     const [locLoading, setLocLoading] = useState(false);
-    const cameraRef = useRef<Mapbox.Camera>(null);
+    const cameraRef = useRef<CameraRef>(null);
 
-    useEffect(() => {
-        if (mapboxToken) {
-            Mapbox.setAccessToken(mapboxToken);
-        }
-    }, [mapboxToken]);
+    // MapLibre does not require setAccessToken at the global level. Access tokens are passed directly in style URLs.
 
     useEffect(() => {
         (async () => {
+            const FALLBACK_TOKEN = 'pk.eyJ1IjoiZGlvZ29hb20iLCJhIjoiY21xc2NxNG5hMDZrYzMyczZhdXk3MWNjdiJ9.r5JNit1Q11FrpwaONflZTQ';
             try {
                 console.log('[MapPickerDebug] A buscar token do Mapbox...');
                 const res = await apiService.getMapboxToken();
@@ -44,13 +43,29 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                     console.log('[MapPickerDebug] Token válido obtido com sucesso!');
                     setMapboxToken(res.token);
                 } else {
-                    console.warn('[MapPickerDebug] Token recebido é inválido ou mock:', res?.token);
+                    console.warn('[MapPickerDebug] Token recebido é inválido ou mock. A usar fallback...');
+                    setMapboxToken(FALLBACK_TOKEN);
                 }
             } catch (e) {
-                console.error('[MapPickerDebug] Erro ao buscar token do Mapbox:', e);
+                console.error('[MapPickerDebug] Erro ao buscar token do Mapbox. A usar fallback...', e);
+                setMapboxToken(FALLBACK_TOKEN);
             }
         })();
     }, []);
+
+    useEffect(() => {
+        if (mapboxToken) {
+            const url = `https://api.mapbox.com/styles/v1/mapbox/streets-v12?access_token=${mapboxToken}`;
+            fetch(url)
+                .then(res => res.json())
+                .then(json => {
+                    setStyleJSON(resolveMapboxStyle(json, mapboxToken));
+                })
+                .catch(err => {
+                    console.error('[MapPicker] Erro ao buscar style JSON:', err);
+                });
+        }
+    }, [mapboxToken]);
 
     useEffect(() => {
         if (initial) return;
@@ -59,17 +74,17 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted') return;
                 const loc = await Location.getCurrentPositionAsync({});
-                cameraRef.current?.setCamera({
-                    centerCoordinate: [loc.coords.longitude, loc.coords.latitude],
-                    zoomLevel: 14,
-                    animationDuration: 800,
+                cameraRef.current?.easeTo({
+                    center: [loc.coords.longitude, loc.coords.latitude],
+                    zoom: 14,
+                    duration: 800,
                 });
             } catch (_) { }
         })();
     }, []);
 
-    const handleMapPress = (feature: any) => {
-        const [longitude, latitude] = feature.geometry.coordinates;
+    const handleMapPress = (event: any) => {
+        const [longitude, latitude] = event.nativeEvent.lngLat;
         setMarker({ latitude, longitude });
     };
 
@@ -82,10 +97,10 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 return;
             }
             const loc = await Location.getCurrentPositionAsync({});
-            cameraRef.current?.setCamera({
-                centerCoordinate: [loc.coords.longitude, loc.coords.latitude],
-                zoomLevel: 14,
-                animationDuration: 500,
+            cameraRef.current?.easeTo({
+                center: [loc.coords.longitude, loc.coords.latitude],
+                zoom: 14,
+                duration: 500,
             });
         } catch (e) {
             Alert.alert('Erro', 'Não foi possível obter a localização.');
@@ -107,7 +122,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
         });
     };
 
-    if (!mapboxToken) {
+    if (!mapboxToken || !styleJSON) {
         return (
             <View style={tw`flex-1 items-center justify-center bg-gray-900`}>
                 <ActivityIndicator size="large" color="#16db65" />
@@ -118,28 +133,28 @@ export default function MapPickerScreen({ navigation, route }: Props) {
 
     return (
         <View style={tw`flex-1`}>
-            <Mapbox.MapView
+            <Map
                 style={StyleSheet.absoluteFillObject}
-                styleURL={Mapbox.StyleURL.Street}
+                mapStyle={styleJSON}
                 onPress={handleMapPress}
             >
-                <Mapbox.Camera
+                <Camera
                     ref={cameraRef}
-                    defaultSettings={{
-                        centerCoordinate: initial ? [initial.lng, initial.lat] : [-8.0, 39.5],
-                        zoomLevel: initial ? 14 : 6,
+                    initialViewState={{
+                        center: initial ? [initial.lng, initial.lat] : [-8.0, 39.5],
+                        zoom: initial ? 14 : 6,
                     }}
                 />
-                <Mapbox.UserLocation />
+                <UserLocation />
                 {marker && (
-                    <Mapbox.MarkerView
+                    <Marker
                         id="marker-suggested"
-                        coordinate={[marker.longitude, marker.latitude]}
+                        lngLat={[marker.longitude, marker.latitude]}
                     >
                         <Ionicons name="location" size={36} color="#16db65" />
-                    </Mapbox.MarkerView>
+                    </Marker>
                 )}
-            </Mapbox.MapView>
+            </Map>
 
             <View style={tw`absolute top-0 left-0 right-0 pt-12 px-5`}>
                 <View style={[tw`rounded-2xl flex-row items-center px-4 py-3`, { backgroundColor: 'rgba(17,24,39,0.97)' }]}>

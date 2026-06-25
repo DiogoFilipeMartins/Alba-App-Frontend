@@ -55,7 +55,7 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "@rnmapbox/maps"
+      "@maplibre/maplibre-react-native"
     ]
   }
 }

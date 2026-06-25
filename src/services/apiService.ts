@@ -21,12 +21,25 @@ const getAuthHeaders = async (headers: HeadersInit = {}) => {
 
 const apiFetch = async (path: string, init: RequestInit = {}, authenticated = true) => {
     const headers = authenticated ? await getAuthHeaders(init.headers) : init.headers;
-    const response = await fetch(`${API_URL}${path}`, {
-        ...init,
-        headers,
-    });
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 seconds timeout
 
-    return handleResponse(response);
+    try {
+        const response = await fetch(`${API_URL}${path}`, {
+            ...init,
+            headers,
+            signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return handleResponse(response);
+    } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('O servidor está a demorar a responder. Tente novamente.');
+        }
+        throw error;
+    }
 };
 
 const handleResponse = async (response: Response) => {

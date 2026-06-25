@@ -1,7 +1,8 @@
 import React, { useState, useEffect, memo } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Modal, Pressable, Alert, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Mapbox from '@rnmapbox/maps';
+import { Map, Camera, UserLocation, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
+import { resolveMapboxStyle } from '../utils/mapUtils';
 import * as Location from 'expo-location';
 import { apiService, Place } from '../services/apiService';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -17,7 +18,7 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-// Componente de Marcador Memoizado para Performance usando MarkerView do Mapbox
+// Componente de Marcador Memoizado para Performance usando Marker do MapLibre
 const PlaceMarker = memo(({ place, colors, onPress }: { place: any, colors: any, onPress: () => void }) => {
   const lat = parseFloat(place.latitude || place.lat);
   const lng = parseFloat(place.longitude || place.lng);
@@ -25,9 +26,9 @@ const PlaceMarker = memo(({ place, colors, onPress }: { place: any, colors: any,
   if (isNaN(lat) || isNaN(lng)) return null;
 
   return (
-    <Mapbox.MarkerView
+    <Marker
       id={`marker-${place.id}`}
-      coordinate={[lng, lat]}
+      lngLat={[lng, lat]}
     >
       <TouchableOpacity 
         onPress={onPress}
@@ -35,12 +36,13 @@ const PlaceMarker = memo(({ place, colors, onPress }: { place: any, colors: any,
       >
         <Ionicons name={place.type === 'professional' ? 'medical' : 'business'} size={14} color="#FFF" />
       </TouchableOpacity>
-    </Mapbox.MarkerView>
+    </Marker>
   );
 });
 
 export default function MapScreen({ navigation, route }: Props) {
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  const [styleJSON, setStyleJSON] = useState<any>(null);
   const { colors, isDark } = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
@@ -57,13 +59,7 @@ export default function MapScreen({ navigation, route }: Props) {
   const [smartSearching, setSmartSearching] = useState(false);
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const cameraRef = React.useRef<Mapbox.Camera | null>(null);
-
-  useEffect(() => {
-    if (mapboxToken) {
-      Mapbox.setAccessToken(mapboxToken);
-    }
-  }, [mapboxToken]);
+  const cameraRef = React.useRef<CameraRef | null>(null);
 
   const FILTERS = ['Todos', 'Profissional', 'Instituição', 'Favoritos', 'Próximos'];
 
@@ -118,6 +114,7 @@ export default function MapScreen({ navigation, route }: Props) {
   };
 
   const loadMapboxToken = async () => {
+    const FALLBACK_TOKEN = 'pk.eyJ1IjoiZGlvZ29hb20iLCJhIjoiY21xc2NxNG5hMDZrYzMyczZhdXk3MWNjdiJ9.r5JNit1Q11FrpwaONflZTQ';
     try {
       console.log('[MapboxDebug] A buscar token do Mapbox...');
       const res = await apiService.getMapboxToken();
@@ -126,10 +123,12 @@ export default function MapScreen({ navigation, route }: Props) {
         console.log('[MapboxDebug] Token válido obtido com sucesso!');
         setMapboxToken(res.token);
       } else {
-        console.warn('[MapboxDebug] Token recebido é inválido ou mock:', res?.token);
+        console.warn('[MapboxDebug] Token recebido é inválido ou mock. A usar fallback...');
+        setMapboxToken(FALLBACK_TOKEN);
       }
     } catch (error) {
-      console.error('[MapboxDebug] Erro ao obter token do Mapbox:', error);
+      console.error('[MapboxDebug] Erro ao obter token do Mapbox. A usar fallback...', error);
+      setMapboxToken(FALLBACK_TOKEN);
     }
   };
 
@@ -155,10 +154,10 @@ export default function MapScreen({ navigation, route }: Props) {
         setLocation(lastKnown);
         // Centrar suavemente no mapa
         if (cameraRef.current) {
-          cameraRef.current.setCamera({
-            centerCoordinate: [lastKnown.coords.longitude, lastKnown.coords.latitude],
-            zoomLevel: 14,
-            animationDuration: 500,
+          cameraRef.current.easeTo({
+            center: [lastKnown.coords.longitude, lastKnown.coords.latitude],
+            zoom: 14,
+            duration: 500,
           });
         }
       }
@@ -171,10 +170,10 @@ export default function MapScreen({ navigation, route }: Props) {
       
       // Centrar na localização precisa atual
       if (cameraRef.current) {
-        cameraRef.current.setCamera({
-          centerCoordinate: [freshLoc.coords.longitude, freshLoc.coords.latitude],
-          zoomLevel: 14,
-          animationDuration: 800,
+        cameraRef.current.easeTo({
+          center: [freshLoc.coords.longitude, freshLoc.coords.latitude],
+          zoom: 14,
+          duration: 800,
         });
       }
     } catch (error) {
@@ -189,6 +188,21 @@ export default function MapScreen({ navigation, route }: Props) {
     loadFavorites();
   }, []);
 
+  useEffect(() => {
+    if (mapboxToken) {
+      const styleId = isDark ? 'dark-v11' : 'streets-v12';
+      const url = `https://api.mapbox.com/styles/v1/mapbox/${styleId}?access_token=${mapboxToken}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(json => {
+          setStyleJSON(resolveMapboxStyle(json, mapboxToken));
+        })
+        .catch(err => {
+          console.error('[MapScreen] Erro ao buscar style JSON:', err);
+        });
+    }
+  }, [mapboxToken, isDark]);
+
   // Efeito para focar num local específico quando navegado a partir do Perfil
   useEffect(() => {
     const focusPlaceId = route.params?.focusPlaceId;
@@ -200,10 +214,10 @@ export default function MapScreen({ navigation, route }: Props) {
         const lng = Number(foundPlace.longitude);
         if (!isNaN(lat) && !isNaN(lng) && cameraRef.current) {
           setTimeout(() => {
-            cameraRef.current?.setCamera({
-              centerCoordinate: [lng, lat],
-              zoomLevel: 15,
-              animationDuration: 800,
+            cameraRef.current?.easeTo({
+              center: [lng, lat],
+              zoom: 15,
+              duration: 800,
             });
           }, 200);
         }
@@ -322,15 +336,15 @@ export default function MapScreen({ navigation, route }: Props) {
 
   const centerOnUser = async () => {
     if (location && cameraRef.current) {
-      cameraRef.current.setCamera({
-        centerCoordinate: [location.coords.longitude, location.coords.latitude],
-        zoomLevel: 14,
-        animationDuration: 1000,
+      cameraRef.current.easeTo({
+        center: [location.coords.longitude, location.coords.latitude],
+        zoom: 14,
+        duration: 1000,
       });
     }
   };
 
-  if (!mapboxToken || loading) {
+  if (!mapboxToken || loading || !styleJSON) {
     return (
       <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.accent} />
@@ -349,11 +363,11 @@ export default function MapScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Mapbox.MapView
+      <Map
         style={styles.map}
-        styleURL={isDark ? Mapbox.StyleURL.Dark : Mapbox.StyleURL.Street}
-        onLongPress={(feature) => {
-          const [longitude, latitude] = feature.geometry.coordinates;
+        mapStyle={styleJSON}
+        onLongPress={(event) => {
+          const [longitude, latitude] = event.nativeEvent.lngLat;
           setSelectedCoords({ latitude, longitude });
           setShowSuggestBtn(true);
         }}
@@ -362,21 +376,21 @@ export default function MapScreen({ navigation, route }: Props) {
           if (showSuggestBtn) setShowSuggestBtn(false);
         }}
       >
-        <Mapbox.Camera
+        <Camera
           ref={cameraRef}
-          defaultSettings={{
-            centerCoordinate: [-9.1393, 38.7223],
-            zoomLevel: 11,
+          initialViewState={{
+            center: [-9.1393, 38.7223],
+            zoom: 11,
           }}
         />
-        <Mapbox.UserLocation />
+        <UserLocation />
         {selectedCoords && showSuggestBtn && (
-          <Mapbox.MarkerView
+          <Marker
             id="selected-coords"
-            coordinate={[selectedCoords.longitude, selectedCoords.latitude]}
+            lngLat={[selectedCoords.longitude, selectedCoords.latitude]}
           >
             <Ionicons name="pin" size={32} color="#FFD700" />
-          </Mapbox.MarkerView>
+          </Marker>
         )}
         {filteredPlaces.map(p => (
           <PlaceMarker 
@@ -386,7 +400,7 @@ export default function MapScreen({ navigation, route }: Props) {
             onPress={() => setSelectedPlace(p)}
           />
         ))}
-      </Mapbox.MapView>
+      </Map>
 
       {/* Painel de Detalhes (Bottom Sheet) */}
       {selectedPlace && (() => {

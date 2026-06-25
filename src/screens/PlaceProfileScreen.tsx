@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Mapbox from '@rnmapbox/maps';
+import { Map, Camera, Marker } from '@maplibre/maplibre-react-native';
+import { resolveMapboxStyle } from '../utils/mapUtils';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, Place } from '../services/apiService';
@@ -25,13 +26,10 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PlaceProfile'>;
 
 export default function PlaceProfileScreen({ route, navigation }: Props) {
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  const [styleJSON, setStyleJSON] = useState<any>(null);
   const { colors, isDark } = useTheme();
 
-  useEffect(() => {
-    if (mapboxToken) {
-      Mapbox.setAccessToken(mapboxToken);
-    }
-  }, [mapboxToken]);
+  // MapLibre does not require setAccessToken. Tokens are embedded in style URLs.
   const { place: passedPlace, placeId } = route.params;
 
   const [place, setPlace] = useState<Place | null>(passedPlace || null);
@@ -40,6 +38,7 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     (async () => {
+      const FALLBACK_TOKEN = 'pk.eyJ1IjoiZGlvZ29hb20iLCJhIjoiY21xc2NxNG5hMDZrYzMyczZhdXk3MWNjdiJ9.r5JNit1Q11FrpwaONflZTQ';
       try {
         console.log('[PlaceProfileDebug] A buscar token do Mapbox...');
         const res = await apiService.getMapboxToken();
@@ -48,13 +47,30 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
           console.log('[PlaceProfileDebug] Token válido obtido com sucesso!');
           setMapboxToken(res.token);
         } else {
-          console.warn('[PlaceProfileDebug] Token recebido é inválido ou mock:', res?.token);
+          console.warn('[PlaceProfileDebug] Token recebido é inválido ou mock. A usar fallback...');
+          setMapboxToken(FALLBACK_TOKEN);
         }
       } catch (err) {
-        console.error('[PlaceProfileDebug] Erro ao buscar token do Mapbox:', err);
+        console.error('[PlaceProfileDebug] Erro ao buscar token do Mapbox. A usar fallback...', err);
+        setMapboxToken(FALLBACK_TOKEN);
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (mapboxToken) {
+      const styleId = isDark ? 'dark-v11' : 'streets-v12';
+      const url = `https://api.mapbox.com/styles/v1/mapbox/${styleId}?access_token=${mapboxToken}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(json => {
+          setStyleJSON(resolveMapboxStyle(json, mapboxToken));
+        })
+        .catch(err => {
+          console.error('[PlaceProfile] Erro ao buscar style JSON:', err);
+        });
+    }
+  }, [mapboxToken, isDark]);
 
   const { profile, isProfessional, isInstitution, refreshProfile } = useAuth();
 
@@ -355,36 +371,38 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
 
             {/* Map Preview Container */}
             <View style={[styles.mapContainer, { borderColor: colors.border }]}>
-              {!mapboxToken ? (
+              {!mapboxToken || !styleJSON ? (
                 <View style={[styles.miniMap, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}>
                   <ActivityIndicator size="small" color={colors.primary} />
                 </View>
               ) : (
-                <Mapbox.MapView
+                <Map
                   style={styles.miniMap}
-                  styleURL={isDark ? Mapbox.StyleURL.Dark : Mapbox.StyleURL.Street}
-                  zoomEnabled={false}
-                  scrollEnabled={false}
-                  rotateEnabled={false}
-                  pitchEnabled={false}
+                  mapStyle={styleJSON}
+                  touchZoom={false}
+                  doubleTapZoom={false}
+                  doubleTapHoldZoom={false}
+                  dragPan={false}
+                  touchRotate={false}
+                  touchPitch={false}
                 >
-                  <Mapbox.Camera
-                    defaultSettings={{
-                      centerCoordinate: [Number(place.longitude), Number(place.latitude)],
-                      zoomLevel: 14,
+                  <Camera
+                    initialViewState={{
+                      center: [Number(place.longitude), Number(place.latitude)],
+                      zoom: 14,
                     }}
                   />
-                  <Mapbox.MarkerView
+                  <Marker
                     id="place-marker"
-                    coordinate={[Number(place.longitude), Number(place.latitude)]}
+                    lngLat={[Number(place.longitude), Number(place.latitude)]}
                   >
                     <Ionicons 
                       name={place.type === 'professional' ? 'medical' : 'business'} 
                       size={24} 
                       color={place.type === 'professional' ? colors.primary : '#3b82f6'} 
                     />
-                  </Mapbox.MarkerView>
-                </Mapbox.MapView>
+                  </Marker>
+                </Map>
               )}
             </View>
 
