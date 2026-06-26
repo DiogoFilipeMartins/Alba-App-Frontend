@@ -247,15 +247,19 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                                 <View style={[
                                     styles.stepBubble,
                                     { backgroundColor: colors.background },
-                                    isActive && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+                                    isActive && { borderColor: colors.primary, backgroundColor: colors.primary },
                                     isCompleted && { borderColor: colors.primary, backgroundColor: colors.primary }
                                 ]}>
                                     {isCompleted ? (
                                         <Ionicons name="checkmark" size={14} color="#FFF" />
+                                    ) : isActive ? (
+                                        <Text style={[styles.stepNumber, { color: '#FFF' }]}>
+                                            {stepNum}
+                                        </Text>
                                     ) : (
                                         <Text style={[
                                             styles.stepNumber,
-                                            { color: isActive ? colors.primary : colors.textMuted }
+                                            { color: colors.textMuted }
                                         ]}>
                                             {stepNum}
                                         </Text>
@@ -288,6 +292,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                                 {/* Professional Card */}
                                 <Pressable
                                     onPress={() => setForm(f => ({ ...f, type: 'professional' }))}
+                                    android_ripple={{ color: 'rgba(22, 219, 101, 0.15)', borderless: false }}
                                     style={[
                                         styles.typeCard,
                                         { backgroundColor: colors.card, borderColor: form.type === 'professional' ? '#16db65' : colors.border },
@@ -304,6 +309,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                                 {/* Institution Card */}
                                 <Pressable
                                     onPress={() => setForm(f => ({ ...f, type: 'institution' }))}
+                                    android_ripple={{ color: 'rgba(34, 197, 94, 0.15)', borderless: false }}
                                     style={[
                                         styles.typeCard,
                                         { backgroundColor: colors.card, borderColor: form.type === 'institution' ? '#22c55e' : colors.border },
@@ -643,6 +649,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: 145,
+        overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.02,
