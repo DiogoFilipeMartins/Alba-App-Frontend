@@ -8,7 +8,9 @@ import {
   Linking,
   Platform,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  TextInput
 } from 'react-native';
 import CustomAlertModal from '../components/CustomAlertModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -68,6 +70,43 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
   const [place, setPlace] = useState<Place | null>(passedPlace || null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(!passedPlace);
+
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const fetchReviews = async () => {
+    if (!place) return;
+    try {
+      setReviewsLoading(true);
+      const data = await apiService.getReviews(place.id);
+      setReviews(data || []);
+    } catch (err) {
+      console.error('[PlaceProfile] Erro ao buscar avaliações:', err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, [place?.id]);
+
+  const averageRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (e) {
+      return '';
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -274,6 +313,21 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
             {place.type === 'professional' ? 'Profissional Especializado' : 'Instituição de Apoio'}
           </Text>
 
+          {averageRating ? (
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={16} color="#fbbf24" />
+              <Text style={[styles.ratingVal, { color: colors.textPrimary }]}>{averageRating}</Text>
+              <Text style={[styles.ratingCount, { color: colors.textSecondary }]}>
+                ({reviews.length} {reviews.length === 1 ? 'avaliação' : 'avaliações'})
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.ratingRow}>
+              <Ionicons name="star-outline" size={16} color={colors.textMuted} />
+              <Text style={[styles.ratingCount, { color: colors.textMuted }]}>Sem avaliações</Text>
+            </View>
+          )}
+
           {place.city && (
             <View style={styles.locationContainer}>
               <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
@@ -357,10 +411,69 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Sobre</Text>
           <Text style={[styles.descriptionText, { color: colors.textSecondary }]}>
-            {place.description ||
+            {claimer?.bio || place.description ||
               'Esta entidade dedica-se a prestar apoio especializado na área do neurodesenvolvimento, assegurando um acompanhamento compassivo e qualificado para a pessoa com PEA e respetiva família.'}
           </Text>
         </View>
+
+        {/* Detailed Professional Cards */}
+        {hasClaimer && (claimer.specialty || claimer.services || claimer.hours || claimer.experience) && (
+          <View style={[styles.section, styles.detailsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.detailsSectionTitle, { color: colors.textPrimary }]}>
+              {place.type === 'professional' ? 'Detalhes Profissionais' : 'Detalhes da Instituição'}
+            </Text>
+
+            {claimer.specialty && (
+              <View style={styles.detailItem}>
+                <Ionicons name="ribbon-outline" size={20} color={colors.primary} style={styles.detailIcon} />
+                <View style={styles.detailTextContent}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Especialidade</Text>
+                  <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{claimer.specialty}</Text>
+                </View>
+              </View>
+            )}
+
+            {claimer.services && (
+              <View style={styles.detailItem}>
+                <Ionicons name="construct-outline" size={20} color={colors.primary} style={styles.detailIcon} />
+                <View style={styles.detailTextContent}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Serviços & Valências</Text>
+                  <View style={styles.servicesContainer}>
+                    {claimer.services.split(',').map((serv: string, idx: number) => {
+                      const text = serv.trim();
+                      if (!text) return null;
+                      return (
+                        <View key={idx} style={[styles.serviceBadge, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                          <Text style={[styles.serviceBadgeText, { color: colors.textPrimary }]}>{text}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {claimer.hours && (
+              <View style={styles.detailItem}>
+                <Ionicons name="time-outline" size={20} color={colors.primary} style={styles.detailIcon} />
+                <View style={styles.detailTextContent}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Horário de Atendimento</Text>
+                  <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{claimer.hours}</Text>
+                </View>
+              </View>
+            )}
+
+            {claimer.experience && (
+              <View style={styles.detailItem}>
+                <Ionicons name="school-outline" size={20} color={colors.primary} style={styles.detailIcon} />
+                <View style={styles.detailTextContent}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Experiência / Qualificações</Text>
+                  <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{claimer.experience}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Accessibility Features */}
         <View style={styles.section}>
@@ -463,7 +576,164 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </View>
         ) : null}
+
+        {/* Reviews Section */}
+        <View style={[styles.section, { marginTop: 12 }]}>
+          <View style={styles.reviewsHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>Avaliações</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setRating(5);
+                setComment('');
+                setReviewModalVisible(true);
+              }}
+              style={[styles.writeReviewBtn, { borderColor: colors.primary }]}
+            >
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
+              <Text style={[styles.writeReviewBtnText, { color: colors.primary }]}>Escrever Avaliação</Text>
+            </TouchableOpacity>
+          </View>
+
+          {reviewsLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
+          ) : reviews.length === 0 ? (
+            <View style={[styles.noReviewsBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Ionicons name="star-outline" size={24} color={colors.textMuted} />
+              <Text style={[styles.noReviewsText, { color: colors.textSecondary }]}>
+                Ainda não há avaliações para este local. Seja o primeiro a deixar a sua opinião!
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.reviewsList}>
+              {reviews.map((rev) => (
+                <View key={rev.id} style={[styles.reviewItem, { borderColor: colors.border }]}>
+                  <View style={styles.reviewUserRow}>
+                    <Text style={[styles.reviewUser, { color: colors.textPrimary }]}>
+                      {rev.profile?.full_name || 'Utilizador do Alba'}
+                    </Text>
+                    <View style={styles.reviewStars}>
+                      {[1, 2, 3, 4, 5].map((starVal) => (
+                        <Ionicons
+                          key={starVal}
+                          name={starVal <= rev.rating ? 'star' : 'star-outline'}
+                          size={14}
+                          color={starVal <= rev.rating ? '#fbbf24' : colors.textMuted}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                  <Text style={[styles.reviewDate, { color: colors.textMuted }]}>
+                    {formatDate(rev.created_at)}
+                  </Text>
+                  {rev.comment ? (
+                    <Text style={[styles.reviewComment, { color: colors.textSecondary }]}>
+                      {rev.comment}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
+
+      {/* Review Submission Modal */}
+      <Modal
+        visible={reviewModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReviewModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Deixar Avaliação</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+              Partilha a tua experiência com "{place.name}".
+            </Text>
+
+            {/* Interactive Stars */}
+            <View style={styles.modalStarsRow}>
+              {[1, 2, 3, 4, 5].map((starVal) => (
+                <TouchableOpacity
+                  key={starVal}
+                  onPress={() => setRating(starVal)}
+                  style={styles.modalStarBtn}
+                >
+                  <Ionicons
+                    name={starVal <= rating ? 'star' : 'star-outline'}
+                    size={36}
+                    color={starVal <= rating ? '#fbbf24' : colors.textMuted}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Comment Input */}
+            <TextInput
+              value={comment}
+              onChangeText={setComment}
+              placeholder="Escreve um comentário opcional sobre o atendimento, acessibilidade ou terapias..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={4}
+              style={[
+                styles.modalInput,
+                {
+                  color: colors.textPrimary,
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                }
+              ]}
+            />
+
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={() => setReviewModalVisible(false)}
+                disabled={submittingReview}
+                style={[styles.modalBtn, styles.modalCancelBtn]}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    setSubmittingReview(true);
+                    await apiService.submitReview(place.id, rating, comment.trim() || undefined);
+                    setReviewModalVisible(false);
+                    showAlert(
+                      'Avaliação Submetida',
+                      'Agradecemos a tua avaliação! Ela ajuda a tornar a comunidade Alba mais informada.',
+                      'checkmark-circle-outline',
+                      colors.primary
+                    );
+                    await fetchReviews();
+                  } catch (e: any) {
+                    showAlert(
+                      'Erro',
+                      e.message || 'Não foi possível submeter a avaliação. Tenta novamente.',
+                      'alert-circle-outline',
+                      '#ef4444'
+                    );
+                  } finally {
+                    setSubmittingReview(false);
+                  }
+                }}
+                disabled={submittingReview}
+                style={[styles.modalBtn, styles.modalSubmitBtn, { backgroundColor: colors.primary }]}
+              >
+                {submittingReview ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.modalBtnText, { color: '#fff' }]}>Submeter</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <CustomAlertModal
         visible={alertConfig.visible}
         title={alertConfig.title}
@@ -684,5 +954,207 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'Poppins_700Bold',
     fontSize: 14,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  ratingVal: {
+    fontSize: 14,
+    fontFamily: 'Poppins_700Bold',
+  },
+  ratingCount: {
+    fontSize: 13,
+    fontFamily: 'Poppins_400Regular',
+  },
+  detailsContainer: {
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 20,
+    gap: 16,
+  },
+  detailsSectionTitle: {
+    fontSize: 16,
+    fontFamily: 'Poppins_700Bold',
+    marginBottom: 4,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  detailIcon: {
+    marginTop: 2,
+  },
+  detailTextContent: {
+    flex: 1,
+    gap: 2,
+  },
+  detailLabel: {
+    fontSize: 11,
+    fontFamily: 'Poppins_700Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontFamily: 'Poppins_400Regular',
+    lineHeight: 20,
+  },
+  servicesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  serviceBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  serviceBadgeText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  writeReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  writeReviewBtnText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_700Bold',
+  },
+  noReviewsBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  noReviewsText: {
+    fontSize: 13,
+    fontFamily: 'Poppins_400Regular',
+    flex: 1,
+    lineHeight: 18,
+  },
+  reviewsList: {
+    gap: 12,
+  },
+  reviewItem: {
+    borderBottomWidth: 1,
+    paddingBottom: 12,
+    marginBottom: 4,
+    gap: 2,
+  },
+  reviewUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reviewUser: {
+    fontSize: 14,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewDate: {
+    fontSize: 11,
+    fontFamily: 'Poppins_400Regular',
+    marginTop: -2,
+  },
+  reviewComment: {
+    fontSize: 13,
+    fontFamily: 'Poppins_400Regular',
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 24,
+    gap: 16,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins_700Bold',
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Poppins_400Regular',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: -8,
+  },
+  modalStarsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginVertical: 4,
+  },
+  modalStarBtn: {
+    padding: 4,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    fontSize: 14,
+    fontFamily: 'Poppins_400Regular',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelBtn: {
+    backgroundColor: 'transparent',
+  },
+  modalSubmitBtn: {
+    elevation: 2,
+  },
+  modalBtnText: {
+    fontSize: 14,
+    fontFamily: 'Poppins_700Bold',
   },
 });

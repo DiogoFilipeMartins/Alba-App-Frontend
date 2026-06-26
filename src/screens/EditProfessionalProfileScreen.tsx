@@ -20,6 +20,9 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
     const [specialty, setSpecialty] = useState(profile?.specialty || '');
     const [bio, setBio] = useState(profile?.bio || '');
     const [website, setWebsite] = useState(profile?.website || '');
+    const [services, setServices] = useState(profile?.services || '');
+    const [hours, setHours] = useState(profile?.hours || '');
+    const [experience, setExperience] = useState(profile?.experience || '');
     const [saving, setSaving] = useState(false);
 
     const accountType = profile?.account_type;
@@ -35,9 +38,12 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
                 specialty: specialty.trim() || undefined,
                 bio: bio.trim() || undefined,
                 website: website.trim() || undefined,
+                services: services.trim() || undefined,
+                hours: hours.trim() || undefined,
+                experience: experience.trim() || undefined,
             });
             await refreshProfile();
-            Alert.alert('Guardado', 'O teu perfil profissional foi atualizado.');
+            Alert.alert('Guardado', 'O teu perfil foi atualizado.');
             navigation.goBack();
         } catch (e: any) {
             Alert.alert('Erro', e.message || 'Não foi possível guardar as alterações.');
@@ -146,6 +152,57 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
                             style={[styles.input, { color: colors.textPrimary }]}
                             autoCapitalize="none"
                             keyboardType="url"
+                        />
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+                        {isProfessional ? 'SERVIÇOS E VALÊNCIAS' : 'SERVIÇOS PRESTADOS'}
+                    </Text>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.card }]}>
+                        <Ionicons name="medical-outline" size={18} color={colors.textMuted} style={{ marginRight: 12 }} />
+                        <TextInput
+                            value={services}
+                            onChangeText={setServices}
+                            placeholder="Ex: Terapia de Fala, Integração Sensorial..."
+                            placeholderTextColor={colors.textMuted}
+                            style={[styles.input, { color: colors.textPrimary }]}
+                        />
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>HORÁRIO DE FUNCIONAMENTO</Text>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.card }]}>
+                        <Ionicons name="time-outline" size={18} color={colors.textMuted} style={{ marginRight: 12 }} />
+                        <TextInput
+                            value={hours}
+                            onChangeText={setHours}
+                            placeholder="Ex: Seg a Sex, 9h-13h e 14h-18h"
+                            placeholderTextColor={colors.textMuted}
+                            style={[styles.input, { color: colors.textPrimary }]}
+                        />
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+                        {isProfessional ? 'FORMAÇÃO E EXPERIÊNCIA' : 'SOBRE A INSTITUIÇÃO / CREDENCIAIS'}
+                    </Text>
+                    <View style={[styles.inputWrap, styles.inputWrapMulti, { backgroundColor: colors.card }]}>
+                        <Ionicons name="ribbon-outline" size={18} color={colors.textMuted} style={{ marginRight: 12, marginTop: 2 }} />
+                        <TextInput
+                            value={experience}
+                            onChangeText={setExperience}
+                            placeholder={isProfessional
+                                ? "Ex: Licenciatura em Psicologia, Mestrado em Neurodesenvolvimento, 5 anos de experiência..."
+                                : "Ex: Associação sem fins lucrativos fundada em 2018..."
+                            }
+                            placeholderTextColor={colors.textMuted}
+                            style={[styles.input, styles.inputMulti, { color: colors.textPrimary }]}
+                            multiline
+                            numberOfLines={3}
                         />
                     </View>
                 </View>

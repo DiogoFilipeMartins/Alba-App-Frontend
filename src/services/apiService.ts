@@ -343,7 +343,17 @@ export const apiService = {
     },
 
     // Profile management
-    async updateProfile(data: { full_name?: string; phone?: string; specialty?: string; bio?: string; website?: string; account_type?: string }): Promise<any> {
+    async updateProfile(data: { 
+        full_name?: string; 
+        phone?: string; 
+        specialty?: string; 
+        bio?: string; 
+        website?: string; 
+        account_type?: string;
+        services?: string;
+        hours?: string;
+        experience?: string;
+    }): Promise<any> {
         return apiFetch('/profile', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -423,6 +433,19 @@ export const apiService = {
     async getNews(filters: { query?: string; category?: string } = {}): Promise<NewsItem[]> {
         const params = new URLSearchParams(filters as any).toString();
         return apiFetch(`/news?${params}`);
+    },
+
+    // Reviews
+    async getReviews(placeId: string): Promise<any[]> {
+        return apiFetch(`/places/${placeId}/reviews`);
+    },
+
+    async submitReview(placeId: string, rating: number, comment?: string): Promise<any> {
+        return apiFetch(`/places/${placeId}/reviews`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating, comment }),
+        });
     },
 };
 
