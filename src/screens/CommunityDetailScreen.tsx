@@ -16,9 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { apiService, CommunityMember } from '../services/apiService';
+import { apiService, CommunityMember, DonationCampaign } from '../services/apiService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CommunityDetail'>;
 
@@ -56,6 +57,174 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
     // Mute Switch Mock State
     const [isMuted, setIsMuted] = useState(false);
 
+    // Custom Alert Modal State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        icon?: keyof typeof Ionicons.glyphMap;
+        iconColor?: string;
+        primaryButton?: { text: string; onPress: () => void; destructive?: boolean };
+        secondaryButton?: { text: string; onPress: () => void };
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showAlert = (
+        title: string,
+        message: string,
+        icon?: keyof typeof Ionicons.glyphMap,
+        iconColor?: string,
+        primaryButton?: { text: string; onPress: () => void; destructive?: boolean },
+        secondaryButton?: { text: string; onPress: () => void }
+    ) => {
+        setAlertConfig({
+            visible: true,
+            title,
+            message,
+            icon,
+            iconColor,
+            primaryButton,
+            secondaryButton,
+        });
+    };
+
+    // Campaigns states
+    const [campaigns, setCampaigns] = useState<DonationCampaign[]>([]);
+    const [campaignsLoading, setCampaignsLoading] = useState(true);
+
+    // New campaign modal states
+    const [campaignModalVisible, setCampaignModalVisible] = useState(false);
+    const [campaignTitle, setCampaignTitle] = useState('');
+    const [campaignDesc, setCampaignDesc] = useState('');
+    const [campaignGoal, setCampaignGoal] = useState('');
+    const [campaignMbway, setCampaignMbway] = useState('');
+    const [campaignIban, setCampaignIban] = useState('');
+    const [creatingCampaign, setCreatingCampaign] = useState(false);
+
+    // Contribution modal states
+    const [contribModalVisible, setContribModalVisible] = useState(false);
+    const [selectedCampaign, setSelectedCampaign] = useState<DonationCampaign | null>(null);
+    const [contribAmount, setContribAmount] = useState('');
+    const [contribName, setContribName] = useState('');
+    const [contribNote, setContribNote] = useState('');
+    const [submittingContrib, setSubmittingContrib] = useState(false);
+
+    const fetchCampaigns = async () => {
+        try {
+            setCampaignsLoading(true);
+            const data = await apiService.getCommunityCampaigns(communityId);
+            setCampaigns(data || []);
+        } catch (e) {
+            console.error('[CommunityDetailScreen] Error fetching campaigns:', e);
+        } finally {
+            setCampaignsLoading(false);
+        }
+    };
+
+    const myMemberRecord = members.find(m => m.user_id === user?.id);
+    const isMeAdmin = myMemberRecord?.role === 'admin';
+
+    const handlePromoteMember = (targetMember: CommunityMember) => {
+        const memberName = targetMember.profiles?.full_name || 'Utilizador';
+        
+        showAlert(
+            'Promover a Administrador',
+            `Tens a certeza que desejas promover "${memberName}" a administrador desta comunidade? Esta ação dará permissões para editar o grupo e gerir campanhas.`,
+            'shield-checkmark-outline',
+            colors.primary,
+            {
+                text: 'Promover',
+                onPress: async () => {
+                    try {
+                        await apiService.updateCommunityMemberRole(communityId, targetMember.user_id, 'admin');
+                        showAlert('Sucesso', `"${memberName}" foi promovido a administrador.`, 'checkmark-circle-outline', colors.primary);
+                        
+                        // Refresh list
+                        const updatedMembers = await apiService.getCommunityMembers(communityId);
+                        setMembers(updatedMembers);
+                    } catch (e: any) {
+                        showAlert('Erro', e.message || 'Não foi possível promover o membro.', 'alert-circle-outline', '#ef4444');
+                    }
+                }
+            },
+            {
+                text: 'Cancelar',
+                onPress: () => {}
+            }
+        );
+    };
+
+    const handleSaveCampaign = async () => {
+        if (!campaignTitle.trim()) {
+            showAlert('Dados Inválidos', 'Por favor, insere um título para a campanha.', 'alert-circle-outline', '#ef4444');
+            return;
+        }
+        const goalNum = Number(campaignGoal);
+        if (isNaN(goalNum) || goalNum <= 0) {
+            showAlert('Dados Inválidos', 'Por favor, insere um montante objetivo válido.', 'alert-circle-outline', '#ef4444');
+            return;
+        }
+
+        try {
+            setCreatingCampaign(true);
+            await apiService.createCommunityCampaign(communityId, {
+                title: campaignTitle.trim(),
+                description: campaignDesc.trim() || undefined,
+                goal_amount: goalNum,
+                mbway_phone: campaignMbway.trim() || undefined,
+                iban: campaignIban.trim() || undefined
+            });
+
+            setCampaignModalVisible(false);
+            setCampaignTitle('');
+            setCampaignDesc('');
+            setCampaignGoal('');
+            setCampaignMbway('');
+            setCampaignIban('');
+            
+            showAlert('Sucesso', 'Campanha criada com sucesso!', 'checkmark-circle-outline', colors.primary);
+            await fetchCampaigns();
+        } catch (e: any) {
+            showAlert('Erro', e.message || 'Não foi possível criar a campanha.', 'alert-circle-outline', '#ef4444');
+        } finally {
+            setCreatingCampaign(false);
+        }
+    };
+
+    const handleDonate = async () => {
+        if (!selectedCampaign) return;
+        const amountNum = Number(contribAmount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            showAlert('Dados Inválidos', 'Por favor, insere um montante válido.', 'alert-circle-outline', '#ef4444');
+            return;
+        }
+
+        try {
+            setSubmittingContrib(true);
+            await apiService.createDonation({
+                campaignId: selectedCampaign.id,
+                amount: amountNum,
+                donorName: contribName.trim() || undefined,
+                note: contribNote.trim() || undefined
+            });
+
+            setContribModalVisible(false);
+            setContribAmount('');
+            setContribName('');
+            setContribNote('');
+
+            showAlert('Doação Registada', 'A tua contribuição foi registada com sucesso. Obrigado!', 'checkmark-circle-outline', colors.primary);
+            await fetchCampaigns();
+        } catch (e: any) {
+            showAlert('Erro', e.message || 'Não foi possível registar a contribuição.', 'alert-circle-outline', '#ef4444');
+        } finally {
+            setSubmittingContrib(false);
+        }
+    };
+
     useEffect(() => {
         const fetchDetailsAndMembers = async () => {
             try {
@@ -80,6 +249,9 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                         setEditPhotoUrl(matchedComm.photo_url);
                     }
                 }
+
+                // 3. Fetch community campaigns
+                await fetchCampaigns();
             } catch (e) {
                 console.error('[CommunityDetailScreen] Error fetching info:', e);
             } finally {
@@ -283,6 +455,104 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
 
                     <View style={[styles.separator, { backgroundColor: containerBg }]} />
 
+                    {/* Block 5.5: Community Campaigns */}
+                    <View style={[styles.sectionBlock, { backgroundColor: cardBg }]}>
+                        <View style={styles.campaignsHeader}>
+                            <Text style={[styles.participantsTitle, { color: textPrimary }]}>
+                                Campanhas de Apoio
+                            </Text>
+                            {isMeAdmin && (
+                                <Pressable
+                                    onPress={() => {
+                                        setCampaignTitle('');
+                                        setCampaignDesc('');
+                                        setCampaignGoal('');
+                                        setCampaignMbway('');
+                                        setCampaignIban('');
+                                        setCampaignModalVisible(true);
+                                    }}
+                                    style={styles.newCampaignBtn}
+                                >
+                                    <Ionicons name="add" size={16} color={accentGreen} style={{ marginRight: 4 }} />
+                                    <Text style={[styles.newCampaignBtnText, { color: accentGreen }]}>Nova</Text>
+                                </Pressable>
+                            )}
+                        </View>
+
+                        {campaignsLoading ? (
+                            <ActivityIndicator size="small" color={accentGreen} style={{ marginVertical: 16 }} />
+                        ) : campaigns.length === 0 ? (
+                            <View style={styles.emptyCampaignsBox}>
+                                <Ionicons name="gift-outline" size={24} color={iconMuted} />
+                                <Text style={[styles.emptyCampaignsText, { color: textSecondary }]}>
+                                    Ainda não há campanhas criadas para esta comunidade.
+                                </Text>
+                            </View>
+                        ) : (
+                            <View style={styles.campaignsList}>
+                                {campaigns.map((c, idx) => {
+                                    const percent = Math.min(100, Math.round((Number(c.current_amount || 0) / Number(c.goal_amount || 1)) * 100));
+                                    
+                                    return (
+                                        <View key={c.id}>
+                                            {idx > 0 && <View style={[styles.innerDivider, { backgroundColor: borderCol, marginLeft: 0 }]} />}
+                                            <View style={styles.campaignItem}>
+                                                <Text style={[styles.campaignItemTitle, { color: textPrimary }]}>{c.title}</Text>
+                                                {c.description ? (
+                                                    <Text style={[styles.campaignItemDesc, { color: textSecondary }]}>{c.description}</Text>
+                                                ) : null}
+
+                                                {/* Progress indicator */}
+                                                <View style={styles.progressLabelRow}>
+                                                    <Text style={[styles.progressValText, { color: textPrimary }]}>
+                                                        {Number(c.current_amount || 0).toFixed(2)}€ <Text style={{ color: textSecondary, fontSize: 11, fontFamily: 'Poppins_400Regular' }}>de {Number(c.goal_amount).toFixed(2)}€</Text>
+                                                    </Text>
+                                                    <Text style={[styles.progressPercentText, { color: accentGreen }]}>{percent}%</Text>
+                                                </View>
+
+                                                <View style={[styles.progressBarBg, { backgroundColor: borderCol }]}>
+                                                    <View style={[styles.progressBarFill, { backgroundColor: accentGreen, width: `${percent}%` }]} />
+                                                </View>
+
+                                                {/* Payment Info */}
+                                                <View style={styles.paymentMethodsBox}>
+                                                    {c.mbway_phone ? (
+                                                        <Text style={[styles.paymentMethodText, { color: textSecondary }]}>
+                                                            <Ionicons name="phone-portrait-outline" size={12} /> MB Way: <Text style={{ color: textPrimary, fontFamily: 'Poppins_600SemiBold' }}>{c.mbway_phone}</Text>
+                                                        </Text>
+                                                    ) : null}
+                                                    {c.iban ? (
+                                                        <Text style={[styles.paymentMethodText, { color: textSecondary, marginTop: 2 }]}>
+                                                            <Ionicons name="card-outline" size={12} /> IBAN: <Text style={{ color: textPrimary, fontFamily: 'Poppins_600SemiBold' }}>{c.iban}</Text>
+                                                        </Text>
+                                                    ) : null}
+                                                </View>
+
+                                                {c.is_active && (
+                                                    <Pressable
+                                                        onPress={() => {
+                                                            setSelectedCampaign(c);
+                                                            setContribAmount('');
+                                                            setContribName('');
+                                                            setContribNote('');
+                                                            setContribModalVisible(true);
+                                                        }}
+                                                        style={[styles.donateBtn, { backgroundColor: accentGreen }]}
+                                                    >
+                                                        <Ionicons name="heart" size={14} color="#FFF" style={{ marginRight: 6 }} />
+                                                        <Text style={styles.donateBtnText}>Apoiar Campanha</Text>
+                                                    </Pressable>
+                                                )}
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={[styles.separator, { backgroundColor: containerBg }]} />
+
                     {/* Block 6: Participant List */}
                     <View style={[styles.sectionBlock, { backgroundColor: cardBg }]}>
                         <View style={styles.participantsHeader}>
@@ -334,10 +604,20 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                                                 {name} {isMe && <Text style={{ color: textSecondary, fontFamily: 'Poppins_400Regular' }}>(tu)</Text>}
                                             </Text>
                                         </View>
-                                        {m.role === 'admin' && (
+                                        {m.role === 'admin' ? (
                                             <View style={[styles.adminPill, { borderColor: accentGreen }]}>
                                                 <Text style={[styles.adminPillText, { color: accentGreen }]}>Admin do grupo</Text>
                                             </View>
+                                        ) : (
+                                            isMeAdmin && !isMe && (
+                                                <Pressable
+                                                    onPress={() => handlePromoteMember(m)}
+                                                    style={[styles.promoteBtn, { borderColor: accentGreen }]}
+                                                >
+                                                    <Ionicons name="shield-checkmark-outline" size={12} color={accentGreen} style={{ marginRight: 4 }} />
+                                                    <Text style={[styles.promoteBtnText, { color: accentGreen }]}>Promover</Text>
+                                                </Pressable>
+                                            )
                                         )}
                                     </View>
                                 </View>
@@ -505,6 +785,190 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                     </ScrollView>
                 </SafeAreaView>
             </Modal>
+
+            {/* New Campaign Modal */}
+            <Modal
+                visible={campaignModalVisible}
+                animationType="slide"
+                onRequestClose={() => setCampaignModalVisible(false)}
+            >
+                <SafeAreaView style={[styles.root, { backgroundColor: cardBg }]} edges={['top', 'bottom']}>
+                    {/* Header */}
+                    <View style={[styles.header, { backgroundColor: cardBg, borderBottomColor: borderCol }]}>
+                        <Pressable onPress={() => setCampaignModalVisible(false)} style={styles.backBtn}>
+                            <Ionicons name="arrow-back" size={24} color={textPrimary} />
+                        </Pressable>
+                        <Text style={[styles.headerTitle, { color: textPrimary }]}>Nova Campanha</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+
+                    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 16 }}>
+                        <Text style={[styles.inputLabel, { color: textSecondary }]}>TÍTULO DA CAMPANHA</Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol }]}
+                            placeholder="Ex: Fundos para novas terapias ABA..."
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={campaignTitle}
+                            onChangeText={setCampaignTitle}
+                        />
+
+                        <Text style={[styles.inputLabel, { color: textSecondary }]}>DESCRIÇÃO</Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol, minHeight: 60 }]}
+                            placeholder="Explicita o objetivo desta campanha de apoio..."
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={campaignDesc}
+                            onChangeText={setCampaignDesc}
+                            multiline
+                            numberOfLines={3}
+                        />
+
+                        <Text style={[styles.inputLabel, { color: textSecondary }]}>MONTANTE OBJETIVO (€)</Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol }]}
+                            placeholder="Ex: 500"
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={campaignGoal}
+                            onChangeText={setCampaignGoal}
+                            keyboardType="numeric"
+                        />
+
+                        <Text style={[styles.inputLabel, { color: textSecondary }]}>NÚMERO MB WAY (OPCIONAL)</Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol }]}
+                            placeholder="Ex: 912345678"
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={campaignMbway}
+                            onChangeText={setCampaignMbway}
+                            keyboardType="phone-pad"
+                        />
+
+                        <Text style={[styles.inputLabel, { color: textSecondary }]}>IBAN PARA TRANSFERÊNCIA (OPCIONAL)</Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol }]}
+                            placeholder="Ex: PT50 0033 0000 1234 5678 9012 3"
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={campaignIban}
+                            onChangeText={setCampaignIban}
+                        />
+
+                        <Pressable
+                            onPress={handleSaveCampaign}
+                            disabled={creatingCampaign}
+                            style={[styles.saveCampaignSubmitBtn, { backgroundColor: accentGreen }]}
+                        >
+                            {creatingCampaign ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={{ color: '#fff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
+                                    Criar Campanha
+                                </Text>
+                            )}
+                        </Pressable>
+                    </ScrollView>
+                </SafeAreaView>
+            </Modal>
+
+            {/* Contribution Modal */}
+            <Modal
+                visible={contribModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setContribModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContentCard, { backgroundColor: cardBg, borderColor: borderCol }]}>
+                        <Text style={[styles.modalTitleText, { color: textPrimary }]}>Apoiar Campanha</Text>
+                        <Text style={[styles.modalSubtitleText, { color: textSecondary }]}>
+                            {selectedCampaign?.title}
+                        </Text>
+
+                        {/* Amount */}
+                        <Text style={[styles.inputLabel, { color: textSecondary, marginTop: 10 }]}>MONTANTE DA DOAÇÃO (€)</Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol, textAlign: 'center', fontSize: 18 }]}
+                            placeholder="Ex: 10"
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={contribAmount}
+                            onChangeText={setContribAmount}
+                            keyboardType="numeric"
+                        />
+
+                        {/* Donor details */}
+                        <Text style={[styles.inputLabel, { color: textSecondary, marginTop: 10 }]}>TEU NOME (OPCIONAL)</Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol }]}
+                            placeholder="Ex: Maria"
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={contribName}
+                            onChangeText={setContribName}
+                        />
+
+                        <Text style={[styles.inputLabel, { color: textSecondary, marginTop: 10 }]}>MENSAGEM (OPCIONAL)</Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol }]}
+                            placeholder="Deixa uma mensagem..."
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={contribNote}
+                            onChangeText={setContribNote}
+                        />
+
+                        {/* Payment instructions */}
+                        {(selectedCampaign?.mbway_phone || selectedCampaign?.iban) ? (
+                            <View style={[styles.paymentInstructionsContainer, { backgroundColor: containerBg, borderColor: borderCol }]}>
+                                <Text style={[styles.instructionsTitle, { color: textPrimary }]}>Instruções de Pagamento</Text>
+                                <Text style={[styles.instructionsBody, { color: textSecondary }]}>
+                                    Por favor, transfira o valor inserido acima.
+                                </Text>
+                                {selectedCampaign.mbway_phone ? (
+                                    <Text style={[styles.instructionsDetail, { color: textPrimary }]}>
+                                        MB Way: <Text style={{ fontFamily: 'Poppins_700Bold', color: accentGreen }}>{selectedCampaign.mbway_phone}</Text>
+                                    </Text>
+                                ) : null}
+                                {selectedCampaign.iban ? (
+                                    <Text style={[styles.instructionsDetail, { color: textPrimary, marginTop: 2 }]}>
+                                        IBAN: <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 11 }}>{selectedCampaign.iban}</Text>
+                                    </Text>
+                                ) : null}
+                            </View>
+                        ) : null}
+
+                        {/* Actions */}
+                        <View style={styles.modalActionButtonsRow}>
+                            <Pressable
+                                onPress={() => setContribModalVisible(false)}
+                                style={[styles.modalActionBtn, styles.modalCancelActionBtn]}
+                            >
+                                <Text style={[styles.modalBtnText, { color: textSecondary }]}>Cancelar</Text>
+                            </Pressable>
+
+                            <Pressable
+                                onPress={handleDonate}
+                                disabled={submittingContrib}
+                                style={[styles.modalActionBtn, styles.modalSubmitActionBtn, { backgroundColor: accentGreen }]}
+                            >
+                                {submittingContrib ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={[styles.modalBtnText, { color: '#fff' }]}>Confirmar</Text>
+                                )}
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Custom Alert Modal */}
+            <CustomAlertModal
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                primaryButton={alertConfig.primaryButton}
+                secondaryButton={alertConfig.secondaryButton}
+                onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+            />
         </SafeAreaView>
     );
 }
@@ -707,5 +1171,208 @@ const styles = StyleSheet.create({
     adminPillText: {
         fontSize: 9,
         fontFamily: 'Poppins_600SemiBold',
+    },
+    promoteBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 0.8,
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    promoteBtnText: {
+        fontSize: 10,
+        fontFamily: 'Poppins_600SemiBold',
+    },
+    campaignsHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    newCampaignBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+    },
+    newCampaignBtnText: {
+        fontSize: 12,
+        fontFamily: 'Poppins_700Bold',
+    },
+    emptyCampaignsBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 16,
+        borderRadius: 12,
+        marginHorizontal: 16,
+        marginBottom: 16,
+    },
+    emptyCampaignsText: {
+        fontSize: 12,
+        fontFamily: 'Poppins_400Regular',
+        flex: 1,
+        lineHeight: 18,
+    },
+    campaignsList: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+        gap: 12,
+    },
+    campaignItem: {
+        paddingVertical: 12,
+        gap: 8,
+    },
+    campaignItemTitle: {
+        fontSize: 14,
+        fontFamily: 'Poppins_700Bold',
+    },
+    campaignItemDesc: {
+        fontSize: 12,
+        fontFamily: 'Poppins_400Regular',
+        lineHeight: 18,
+    },
+    progressLabelRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        marginTop: 4,
+    },
+    progressValText: {
+        fontSize: 13,
+        fontFamily: 'Poppins_700Bold',
+    },
+    progressPercentText: {
+        fontSize: 13,
+        fontFamily: 'Poppins_700Bold',
+    },
+    progressBarBg: {
+        height: 6,
+        borderRadius: 3,
+        overflow: 'hidden',
+        width: '100%',
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 3,
+    },
+    paymentMethodsBox: {
+        borderRadius: 8,
+        padding: 10,
+        backgroundColor: 'rgba(0,0,0,0.02)',
+        marginTop: 4,
+    },
+    paymentMethodText: {
+        fontSize: 11,
+        fontFamily: 'Poppins_400Regular',
+    },
+    donateBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+        paddingVertical: 8,
+        marginTop: 8,
+    },
+    donateBtnText: {
+        color: '#FFF',
+        fontSize: 12,
+        fontFamily: 'Poppins_700Bold',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    modalContentCard: {
+        width: '100%',
+        maxWidth: 320,
+        borderRadius: 24,
+        borderWidth: 1,
+        padding: 20,
+        gap: 12,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    modalTitleText: {
+        fontSize: 18,
+        fontFamily: 'Poppins_700Bold',
+        textAlign: 'center',
+    },
+    modalSubtitleText: {
+        fontSize: 12,
+        fontFamily: 'Poppins_400Regular',
+        textAlign: 'center',
+        lineHeight: 16,
+        marginTop: -6,
+    },
+    inputLabel: {
+        fontSize: 10,
+        fontFamily: 'Poppins_700Bold',
+        letterSpacing: 0.5,
+        marginTop: 4,
+    },
+    modalTextInput: {
+        borderBottomWidth: 1.5,
+        fontSize: 14,
+        fontFamily: 'Poppins_400Regular',
+        paddingVertical: 4,
+    },
+    saveCampaignSubmitBtn: {
+        paddingVertical: 14,
+        borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 20,
+    },
+    paymentInstructionsContainer: {
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 12,
+        marginTop: 6,
+        gap: 2,
+    },
+    instructionsTitle: {
+        fontSize: 12,
+        fontFamily: 'Poppins_700Bold',
+    },
+    instructionsBody: {
+        fontSize: 11,
+        fontFamily: 'Poppins_400Regular',
+        lineHeight: 16,
+        marginBottom: 4,
+    },
+    instructionsDetail: {
+        fontSize: 12,
+        fontFamily: 'Poppins_500Medium',
+    },
+    modalActionButtonsRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 12,
+    },
+    modalActionBtn: {
+        flex: 1,
+        height: 44,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalCancelActionBtn: {
+        backgroundColor: 'transparent',
+    },
+    modalSubmitActionBtn: {
+        elevation: 2,
+    },
+    modalBtnText: {
+        fontSize: 13,
+        fontFamily: 'Poppins_700Bold',
     },
 });

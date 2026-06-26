@@ -91,7 +91,11 @@ export interface DonationCampaign {
     description?: string;
     goal_amount: number;
     current_amount: number;
-    place_id: string;
+    place_id?: string | null;
+    community_id?: string | null;
+    mbway_phone?: string | null;
+    iban?: string | null;
+    created_by?: string | null;
     is_active: boolean;
     place?: Place;
 }
@@ -312,6 +316,26 @@ export const apiService = {
 
     async getCommunityMembers(id: string): Promise<CommunityMember[]> {
         return apiFetch(`/communities/${id}/members`);
+    },
+
+    async updateCommunityMemberRole(communityId: string, userId: string, role: string): Promise<any> {
+        return apiFetch(`/communities/${communityId}/members/${userId}/role`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role }),
+        });
+    },
+
+    async getCommunityCampaigns(communityId: string): Promise<DonationCampaign[]> {
+        return apiFetch(`/communities/${communityId}/campaigns`);
+    },
+
+    async createCommunityCampaign(communityId: string, data: { title: string; description?: string; goal_amount: number; mbway_phone?: string; iban?: string }): Promise<DonationCampaign> {
+        return apiFetch(`/communities/${communityId}/campaigns`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
     },
 
     async sendChatMessage(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<{ reply: string; results?: Place[] }> {
