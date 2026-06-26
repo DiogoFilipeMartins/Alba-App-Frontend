@@ -7,7 +7,6 @@ import {
     ActivityIndicator,
     Modal,
     TextInput,
-    Alert,
     RefreshControl,
     FlatList,
     Platform,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import CustomAlertModal from '../components/CustomAlertModal';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -69,6 +69,9 @@ export default function CommunitiesScreen({ navigation }: Props) {
     const [newName, setNewName] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [newColor, setNewColor] = useState(COLORS[0]);
+    const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any });
+    const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+    const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
 
 
     const fetchData = async (isRefresh = false) => {
@@ -103,7 +106,10 @@ export default function CommunitiesScreen({ navigation }: Props) {
     }, [communities, search]);
 
     const handleCreate = async () => {
-        if (!newName.trim()) return Alert.alert('Aviso', 'O nome da comunidade é obrigatório.');
+        if (!newName.trim()) {
+            showAlert({ title: 'Aviso', message: 'O nome da comunidade é obrigatório.', icon: 'alert-circle', iconColor: '#f59e0b', primaryButton: undefined });
+            return;
+        }
         try {
             setCreating(true);
             await apiService.createCommunity({ name: newName.trim(), description: newDesc.trim() });
@@ -111,7 +117,7 @@ export default function CommunitiesScreen({ navigation }: Props) {
             setModalVisible(false);
             fetchData();
         } catch (e: any) {
-            Alert.alert('Erro', e.message || 'Não foi possível criar a comunidade.');
+            showAlert({ title: 'Erro', message: e.message || 'Não foi possível criar a comunidade.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
         } finally {
             setCreating(false);
         }
@@ -126,6 +132,10 @@ export default function CommunitiesScreen({ navigation }: Props) {
             });
             return;
         }
+        if (community.is_private) {
+            showAlert({ title: 'Comunidade Privada', message: 'Esta comunidade é privada. Precisas de receber um convite para entrar.', icon: 'lock-closed', iconColor: colors.textMuted, primaryButton: undefined });
+            return;
+        }
         try {
             setJoining(community.id);
             await apiService.joinCommunity(community.id);
@@ -136,7 +146,7 @@ export default function CommunitiesScreen({ navigation }: Props) {
             });
             fetchData();
         } catch (e: any) {
-            Alert.alert('Erro', 'Não foi possível juntar-se à comunidade.');
+            showAlert({ title: 'Erro', message: 'Não foi possível juntar-se à comunidade.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
         } finally {
             setJoining(null);
         }
@@ -245,6 +255,11 @@ export default function CommunitiesScreen({ navigation }: Props) {
                             </View>
                             {joining === item.id ? (
                                 <ActivityIndicator color={accentColor} size="small" />
+                            ) : item.is_private ? (
+                                <View style={[styles.joinBtn, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                                    <Ionicons name="lock-closed" size={11} color={colors.textMuted} />
+                                    <Text style={[styles.joinText, { color: colors.textMuted }]}>Privada</Text>
+                                </View>
                             ) : (
                                 <View style={[styles.joinBtn, { backgroundColor: accentColor }]}>
                                     <Text style={styles.joinText}>Juntar-se</Text>
@@ -460,6 +475,16 @@ export default function CommunitiesScreen({ navigation }: Props) {
                     />
                 </SafeAreaView>
             </Modal>
+
+            <CustomAlertModal
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                icon={alertState.icon}
+                iconColor={alertState.iconColor}
+                primaryButton={alertState.primaryButton}
+                onClose={closeAlert}
+            />
         </SafeAreaView>
     );
 }

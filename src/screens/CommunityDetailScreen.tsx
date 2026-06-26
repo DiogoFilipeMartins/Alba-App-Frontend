@@ -6,7 +6,6 @@ import {
     ScrollView,
     Pressable,
     ActivityIndicator,
-    Alert,
     Switch,
     Image,
     Modal,
@@ -54,6 +53,15 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
     const [editPhotoUrl, setEditPhotoUrl] = useState(route.params.photoUrl || '');
     const [updating, setUpdating] = useState(false);
     
+    // Community privacy
+    const [isPrivate, setIsPrivate] = useState(false);
+    const [editIsPrivate, setEditIsPrivate] = useState(false);
+
+    // Invite modal
+    const [inviteModalVisible, setInviteModalVisible] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [sendingInvite, setSendingInvite] = useState(false);
+
     // Mute Switch Mock State
     const [isMuted, setIsMuted] = useState(false);
 
@@ -248,6 +256,8 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                         setPhotoUrl(matchedComm.photo_url);
                         setEditPhotoUrl(matchedComm.photo_url);
                     }
+                    setIsPrivate(!!matchedComm.is_private);
+                    setEditIsPrivate(!!matchedComm.is_private);
                 }
 
                 // 3. Fetch community campaigns
@@ -267,36 +277,61 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
             const updatedComm = await apiService.updateCommunity(communityId, {
                 description: editDesc.trim(),
                 photo_url: editPhotoUrl.trim(),
+                ...(isMeAdmin ? { is_private: editIsPrivate } : {}),
             });
             setCommDesc(updatedComm.description || '');
             setPhotoUrl(updatedComm.photo_url || '');
+            setIsPrivate(!!updatedComm.is_private);
             setEditModalVisible(false);
-            Alert.alert('Sucesso', 'Dados da comunidade atualizados.');
+            showAlert('Sucesso', 'Dados da comunidade atualizados.', 'checkmark-circle', '#22c55e');
         } catch (e: any) {
-            Alert.alert('Erro', e.message || 'Não foi possível atualizar a comunidade.');
+            showAlert('Erro', e.message || 'Não foi possível atualizar a comunidade.', 'alert-circle', '#ef4444');
         } finally {
             setUpdating(false);
         }
     };
 
+    const handleSendInvite = async () => {
+        if (!inviteEmail.trim() || !inviteEmail.includes('@')) {
+            showAlert('Email inválido', 'Por favor insere um endereço de email válido.', 'alert-circle-outline', '#ef4444');
+            return;
+        }
+        try {
+            setSendingInvite(true);
+            await apiService.inviteToCommunity(communityId, inviteEmail.trim());
+            setInviteModalVisible(false);
+            setInviteEmail('');
+            showAlert('Convite enviado', `O convite foi enviado para ${inviteEmail.trim()}.`, 'checkmark-circle-outline', '#22c55e');
+        } catch (e: any) {
+            showAlert('Erro', e.message || 'Não foi possível enviar o convite.', 'alert-circle-outline', '#ef4444');
+        } finally {
+            setSendingInvite(false);
+        }
+    };
+
     const handleLeave = () => {
-        Alert.alert('Sair da Comunidade', 'Tens a certeza que queres sair desta comunidade?', [
-            { text: 'Cancelar', style: 'cancel' },
+        showAlert(
+            'Sair da Comunidade',
+            'Tens a certeza que queres sair desta comunidade?',
+            'people',
+            '#ef4444',
             {
-                text: 'Sair', style: 'destructive',
+                text: 'Sair',
                 onPress: async () => {
                     try {
                         setLeaving(true);
                         await apiService.leaveCommunity(communityId);
                         (navigation as any).navigate('Main', { screen: 'Communities' });
                     } catch (e: any) {
-                        Alert.alert('Erro', e.message || 'Não foi possível sair.');
+                        showAlert('Erro', e.message || 'Não foi possível sair.', 'alert-circle', '#ef4444');
                     } finally {
                         setLeaving(false);
                     }
                 },
+                destructive: true,
             },
-        ]);
+            { text: 'Cancelar', onPress: () => {} }
+        );
     };
 
     // Literal WhatsApp Theme Colors
@@ -455,8 +490,8 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
 
                     <View style={[styles.separator, { backgroundColor: containerBg }]} />
 
-                    {/* Block 5.5: Community Campaigns */}
-                    <View style={[styles.sectionBlock, { backgroundColor: cardBg }]}>
+                    {/* Block 5.5: Community Campaigns (hidden from non-members in private communities) */}
+                    {(!isPrivate || isMember) && <View style={[styles.sectionBlock, { backgroundColor: cardBg }]}>
                         <View style={styles.campaignsHeader}>
                             <Text style={[styles.participantsTitle, { color: textPrimary }]}>
                                 Campanhas de Apoio
@@ -549,7 +584,7 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                                 })}
                             </View>
                         )}
-                    </View>
+                    </View>}
 
                     <View style={[styles.separator, { backgroundColor: containerBg }]} />
 
@@ -564,27 +599,20 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                             </Pressable>
                         </View>
 
-                        {/* Add members button */}
-                        <Pressable style={styles.rowItem}>
-                            <View style={[styles.addParticipantCircle, { backgroundColor: accentGreen }]}>
-                                <Ionicons name="person-add" size={18} color="#FFF" />
-                            </View>
-                            <Text style={[styles.rowText, { color: accentGreen, fontFamily: 'Poppins_700Bold' }]}>
-                                Adicionar participantes
-                            </Text>
-                        </Pressable>
-                        <View style={[styles.innerDivider, { backgroundColor: borderCol }]} />
-
-                        {/* Invite link button */}
-                        <Pressable style={styles.rowItem}>
-                            <View style={[styles.addParticipantCircle, { backgroundColor: accentGreen }]}>
-                                <Ionicons name="link" size={18} color="#FFF" />
-                            </View>
-                            <Text style={[styles.rowText, { color: accentGreen, fontFamily: 'Poppins_700Bold' }]}>
-                                Convidar via link
-                            </Text>
-                        </Pressable>
-                        <View style={[styles.innerDivider, { backgroundColor: borderCol }]} />
+                        {/* Add members button (admin-only invite) */}
+                        {isMeAdmin && (
+                            <>
+                                <Pressable style={styles.rowItem} onPress={() => { setInviteEmail(''); setInviteModalVisible(true); }}>
+                                    <View style={[styles.addParticipantCircle, { backgroundColor: accentGreen }]}>
+                                        <Ionicons name="person-add" size={18} color="#FFF" />
+                                    </View>
+                                    <Text style={[styles.rowText, { color: accentGreen, fontFamily: 'Poppins_700Bold' }]}>
+                                        Convidar por email
+                                    </Text>
+                                </Pressable>
+                                <View style={[styles.innerDivider, { backgroundColor: borderCol }]} />
+                            </>
+                        )}
 
                         {/* Participant entries */}
                         {members.map((m, idx) => {
@@ -756,6 +784,32 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                             multiline
                             numberOfLines={4}
                         />
+
+                        {/* Privacy Toggle (admin only) */}
+                        {isMeAdmin && (
+                            <>
+                                <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: textSecondary, marginBottom: 8, letterSpacing: 0.5 }}>
+                                    PRIVACIDADE
+                                </Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: borderCol, paddingBottom: 20, marginBottom: 24 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                                        <Ionicons name={editIsPrivate ? 'lock-closed' : 'lock-open-outline'} size={20} color={editIsPrivate ? accentGreen : iconMuted} />
+                                        <View>
+                                            <Text style={{ fontSize: 14, fontFamily: 'Poppins_600SemiBold', color: textPrimary }}>Comunidade Privada</Text>
+                                            <Text style={{ fontSize: 12, fontFamily: 'Poppins_400Regular', color: textSecondary }}>
+                                                {editIsPrivate ? 'Só por convite · campanhas visíveis apenas a membros' : 'Qualquer utilizador pode entrar'}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <Switch
+                                        value={editIsPrivate}
+                                        onValueChange={setEditIsPrivate}
+                                        trackColor={{ false: borderCol, true: accentGreen }}
+                                        thumbColor="#FFF"
+                                    />
+                                </View>
+                            </>
+                        )}
 
                         {/* Save Button */}
                         <Pressable
@@ -951,6 +1005,46 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                                     <ActivityIndicator color="#fff" />
                                 ) : (
                                     <Text style={[styles.modalBtnText, { color: '#fff' }]}>Confirmar</Text>
+                                )}
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Invite Modal */}
+            <Modal visible={inviteModalVisible} transparent animationType="fade" onRequestClose={() => setInviteModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContentCard, { backgroundColor: cardBg, borderColor: borderCol }]}>
+                        <Text style={[styles.modalTitleText, { color: textPrimary }]}>Convidar por Email</Text>
+                        <Text style={[styles.modalSubtitleText, { color: textSecondary }]}>
+                            Insere o email do utilizador que queres convidar para esta comunidade.
+                        </Text>
+                        <TextInput
+                            style={[styles.modalTextInput, { color: textPrimary, borderBottomColor: borderCol, marginTop: 16 }]}
+                            placeholder="email@exemplo.com"
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={inviteEmail}
+                            onChangeText={setInviteEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                        />
+                        <View style={styles.modalActionButtonsRow}>
+                            <Pressable
+                                onPress={() => setInviteModalVisible(false)}
+                                style={[styles.modalActionBtn, styles.modalCancelActionBtn]}
+                            >
+                                <Text style={[styles.modalBtnText, { color: textSecondary }]}>Cancelar</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={handleSendInvite}
+                                disabled={sendingInvite}
+                                style={[styles.modalActionBtn, styles.modalSubmitActionBtn, { backgroundColor: accentGreen }]}
+                            >
+                                {sendingInvite ? (
+                                    <ActivityIndicator color="#fff" size="small" />
+                                ) : (
+                                    <Text style={[styles.modalBtnText, { color: '#fff' }]}>Enviar Convite</Text>
                                 )}
                             </Pressable>
                         </View>

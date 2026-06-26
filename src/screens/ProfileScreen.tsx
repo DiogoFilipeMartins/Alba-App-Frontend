@@ -10,7 +10,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { FavoritePlace, favoritesService } from '../services/favoritesService';
-import { apiService } from '../services/apiService';
+import { apiService, CommunityInvite } from '../services/apiService';
 import { notificationService } from '../services/notificationService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomAlertModal from '../components/CustomAlertModal';
@@ -25,6 +25,8 @@ export default function ProfileScreen({ navigation }: Props) {
     const { colors, isDark } = useTheme();
     const username = profile?.full_name || profile?.username || 'Utilizador';
     const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
+    const [pendingInvites, setPendingInvites] = useState<CommunityInvite[]>([]);
+    const [respondingInvite, setRespondingInvite] = useState<string | null>(null);
 
     const isSpecialAccount = isProfessional || isInstitution;
     const accountColor = isProfessional ? '#0ebd5f' : isInstitution ? '#7c3aed' : colors.primary;
@@ -72,17 +74,47 @@ export default function ProfileScreen({ navigation }: Props) {
             setFavorites(data);
         };
 
+        const loadInvites = async () => {
+            try {
+                const data = await apiService.getMyInvites();
+                setPendingInvites(data || []);
+            } catch {}
+        };
+
         const checkNotifications = async () => {
             const granted = await notificationService.requestPermissions();
             setNotificationsGranted(granted);
         };
 
-        const unsubscribe = navigation.addListener('focus', loadFavorites);
-        loadFavorites();
+        const loadAll = () => { loadFavorites(); loadInvites(); };
+        const unsubscribe = navigation.addListener('focus', loadAll);
+        loadAll();
         checkNotifications();
 
         return unsubscribe;
     }, [navigation]);
+
+    const handleRespondInvite = async (invite: CommunityInvite, accept: boolean) => {
+        try {
+            setRespondingInvite(invite.id);
+            if (accept) {
+                await apiService.acceptInvite(invite.id);
+                showAlert(
+                    'Convite aceite!',
+                    `Entraste na comunidade "${invite.communities?.name || ''}".`,
+                    'checkmark-circle-outline',
+                    '#22c55e'
+                );
+            } else {
+                await apiService.declineInvite(invite.id);
+            }
+            setPendingInvites(prev => prev.filter(i => i.id !== invite.id));
+        } catch (e: any) {
+            showAlert('Erro', e.message || 'Não foi possível processar o convite.', 'alert-circle-outline', '#ef4444');
+        } finally {
+            setRespondingInvite(null);
+        }
+    };
 
     const handleToggleNotifications = async () => {
         const granted = await notificationService.requestPermissions();
@@ -216,6 +248,54 @@ export default function ProfileScreen({ navigation }: Props) {
                         </View>
                     )}
                 </View>
+
+                {pendingInvites.length > 0 && (
+                    <View style={s.section}>
+                        <Text style={[s.secTitle, { color: colors.textMuted }]}>Convites Pendentes</Text>
+                        <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                            {pendingInvites.map((invite, index) => (
+                                <View
+                                    key={invite.id}
+                                    style={[
+                                        s.item,
+                                        { flexDirection: 'column', alignItems: 'flex-start', gap: 10 },
+                                        index < pendingInvites.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }
+                                    ]}
+                                >
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%' }}>
+                                        <View style={[s.iconBox, { backgroundColor: invite.communities?.color ? invite.communities.color + '20' : colors.surface }]}>
+                                            <Ionicons name="people" size={18} color={invite.communities?.color || colors.primary} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={[s.itemLabel, { color: colors.textPrimary, fontSize: 14 }]} numberOfLines={1}>
+                                                {invite.communities?.name || 'Comunidade'}
+                                            </Text>
+                                            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                                                Convidado por {invite.profiles?.full_name || 'um administrador'}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+                                        <TouchableOpacity
+                                            onPress={() => handleRespondInvite(invite, false)}
+                                            disabled={respondingInvite === invite.id}
+                                            style={{ flex: 1, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}
+                                        >
+                                            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary }}>Recusar</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => handleRespondInvite(invite, true)}
+                                            disabled={respondingInvite === invite.id}
+                                            style={{ flex: 1, paddingVertical: 8, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }}
+                                        >
+                                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Aceitar</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
 
                 <View style={s.section}>
                     <Text style={[s.secTitle, { color: colors.textMuted }]}>Favoritos</Text>

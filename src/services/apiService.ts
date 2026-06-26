@@ -116,6 +116,7 @@ export interface Community {
     description?: string;
     created_by: string;
     is_member?: boolean;
+    is_private?: boolean;
     member_count?: number;
     color?: string;
     photo_url?: string;
@@ -125,6 +126,16 @@ export interface Community {
         created_at: string;
         sender_name: string;
     } | null;
+}
+
+export interface CommunityInvite {
+    id: string;
+    community_id: string;
+    invitee_email: string;
+    status: 'pending' | 'accepted' | 'declined';
+    created_at: string;
+    communities?: { name: string; photo_url?: string; color?: string };
+    profiles?: { full_name: string };
 }
 
 export interface CommunityMember {
@@ -282,7 +293,7 @@ export const apiService = {
         });
     },
 
-    async updateCommunity(id: string, data: { name?: string; description?: string; color?: string; photo_url?: string }): Promise<Community> {
+    async updateCommunity(id: string, data: { name?: string; description?: string; color?: string; photo_url?: string; is_private?: boolean }): Promise<Community> {
         return apiFetch(`/communities/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -423,6 +434,26 @@ export const apiService = {
         });
     },
 
+    async inviteToCommunity(communityId: string, email: string): Promise<void> {
+        await apiFetch(`/communities/${communityId}/invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+    },
+
+    async getMyInvites(): Promise<CommunityInvite[]> {
+        return apiFetch('/invites');
+    },
+
+    async acceptInvite(inviteId: string): Promise<{ success: boolean; community_id: string }> {
+        return apiFetch(`/invites/${inviteId}/accept`, { method: 'POST' });
+    },
+
+    async declineInvite(inviteId: string): Promise<void> {
+        await apiFetch(`/invites/${inviteId}/decline`, { method: 'POST' });
+    },
+
     // Admin: Users
     async getAdminUsers(): Promise<any[]> {
         return apiFetch('/admin/users');
@@ -472,7 +503,10 @@ export const apiService = {
 
     // News
     async getNews(filters: { query?: string; category?: string } = {}): Promise<NewsItem[]> {
-        const params = new URLSearchParams(filters as any).toString();
+        const cleanFilters = Object.fromEntries(
+            Object.entries(filters).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+        );
+        const params = new URLSearchParams(cleanFilters as any).toString();
         return apiFetch(`/news?${params}`);
     },
 
