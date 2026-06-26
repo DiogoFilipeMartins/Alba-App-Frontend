@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiService, Place } from '../services/apiService';
+import * as Location from 'expo-location';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/types';
 
@@ -154,6 +155,7 @@ export default function ChatbotScreen({ navigation }: Props) {
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const listRef = useRef<FlatList>(null);
 
     const scrollToBottom = useCallback(() => {
@@ -163,6 +165,17 @@ export default function ChatbotScreen({ navigation }: Props) {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+                const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+            } catch {}
+        })();
+    }, []);
 
     const [history, setHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
 
@@ -194,7 +207,7 @@ export default function ChatbotScreen({ navigation }: Props) {
         ];
 
         try {
-            const chatRes = await apiService.sendChatMessage(newHistory);
+            const chatRes = await apiService.sendChatMessage(newHistory, userLocation);
 
             const updatedHistory: { role: 'user' | 'assistant'; content: string }[] = [
                 ...newHistory,

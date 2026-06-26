@@ -349,7 +349,7 @@ export const apiService = {
         });
     },
 
-    async sendChatMessage(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<{ reply: string; results?: Place[] }> {
+    async sendChatMessage(messages: { role: 'user' | 'assistant'; content: string }[], location?: { latitude: number; longitude: number } | null): Promise<{ reply: string; results?: Place[] }> {
         // Timeout generoso (60s) para lidar com cold starts do Render free tier
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -358,7 +358,7 @@ export const apiService = {
             const response = await fetch(`${API_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages }),
+                body: JSON.stringify({ messages, location: location ?? null }),
                 signal: controller.signal,
             });
             const data = await handleResponse(response) as { reply: string; results?: Place[] };
