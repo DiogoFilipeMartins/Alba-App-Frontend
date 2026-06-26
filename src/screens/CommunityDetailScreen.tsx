@@ -65,6 +65,10 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
     // Mute Switch Mock State
     const [isMuted, setIsMuted] = useState(false);
 
+    // Search participants
+    const [searchVisible, setSearchVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
     // Custom Alert Modal State
     const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
@@ -307,6 +311,52 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
         } finally {
             setSendingInvite(false);
         }
+    };
+
+    const handleRemoveMember = (targetMember: CommunityMember) => {
+        const memberName = targetMember.profiles?.full_name || 'Utilizador';
+        showAlert(
+            'Remover Membro',
+            `Tens a certeza que desejas remover "${memberName}" desta comunidade?`,
+            'person-remove-outline',
+            '#ef4444',
+            {
+                text: 'Remover',
+                destructive: true,
+                onPress: async () => {
+                    try {
+                        await apiService.removeCommunityMember(communityId, targetMember.user_id);
+                        setMembers(prev => prev.filter(m => m.user_id !== targetMember.user_id));
+                        showAlert('Membro removido', `"${memberName}" foi removido da comunidade.`, 'checkmark-circle-outline', '#22c55e');
+                    } catch (e: any) {
+                        showAlert('Erro', e.message || 'Não foi possível remover o membro.', 'alert-circle-outline', '#ef4444');
+                    }
+                }
+            },
+            { text: 'Cancelar', onPress: () => {} }
+        );
+    };
+
+    const handleDeleteCommunity = () => {
+        showAlert(
+            'Eliminar Comunidade',
+            `Tens a certeza que queres eliminar a comunidade "${communityName}"? Esta ação é irreversível e apagará todas as mensagens e dados.`,
+            'trash-outline',
+            '#ef4444',
+            {
+                text: 'Eliminar',
+                destructive: true,
+                onPress: async () => {
+                    try {
+                        await apiService.deleteCommunity(communityId);
+                        (navigation as any).navigate('Main', { screen: 'Communities' });
+                    } catch (e: any) {
+                        showAlert('Erro', e.message || 'Não foi possível eliminar a comunidade.', 'alert-circle-outline', '#ef4444');
+                    }
+                }
+            },
+            { text: 'Cancelar', onPress: () => {} }
+        );
     };
 
     const handleLeave = () => {
@@ -594,10 +644,24 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                             <Text style={[styles.participantsTitle, { color: textPrimary }]}>
                                 {members.length} participantes
                             </Text>
-                            <Pressable style={styles.searchIconBtn}>
-                                <Ionicons name="search" size={20} color={accentGreen} />
+                            <Pressable style={styles.searchIconBtn} onPress={() => { setSearchVisible(v => !v); setSearchQuery(''); }}>
+                                <Ionicons name={searchVisible ? 'close' : 'search'} size={20} color={accentGreen} />
                             </Pressable>
                         </View>
+
+                        {/* Search input */}
+                        {searchVisible && (
+                            <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+                                <TextInput
+                                    style={{ borderBottomWidth: 1.5, borderBottomColor: accentGreen, color: textPrimary, fontSize: 14, fontFamily: 'Poppins_400Regular', paddingVertical: 6 }}
+                                    placeholder="Pesquisar participante..."
+                                    placeholderTextColor={textSecondary}
+                                    value={searchQuery}
+                                    onChangeText={setSearchQuery}
+                                    autoFocus
+                                />
+                            </View>
+                        )}
 
                         {/* Add members button (admin-only invite) */}
                         {isMeAdmin && (
@@ -615,15 +679,32 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                         )}
 
                         {/* Participant entries */}
-                        {members.map((m, idx) => {
+                        {members.filter(m => {
+                            if (!searchQuery.trim()) return true;
+                            return (m.profiles?.full_name || '').toLowerCase().includes(searchQuery.toLowerCase());
+                        }).map((m, idx) => {
                             const name = m.profiles?.full_name || 'Utilizador';
                             const isMe = m.user_id === user?.id;
                             const avatarCol = getAvatarColor(m.user_id);
-                            
+
                             return (
                                 <View key={m.user_id}>
                                     {idx > 0 && <View style={[styles.innerDivider, { backgroundColor: borderCol }]} />}
-                                    <View style={styles.memberRow}>
+                                    <Pressable
+                                        style={styles.memberRow}
+                                        onLongPress={() => {
+                                            if (isMeAdmin && !isMe && m.role !== 'admin') {
+                                                showAlert(
+                                                    name,
+                                                    'O que pretendes fazer com este membro?',
+                                                    'person-outline',
+                                                    accentGreen,
+                                                    { text: 'Remover do grupo', onPress: () => handleRemoveMember(m), destructive: true },
+                                                    { text: 'Promover a admin', onPress: () => handlePromoteMember(m) }
+                                                );
+                                            }
+                                        }}
+                                    >
                                         <View style={[styles.memberAvatar, { backgroundColor: avatarCol }]}>
                                             <Text style={styles.memberAvatarText}>{name.charAt(0).toUpperCase()}</Text>
                                         </View>
@@ -638,16 +719,10 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                                             </View>
                                         ) : (
                                             isMeAdmin && !isMe && (
-                                                <Pressable
-                                                    onPress={() => handlePromoteMember(m)}
-                                                    style={[styles.promoteBtn, { borderColor: accentGreen }]}
-                                                >
-                                                    <Ionicons name="shield-checkmark-outline" size={12} color={accentGreen} style={{ marginRight: 4 }} />
-                                                    <Text style={[styles.promoteBtnText, { color: accentGreen }]}>Promover</Text>
-                                                </Pressable>
+                                                <Ionicons name="ellipsis-vertical" size={16} color={textSecondary} />
                                             )
                                         )}
-                                    </View>
+                                    </Pressable>
                                 </View>
                             );
                         })}
@@ -666,6 +741,16 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                                 <Text style={[styles.rowText, { color: '#ef4444', fontFamily: 'Poppins_700Bold' }]}>Sair do grupo</Text>
                             )}
                         </Pressable>
+                        {/* Delete community (admin only) */}
+                        {isMeAdmin && (
+                            <>
+                                <View style={[styles.innerDivider, { backgroundColor: borderCol, marginLeft: 0 }]} />
+                                <Pressable onPress={handleDeleteCommunity} style={styles.rowItem}>
+                                    <Ionicons name="trash-outline" size={22} color="#b91c1c" style={styles.rowIcon} />
+                                    <Text style={[styles.rowText, { color: '#b91c1c', fontFamily: 'Poppins_700Bold' }]}>Eliminar comunidade</Text>
+                                </Pressable>
+                            </>
+                        )}
                     </View>
 
                     <View style={{ height: 40, backgroundColor: containerBg }} />

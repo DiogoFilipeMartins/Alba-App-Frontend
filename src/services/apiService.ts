@@ -145,6 +145,25 @@ export interface CommunityMember {
     profiles?: { full_name: string };
 }
 
+export interface DirectMessage {
+    id: string;
+    sender_id: string;
+    receiver_id: string;
+    content: string;
+    read_at: string | null;
+    created_at: string;
+    sender?: { id: string; full_name: string };
+    receiver?: { id: string; full_name: string };
+}
+
+export interface DMConversation {
+    userId: string;
+    userName: string;
+    lastMessage: string;
+    lastMessageAt: string;
+    unread: boolean;
+}
+
 export interface CommunityMessage {
     id: string;
     community_id: string;
@@ -452,6 +471,39 @@ export const apiService = {
 
     async declineInvite(inviteId: string): Promise<void> {
         await apiFetch(`/invites/${inviteId}/decline`, { method: 'POST' });
+    },
+
+    async removeCommunityMember(communityId: string, userId: string): Promise<void> {
+        await apiFetch(`/communities/${communityId}/members/${userId}`, { method: 'DELETE' });
+    },
+
+    async deleteCommunity(communityId: string): Promise<void> {
+        await apiFetch(`/communities/${communityId}`, { method: 'DELETE' });
+    },
+
+    async forgotPassword(email: string): Promise<void> {
+        await apiFetch('/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+    },
+
+    // Direct Messages
+    async getDMConversations(): Promise<DMConversation[]> {
+        return apiFetch('/dm');
+    },
+
+    async getDMMessages(userId: string): Promise<DirectMessage[]> {
+        return apiFetch(`/dm/${userId}`);
+    },
+
+    async sendDM(userId: string, content: string): Promise<DirectMessage> {
+        return apiFetch(`/dm/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content }),
+        });
     },
 
     // Admin: Users

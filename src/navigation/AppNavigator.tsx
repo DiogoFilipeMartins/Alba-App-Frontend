@@ -28,6 +28,7 @@ import DirectoryScreen from '../screens/DirectoryScreen';
 import PlaceProfileScreen from '../screens/PlaceProfileScreen';
 import AppearanceScreen from '../screens/AppearanceScreen';
 import NewsScreen from '../screens/NewsScreen';
+import DirectMessageScreen from '../screens/DirectMessageScreen';
 import { RootStackParamList, MainTabParamList } from './types';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -122,6 +123,7 @@ export default function AppNavigator() {
             <Stack.Screen name="PlaceProfile" component={PlaceProfileScreen} />
             <Stack.Screen name="Appearance" component={AppearanceScreen} />
             <Stack.Screen name="News" component={NewsScreen} />
+            <Stack.Screen name="DirectMessage" component={DirectMessageScreen} />
           </>
         )}
       </Stack.Navigator>

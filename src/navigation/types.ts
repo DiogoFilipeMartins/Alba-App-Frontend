@@ -8,6 +8,7 @@ export type RootStackParamList = {
   CommunityDetail: { communityId: string; communityName: string; communityColor?: string; description?: string; memberCount?: number; photoUrl?: string };
   SuggestPlace: { pickedCoords?: { lat: number; lng: number } };
   Donations: undefined;
+  DirectMessage: { userId: string; userName: string };
   EditProfile: undefined;
   EditProfessionalProfile: undefined;
   Security: undefined;

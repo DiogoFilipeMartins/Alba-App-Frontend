@@ -10,6 +10,7 @@ import {
   Platform,
   Text,
   Image,
+  Modal,
 } from 'react-native';
 import CustomAlertModal from '../components/CustomAlertModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
+import { apiService } from '../services/apiService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -28,6 +30,10 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
+
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [sendingReset, setSendingReset] = useState(false);
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -60,6 +66,24 @@ export default function LoginScreen({ navigation }: Props) {
       primaryButton,
       secondaryButton,
     });
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim() || !forgotEmail.includes('@')) {
+      showAlert('Email inválido', 'Insere um endereço de email válido.', 'alert-circle-outline', '#ef4444');
+      return;
+    }
+    setSendingReset(true);
+    try {
+      await apiService.forgotPassword(forgotEmail.trim());
+      setForgotModalVisible(false);
+      setForgotEmail('');
+      showAlert('Email enviado', 'Se esse email existir na nossa plataforma, receberás um link para redefinir a tua palavra-passe.', 'checkmark-circle-outline', '#22c55e');
+    } catch (e: any) {
+      showAlert('Erro', e.message || 'Não foi possível enviar o email.', 'alert-circle-outline', '#ef4444');
+    } finally {
+      setSendingReset(false);
+    }
   };
 
   const handleAuth = async () => {
@@ -161,6 +185,12 @@ export default function LoginScreen({ navigation }: Props) {
                 )}
               </TouchableOpacity>
 
+              <TouchableOpacity style={styles.forgotBtn} onPress={() => { setForgotEmail(''); setForgotModalVisible(true); }}>
+                <Text style={[styles.forgotText, { color: colors.primary, fontFamily: colors.fontRegular }]}>
+                  Esqueceu-se da palavra-passe?
+                </Text>
+              </TouchableOpacity>
+
               <View style={styles.switchBtn}>
                 <Text style={[styles.switchText, { color: colors.textSecondary, fontFamily: colors.fontRegular }]}>
                   Ainda não tem conta?{' '}
@@ -186,6 +216,43 @@ export default function LoginScreen({ navigation }: Props) {
         secondaryButton={alertConfig.secondaryButton}
         onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
       />
+
+      {/* Forgot Password Modal */}
+      <Modal visible={forgotModalVisible} transparent animationType="fade" onRequestClose={() => setForgotModalVisible(false)}>
+        <View style={styles.forgotOverlay}>
+          <View style={[styles.forgotCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Ionicons name="lock-open-outline" size={36} color={colors.primary} style={{ alignSelf: 'center', marginBottom: 12 }} />
+            <Text style={[styles.forgotTitle, { color: colors.textPrimary, fontFamily: colors.fontBold }]}>Recuperar Palavra-passe</Text>
+            <Text style={[styles.forgotSub, { color: colors.textSecondary, fontFamily: colors.fontRegular }]}>
+              Insere o teu email e enviamos um link para redefinires a tua palavra-passe.
+            </Text>
+            <TextInput
+              style={[styles.forgotInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border, fontFamily: colors.fontRegular }]}
+              placeholder="O teu email"
+              placeholderTextColor={colors.textMuted}
+              value={forgotEmail}
+              onChangeText={setForgotEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+              <TouchableOpacity
+                style={[styles.forgotActionBtn, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }]}
+                onPress={() => setForgotModalVisible(false)}
+              >
+                <Text style={{ color: colors.textSecondary, fontFamily: colors.fontBold, fontSize: 14 }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.forgotActionBtn, { backgroundColor: colors.primary }]}
+                onPress={handleForgotPassword}
+                disabled={sendingReset}
+              >
+                {sendingReset ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontFamily: colors.fontBold, fontSize: 14 }}>Enviar</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -209,4 +276,12 @@ const styles = StyleSheet.create({
   buttonText: { color: '#FFF', fontSize: 16 },
   switchBtn: { alignItems: 'center', marginTop: 24 },
   switchText: { fontSize: 14 },
+  forgotBtn: { alignItems: 'center', marginTop: 4 },
+  forgotText: { fontSize: 13 },
+  forgotOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  forgotCard: { width: '100%', maxWidth: 340, borderRadius: 24, borderWidth: 1, padding: 24, gap: 10 },
+  forgotTitle: { fontSize: 18, textAlign: 'center' },
+  forgotSub: { fontSize: 13, textAlign: 'center', lineHeight: 18, opacity: 0.8 },
+  forgotInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, marginTop: 4 },
+  forgotActionBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 });

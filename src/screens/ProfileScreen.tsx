@@ -10,7 +10,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { FavoritePlace, favoritesService } from '../services/favoritesService';
-import { apiService, CommunityInvite } from '../services/apiService';
+import { apiService, CommunityInvite, DMConversation } from '../services/apiService';
 import { notificationService } from '../services/notificationService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomAlertModal from '../components/CustomAlertModal';
@@ -27,6 +27,7 @@ export default function ProfileScreen({ navigation }: Props) {
     const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
     const [pendingInvites, setPendingInvites] = useState<CommunityInvite[]>([]);
     const [respondingInvite, setRespondingInvite] = useState<string | null>(null);
+    const [dmConversations, setDmConversations] = useState<DMConversation[]>([]);
 
     const isSpecialAccount = isProfessional || isInstitution;
     const accountColor = isProfessional ? '#0ebd5f' : isInstitution ? '#7c3aed' : colors.primary;
@@ -81,12 +82,19 @@ export default function ProfileScreen({ navigation }: Props) {
             } catch {}
         };
 
+        const loadDMs = async () => {
+            try {
+                const data = await apiService.getDMConversations();
+                setDmConversations(data || []);
+            } catch {}
+        };
+
         const checkNotifications = async () => {
             const granted = await notificationService.requestPermissions();
             setNotificationsGranted(granted);
         };
 
-        const loadAll = () => { loadFavorites(); loadInvites(); };
+        const loadAll = () => { loadFavorites(); loadInvites(); loadDMs(); };
         const unsubscribe = navigation.addListener('focus', loadAll);
         loadAll();
         checkNotifications();
@@ -292,6 +300,33 @@ export default function ProfileScreen({ navigation }: Props) {
                                         </TouchableOpacity>
                                     </View>
                                 </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
+
+                {dmConversations.length > 0 && (
+                    <View style={s.section}>
+                        <Text style={[s.secTitle, { color: colors.textMuted }]}>Mensagens Diretas</Text>
+                        <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                            {dmConversations.slice(0, 5).map((conv, index) => (
+                                <TouchableOpacity
+                                    key={conv.userId}
+                                    style={[s.item, index < Math.min(dmConversations.length, 5) - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}
+                                    onPress={() => (navigation as any).navigate('DirectMessage', { userId: conv.userId, userName: conv.userName })}
+                                >
+                                    <View style={[s.iconBox, { backgroundColor: colors.primary + '20' }]}>
+                                        <Text style={{ fontSize: 18, fontWeight: '900', color: colors.primary }}>{(conv.userName[0] || 'U').toUpperCase()}</Text>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[s.itemLabel, { color: colors.textPrimary, fontSize: 14 }]} numberOfLines={1}>{conv.userName}</Text>
+                                        <Text style={{ fontSize: 12, color: colors.textSecondary }} numberOfLines={1}>{conv.lastMessage}</Text>
+                                    </View>
+                                    {conv.unread && (
+                                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} />
+                                    )}
+                                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                                </TouchableOpacity>
                             ))}
                         </View>
                     </View>

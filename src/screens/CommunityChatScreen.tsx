@@ -84,6 +84,10 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
     const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
     const [activeMockType, setActiveMockType] = useState<'gallery' | 'document' | 'location' | 'contact' | null>(null);
 
+    // Search
+    const [searchMode, setSearchMode] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
     const accentColor = communityColor || colors.primary;
     const flatListRef = useRef<FlatList>(null);
     const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any, secondaryButton: undefined as any });
@@ -443,48 +447,65 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
             {/* Header Safe Area */}
             <SafeAreaView style={{ backgroundColor: headerBg }} edges={['top']}>
                 <View style={[styles.header, { borderBottomColor: isDark ? '#222E35' : '#E9E9EB', backgroundColor: headerBg }]}>
-                    <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
+                    <Pressable onPress={() => { if (searchMode) { setSearchMode(false); setSearchQuery(''); } else { navigation.goBack(); } }} style={styles.headerBtn}>
                         <Ionicons name="arrow-back" size={24} color={isDark ? '#E9EDEF' : '#54656F'} />
                     </Pressable>
-                    
-                    <Pressable 
-                        onPress={() => navigation.navigate('CommunityDetail', {
-                            communityId,
-                            communityName,
-                            communityColor: accentColor,
-                            memberCount: members.length
-                        })}
-                        style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}
-                    >
-                        <View style={[styles.headerEmoji, { backgroundColor: accentColor }]}>
-                            <Ionicons name="people" size={20} color="#fff" />
-                        </View>
-                        
-                        <View style={styles.headerTitleWrap}>
-                            <Text style={[styles.headerTitle, { color: isDark ? '#E9EDEF' : '#111B21' }]} numberOfLines={1}>
-                                {communityName}
-                            </Text>
-                            <Text style={[styles.headerSub, { color: isDark ? '#8696A0' : '#667781' }]}>
-                                {members.length} membros
-                            </Text>
-                        </View>
+
+                    {searchMode ? (
+                        <TextInput
+                            style={[styles.headerSearchInput, { color: isDark ? '#E9EDEF' : '#111B21', backgroundColor: isDark ? '#2A3942' : '#F0F2F5' }]}
+                            placeholder="Pesquisar nas mensagens..."
+                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            autoFocus
+                        />
+                    ) : (
+                        <Pressable
+                            onPress={() => navigation.navigate('CommunityDetail', {
+                                communityId,
+                                communityName,
+                                communityColor: accentColor,
+                                memberCount: members.length
+                            })}
+                            style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}
+                        >
+                            <View style={[styles.headerEmoji, { backgroundColor: accentColor }]}>
+                                <Ionicons name="people" size={20} color="#fff" />
+                            </View>
+                            <View style={styles.headerTitleWrap}>
+                                <Text style={[styles.headerTitle, { color: isDark ? '#E9EDEF' : '#111B21' }]} numberOfLines={1}>
+                                    {communityName}
+                                </Text>
+                                <Text style={[styles.headerSub, { color: isDark ? '#8696A0' : '#667781' }]}>
+                                    {members.length} membros
+                                </Text>
+                            </View>
+                        </Pressable>
+                    )}
+
+                    <Pressable onPress={() => { setSearchMode(v => !v); setSearchQuery(''); }} style={styles.headerBtn}>
+                        <Ionicons name={searchMode ? 'close' : 'search-outline'} size={22} color={isDark ? '#E9EDEF' : '#54656F'} />
                     </Pressable>
 
-                    <Pressable 
-                        onPress={() => navigation.navigate('CommunityDetail', {
-                            communityId,
-                            communityName,
-                            communityColor: accentColor,
-                            memberCount: members.length
-                        })}
-                        style={styles.headerBtn}
-                    >
-                        <Ionicons name="people-outline" size={22} color={isDark ? '#E9EDEF' : '#54656F'} />
-                    </Pressable>
-                    
-                    <Pressable onPress={handleLeave} style={styles.headerBtn}>
-                        <Ionicons name="exit-outline" size={22} color="#ef4444" />
-                    </Pressable>
+                    {!searchMode && (
+                        <>
+                            <Pressable
+                                onPress={() => navigation.navigate('CommunityDetail', {
+                                    communityId,
+                                    communityName,
+                                    communityColor: accentColor,
+                                    memberCount: members.length
+                                })}
+                                style={styles.headerBtn}
+                            >
+                                <Ionicons name="people-outline" size={22} color={isDark ? '#E9EDEF' : '#54656F'} />
+                            </Pressable>
+                            <Pressable onPress={handleLeave} style={styles.headerBtn}>
+                                <Ionicons name="exit-outline" size={22} color="#ef4444" />
+                            </Pressable>
+                        </>
+                    )}
                 </View>
             </SafeAreaView>
 
@@ -495,7 +516,12 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
             ) : (
                 <FlatList
                     ref={flatListRef}
-                    data={messagesWithSeparators}
+                    data={searchMode && searchQuery.trim()
+                        ? messagesWithSeparators.filter(item =>
+                            item.type === 'message' && item.data.content.toLowerCase().includes(searchQuery.toLowerCase())
+                          )
+                        : messagesWithSeparators
+                    }
                     keyExtractor={item => item.type === 'separator' ? item.id : item.data.id}
                     renderItem={renderItem}
                     contentContainerStyle={styles.list}
@@ -762,6 +788,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
     root: { flex: 1 },
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 0.5 },
+    headerSearchInput: { flex: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, fontSize: 14, fontFamily: 'Poppins_400Regular', marginHorizontal: 4 },
     headerBtn: { padding: 8 },
     headerEmoji: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
     headerTitleWrap: { flex: 1 },
