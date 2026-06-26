@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import AppNavigator from './navigation/AppNavigator';
 import { Provider } from 'react-redux';
 import { store } from './store';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -19,11 +19,44 @@ import OnboardingModal from './components/OnboardingModal';
 
 SplashScreen.preventAutoHideAsync();
 
-const ONBOARDING_KEY = '@alba_onboarding_done';
+function AppContent() {
+  const { user, loading } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const checkedUserId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      setShowOnboarding(false);
+      checkedUserId.current = null;
+      return;
+    }
+    if (checkedUserId.current === user.id) return;
+    checkedUserId.current = user.id;
+
+    AsyncStorage.getItem(`@alba_onboarding_done_${user.id}`).then(done => {
+      if (!done) setShowOnboarding(true);
+    });
+  }, [user, loading]);
+
+  const handleOnboardingDone = async () => {
+    if (user) {
+      await AsyncStorage.setItem(`@alba_onboarding_done_${user.id}`, 'true');
+    }
+    setShowOnboarding(false);
+  };
+
+  return (
+    <>
+      <StatusBar style="auto" />
+      <AppNavigator />
+      <OnboardingModal visible={showOnboarding} onDone={handleOnboardingDone} />
+    </>
+  );
+}
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     async function prepare() {
@@ -34,8 +67,6 @@ export default function App() {
           Poppins_600SemiBold,
           Poppins_700Bold,
         });
-        const done = await AsyncStorage.getItem(ONBOARDING_KEY);
-        if (!done) setShowOnboarding(true);
       } catch (e) {
         console.warn(e);
       } finally {
@@ -47,11 +78,6 @@ export default function App() {
     prepare();
   }, []);
 
-  const handleOnboardingDone = async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-    setShowOnboarding(false);
-  };
-
   if (!appIsReady) {
     return null;
   }
@@ -61,9 +87,7 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <StatusBar style="auto" />
-            <AppNavigator />
-            <OnboardingModal visible={showOnboarding} onDone={handleOnboardingDone} />
+            <AppContent />
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
