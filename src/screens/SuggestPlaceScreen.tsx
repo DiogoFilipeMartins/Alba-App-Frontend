@@ -4,6 +4,7 @@ import {
     Text,
     TextInput,
     Pressable,
+    TouchableOpacity,
     ScrollView,
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -290,13 +291,13 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                             
                             <View style={tw`flex-row mb-4 gap-3`}>
                                 {/* Professional Card */}
-                                <Pressable
+                                <TouchableOpacity
+                                    activeOpacity={0.75}
                                     onPress={() => setForm(f => ({ ...f, type: 'professional' }))}
-                                    android_ripple={{ color: 'rgba(22, 219, 101, 0.15)', borderless: false }}
                                     style={[
                                         styles.typeCard,
                                         { backgroundColor: colors.card, borderColor: form.type === 'professional' ? '#16db65' : colors.border },
-                                        form.type === 'professional' && { backgroundColor: 'rgba(22, 219, 101, 0.08)' }
+                                        form.type === 'professional' && { backgroundColor: 'rgba(22, 219, 101, 0.08)' },
                                     ]}
                                 >
                                     <View style={[styles.typeIconContainer, { backgroundColor: form.type === 'professional' ? '#16db65' : colors.border + '30' }]}>
@@ -304,16 +305,16 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                                     </View>
                                     <Text style={[styles.typeTitle, { color: colors.textPrimary }]}>Profissional</Text>
                                     <Text style={[styles.typeDesc, { color: colors.textSecondary }]}>Terapeutas, médicos e especialistas individuais.</Text>
-                                </Pressable>
+                                </TouchableOpacity>
 
                                 {/* Institution Card */}
-                                <Pressable
+                                <TouchableOpacity
+                                    activeOpacity={0.75}
                                     onPress={() => setForm(f => ({ ...f, type: 'institution' }))}
-                                    android_ripple={{ color: 'rgba(34, 197, 94, 0.15)', borderless: false }}
                                     style={[
                                         styles.typeCard,
                                         { backgroundColor: colors.card, borderColor: form.type === 'institution' ? '#22c55e' : colors.border },
-                                        form.type === 'institution' && { backgroundColor: 'rgba(34, 197, 94, 0.08)' }
+                                        form.type === 'institution' && { backgroundColor: 'rgba(34, 197, 94, 0.08)' },
                                     ]}
                                 >
                                     <View style={[styles.typeIconContainer, { backgroundColor: form.type === 'institution' ? '#22c55e' : colors.border + '30' }]}>
@@ -321,7 +322,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                                     </View>
                                     <Text style={[styles.typeTitle, { color: colors.textPrimary }]}>Instituição</Text>
                                     <Text style={[styles.typeDesc, { color: colors.textSecondary }]}>Escolas, associações, clínicas e centros de apoio.</Text>
-                                </Pressable>
+                                </TouchableOpacity>
                             </View>
 
                             <Text style={[styles.label, { color: colors.textSecondary }]}>NOME DO LOCAL OU PROFISSIONAL *</Text>
