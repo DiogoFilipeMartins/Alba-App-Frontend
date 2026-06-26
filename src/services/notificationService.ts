@@ -59,7 +59,11 @@ export const notificationService = {
 
             const tokenData = await Notifications.getExpoPushTokenAsync();
             return tokenData.data;
-        } catch (error) {
+        } catch (error: any) {
+            // Firebase not configured (Android dev build without google-services.json) — silent fail
+            if (error?.message?.includes('FirebaseApp') || error?.message?.includes('Firebase')) {
+                return null;
+            }
             console.warn('[Notifications] Erro ao obter push token:', error);
             return null;
         }
