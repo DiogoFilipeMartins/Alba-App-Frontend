@@ -6,6 +6,7 @@ ios/
 .DS_Store
 Thumbs.db
 .env*
+google-services.json
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
