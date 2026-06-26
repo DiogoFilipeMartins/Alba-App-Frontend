@@ -12,6 +12,7 @@ import {
     Pressable,
     Animated,
     Linking,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -320,7 +321,7 @@ export default function ChatbotScreen({ navigation, route }: Props) {
             return (
                 <View style={styles.botRow}>
                     <View style={[styles.botAvatar, { backgroundColor: colors.primary }]}>
-                        <Text style={styles.botAvatarText}>A</Text>
+                        <Image source={require('../../assets/AlbaAppLogoSemFundo.png')} style={styles.botAvatarImg} resizeMode="contain" />
                     </View>
                     <View style={[styles.botBubble, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <TypingIndicator color={colors.accent} />
@@ -366,7 +367,7 @@ export default function ChatbotScreen({ navigation, route }: Props) {
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <View style={[styles.headerAvatar, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.headerAvatarText}>A</Text>
+                    <Image source={require('../../assets/AlbaAppLogoSemFundo.png')} style={styles.headerAvatarImg} resizeMode="contain" />
                     <View style={styles.onlineDot} />
                 </View>
                 <View style={styles.headerInfo}>
@@ -469,7 +470,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         position: 'relative',
     },
-    headerAvatarText: { color: '#fff', fontSize: 18, fontFamily: 'Poppins_700Bold' },
+    headerAvatarImg: { width: 28, height: 28 },
     onlineDot: {
         position: 'absolute',
         bottom: 1,
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
         flexShrink: 0,
         marginTop: 2,
     },
-    botAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Poppins_700Bold' },
+    botAvatarImg: { width: 22, height: 22 },
     botContent: { flex: 1 },
     botBubble: {
         borderRadius: 20,
