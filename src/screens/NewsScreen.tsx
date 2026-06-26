@@ -180,8 +180,8 @@ export default function NewsScreen({}: Props) {
                         <View style={[styles.catBadge, { backgroundColor: catColor + '15' }]}>
                             <Text style={[styles.catBadgeText, { color: catColor }]}>{item.category}</Text>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            <Text style={[styles.cardMetaText, { color: colors.textMuted }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                            <Text style={[styles.cardMetaText, { color: colors.textMuted }]} numberOfLines={1}>
                                 {getReadingTime(item.content)}
                             </Text>
                             <Pressable 
@@ -528,11 +528,13 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 12,
+        gap: 8,
     },
     catBadge: {
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
+        flexShrink: 1,
     },
     catBadgeText: {
         fontSize: 11,
@@ -638,13 +640,15 @@ const styles = StyleSheet.create({
     },
     modalMetaRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
+        alignItems: 'flex-start',
+        flexWrap: 'wrap',
+        gap: 8,
         marginBottom: 16,
     },
     modalMetaText: {
         fontSize: 13,
         fontFamily: 'Poppins_500Medium',
+        flexShrink: 1,
     },
     modalTitle: {
         fontSize: 24,

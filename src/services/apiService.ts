@@ -179,6 +179,7 @@ export interface NewsItem {
     description: string;
     content: string;
     category: string;
+    approved?: boolean;
     imageUrl?: string;
     sourceName: string;
     sourceUrl?: string;
@@ -560,6 +561,18 @@ export const apiService = {
         );
         const params = new URLSearchParams(cleanFilters as any).toString();
         return apiFetch(`/news?${params}`);
+    },
+
+    async getAdminNews(): Promise<NewsItem[]> {
+        return apiFetch('/admin/news');
+    },
+
+    async moderateNews(id: string, approved: boolean): Promise<NewsItem> {
+        return apiFetch(`/admin/news/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ approved }),
+        });
     },
 
     // Reviews

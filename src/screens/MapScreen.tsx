@@ -58,8 +58,6 @@ export default function MapScreen({ navigation, route }: Props) {
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [showSuggestBtn, setShowSuggestBtn] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [smartResults, setSmartResults] = useState<Place[] | null>(null);
-  const [smartSearching, setSmartSearching] = useState(false);
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const cameraRef = React.useRef<CameraRef | null>(null);
@@ -121,9 +119,7 @@ export default function MapScreen({ navigation, route }: Props) {
 
   const fetchData = async () => {
     try {
-      console.log('[MapScreen] A pedir permissões de localização...');
       const { status } = await Location.requestForegroundPermissionsAsync();
-      console.log('[MapScreen] Permissão de localização:', status);
       if (status !== 'granted') {
         setErrorMsg('Permissão de acesso à localização negada.');
         setLoading(false);
@@ -153,14 +149,10 @@ export default function MapScreen({ navigation, route }: Props) {
   const loadMapboxToken = async () => {
     const FALLBACK_TOKEN = 'pk.eyJ1IjoiZGlvZ29hb20iLCJhIjoiY21xc2NxNG5hMDZrYzMyczZhdXk3MWNjdiJ9.r5JNit1Q11FrpwaONflZTQ';
     try {
-      console.log('[MapboxDebug] A buscar token do Mapbox...');
       const res = await apiService.getMapboxToken();
-      console.log('[MapboxDebug] Resposta do backend:', res);
       if (res && res.token && !res.token.startsWith('pk.mock_')) {
-        console.log('[MapboxDebug] Token válido obtido com sucesso!');
         setMapboxToken(res.token);
       } else {
-        console.warn('[MapboxDebug] Token recebido é inválido ou mock. A usar fallback...');
         setMapboxToken(FALLBACK_TOKEN);
       }
     } catch (error) {
@@ -266,23 +258,6 @@ export default function MapScreen({ navigation, route }: Props) {
 
 
 
-  const handleSmartSearch = async () => {
-    if (!searchQuery.trim()) {
-      setSmartResults(null);
-      return;
-    }
-
-    try {
-      setSmartSearching(true);
-      const results = await apiService.searchPlaces(searchQuery.trim());
-      setSmartResults(results);
-    } catch (error: any) {
-      showAlert('Erro', error?.message || 'Não foi possível executar a pesquisa inteligente.', 'alert-circle-outline', '#ef4444');
-    } finally {
-      setSmartSearching(false);
-    }
-  };
-
   const handleToggleFavorite = async () => {
     if (!selectedPlace) {
       return;
@@ -321,7 +296,7 @@ export default function MapScreen({ navigation, route }: Props) {
     await Linking.openURL(supported ? primaryUrl : fallbackUrl);
   };
 
-  const placesToRender = smartResults ?? places;
+  const placesToRender = places;
 
   const filteredPlaces = (() => {
     const userLat = location?.coords.latitude;
@@ -371,7 +346,6 @@ export default function MapScreen({ navigation, route }: Props) {
 
   const isSelectedFavorite = selectedPlace ? favoriteIds.includes(selectedPlace.id) : false;
 
-  console.log(`[Frontend] Locais após filtro: ${filteredPlaces.length}`);
 
   const centerOnUser = async () => {
     if (location && cameraRef.current) {
@@ -580,26 +554,20 @@ export default function MapScreen({ navigation, route }: Props) {
             placeholder="Pesquisar..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
-            onChangeText={(value) => {
-              setSearchQuery(value);
-              if (!value.trim()) {
-                setSmartResults(null);
-              }
-            }}
+            onChangeText={setSearchQuery}
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            onSubmitEditing={handleSmartSearch}
+            returnKeyType="search"
           />
           {searchQuery !== '' && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={{ marginRight: 10 }}>
               <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={handleSmartSearch} style={styles.filterBtn}>
-            {smartSearching ? (
-              <ActivityIndicator size="small" color={colors.accent} />
-            ) : (
-              <MaterialCommunityIcons name="creation" size={20} color={smartResults ? colors.accent : colors.textSecondary} />
-            )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Chatbot', { initialMessage: searchQuery.trim() || undefined })}
+            style={styles.filterBtn}
+          >
+            <MaterialCommunityIcons name="creation" size={20} color={colors.accent} />
           </TouchableOpacity>
           <View style={{ width: 1, height: 24, backgroundColor: colors.border, marginHorizontal: 10 }} />
           <TouchableOpacity onPress={() => setShowFilterModal(true)} style={styles.filterBtn}>
@@ -617,12 +585,10 @@ export default function MapScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {(smartResults || activeFilter === 'Favoritos' || activeFilter === 'Próximos') && (
+        {(activeFilter === 'Favoritos' || activeFilter === 'Próximos') && (
           <View style={[styles.smartHint, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.smartHintText, { color: colors.textSecondary }]}>
-              {smartResults
-                ? `Pesquisa inteligente activa: ${filteredPlaces.length} resultado(s)`
-                : activeFilter === 'Próximos'
+              {activeFilter === 'Próximos'
                 ? `${filteredPlaces.length} locais mais próximos`
                 : `Filtro de favoritos activo: ${filteredPlaces.length} local(is)`}
             </Text>

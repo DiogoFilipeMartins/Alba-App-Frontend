@@ -159,7 +159,14 @@ export default function DirectoryScreen({ navigation }: Props) {
 
     return (
       <TouchableOpacity
-        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+        style={[
+          styles.card,
+          {
+            backgroundColor: isClaimedAndVerified ? (isDark ? '#0a1f0f' : '#f0fdf4') : colors.card,
+            borderColor: isClaimedAndVerified ? '#22c55e' : colors.border,
+            borderWidth: isClaimedAndVerified ? 1.5 : 1,
+          }
+        ]}
         onPress={() => navigation.navigate('PlaceProfile', { placeId: item.id, place: item })}
         activeOpacity={0.7}
       >
@@ -176,9 +183,6 @@ export default function DirectoryScreen({ navigation }: Props) {
               <Text style={[styles.title, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
                 {item.name}
               </Text>
-              {isClaimedAndVerified && (
-                <Ionicons name="shield-checkmark" size={16} color="#22c55e" />
-              )}
             </View>
             <View style={styles.typeRow}>
               <Text style={[styles.typeLabel, { color: item.type === 'professional' ? colors.accent : '#3b82f6' }]}>
@@ -191,6 +195,12 @@ export default function DirectoryScreen({ navigation }: Props) {
                 </>
               ) : null}
             </View>
+            {isClaimedAndVerified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="shield-checkmark" size={12} color="#16a34a" />
+                <Text style={styles.verifiedBadgeText}>Verificado pela Alba</Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             style={styles.favBtn}
@@ -439,6 +449,22 @@ const styles = StyleSheet.create({
   city: {
     fontSize: 12,
     fontFamily: 'Poppins_400Regular',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginTop: 5,
+  },
+  verifiedBadgeText: {
+    fontSize: 11,
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#16a34a',
   },
   favBtn: {
     paddingLeft: 10,

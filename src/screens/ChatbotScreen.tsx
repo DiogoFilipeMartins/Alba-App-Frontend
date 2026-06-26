@@ -143,7 +143,7 @@ function PlaceCard({ place, colors }: { place: Place; colors: any }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ChatbotScreen({ navigation }: Props) {
+export default function ChatbotScreen({ navigation, route }: Props) {
     const { colors, isDark } = useTheme();
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -157,6 +157,7 @@ export default function ChatbotScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(false);
     const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const listRef = useRef<FlatList>(null);
+    const initialMessageHandled = useRef(false);
 
     const scrollToBottom = useCallback(() => {
         setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -169,7 +170,7 @@ export default function ChatbotScreen({ navigation }: Props) {
     useEffect(() => {
         (async () => {
             try {
-                const { status } = await Location.requestForegroundPermissionsAsync();
+                const { status } = await Location.getForegroundPermissionsAsync();
                 if (status !== 'granted') return;
                 const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
                 setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
@@ -177,7 +178,41 @@ export default function ChatbotScreen({ navigation }: Props) {
         })();
     }, []);
 
+    useEffect(() => {
+        const msg = (route?.params as any)?.initialMessage;
+        if (msg && !initialMessageHandled.current) {
+            initialMessageHandled.current = true;
+            setInput(msg);
+        }
+    }, [route?.params]);
+
     const [history, setHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+
+    const LOCATION_KEYWORDS = [
+        'perto', 'próximo', 'próxima', 'próximos', 'próximas',
+        'perto de mim', 'ao pé de mim', 'na minha zona', 'na minha área',
+        'aqui', 'onde estou', 'minha cidade', 'mais próximo', 'mais próxima',
+        'localização', 'distância', 'a quanto', 'chegar a',
+    ];
+
+    const needsLocation = (text: string) => {
+        const lower = text.toLowerCase();
+        return LOCATION_KEYWORDS.some(kw => lower.includes(kw));
+    };
+
+    const resolveLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
+        if (userLocation) return userLocation;
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') return null;
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+            setUserLocation(coords);
+            return coords;
+        } catch {
+            return null;
+        }
+    };
 
     const sendMessage = useCallback(async (text: string) => {
         const query = text.trim();
@@ -206,8 +241,26 @@ export default function ChatbotScreen({ navigation }: Props) {
             { role: 'user', content: query },
         ];
 
+        let locationToUse = userLocation;
+        if (needsLocation(query) && !userLocation) {
+            locationToUse = await resolveLocation();
+            if (!locationToUse) {
+                setMessages(prev => {
+                    const withoutTyping = prev.filter(m => m.id !== 'typing');
+                    return [...withoutTyping, {
+                        id: Date.now().toString() + '-loc',
+                        role: 'bot' as const,
+                        text: 'Para te sugerir locais próximos preciso de acesso à tua localização. Podes ativá-la nas definições do telemóvel e tentar novamente.',
+                        timestamp: new Date(),
+                    }];
+                });
+                setLoading(false);
+                return;
+            }
+        }
+
         try {
-            const chatRes = await apiService.sendChatMessage(newHistory, userLocation);
+            const chatRes = await apiService.sendChatMessage(newHistory, locationToUse);
 
             const updatedHistory: { role: 'user' | 'assistant'; content: string }[] = [
                 ...newHistory,

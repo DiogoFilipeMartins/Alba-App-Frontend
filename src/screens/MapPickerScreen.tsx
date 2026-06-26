@@ -39,14 +39,10 @@ export default function MapPickerScreen({ navigation, route }: Props) {
         (async () => {
             const FALLBACK_TOKEN = 'pk.eyJ1IjoiZGlvZ29hb20iLCJhIjoiY21xc2NxNG5hMDZrYzMyczZhdXk3MWNjdiJ9.r5JNit1Q11FrpwaONflZTQ';
             try {
-                console.log('[MapPickerDebug] A buscar token do Mapbox...');
                 const res = await apiService.getMapboxToken();
-                console.log('[MapPickerDebug] Resposta do backend:', res);
                 if (res && res.token && !res.token.startsWith('pk.mock_')) {
-                    console.log('[MapPickerDebug] Token válido obtido com sucesso!');
                     setMapboxToken(res.token);
                 } else {
-                    console.warn('[MapPickerDebug] Token recebido é inválido ou mock. A usar fallback...');
                     setMapboxToken(FALLBACK_TOKEN);
                 }
             } catch (e) {

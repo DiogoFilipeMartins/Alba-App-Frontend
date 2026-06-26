@@ -36,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (token) {
         pushTokenRef.current = token;
         await apiService.registerPushToken(token);
-        console.log('[Auth] Push token registado:', token.slice(-10));
       }
     } catch (err) {
       console.warn('[Auth] Erro ao registar push token:', err);

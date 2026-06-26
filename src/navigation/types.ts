@@ -19,7 +19,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Map: { focusPlaceId?: string } | undefined;
-  Chatbot: undefined;
+  Chatbot: { initialMessage?: string } | undefined;
   Communities: undefined;
   Calendar: undefined;
   Profile: undefined;

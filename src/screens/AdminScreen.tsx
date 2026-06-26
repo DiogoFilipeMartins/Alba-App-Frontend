@@ -8,10 +8,11 @@ import {
     Modal,
     TextInput,
     ScrollView,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
-import { apiService, Place, DonationCampaign } from '../services/apiService';
+import { apiService, Place, DonationCampaign, NewsItem } from '../services/apiService';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import CustomAlertModal from '../components/CustomAlertModal';
@@ -22,6 +23,7 @@ const MAIN_TABS = [
     { key: 'places', label: 'Locais' },
     { key: 'users', label: 'Utilizadores' },
     { key: 'campaigns', label: 'Campanhas' },
+    { key: 'news', label: 'Notícias' },
 ] as const;
 
 const STATUS_TABS = [
@@ -30,8 +32,15 @@ const STATUS_TABS = [
     { key: 'rejected', label: 'Rejeitados' },
 ] as const;
 
+const NEWS_FILTER_TABS = [
+    { key: 'all', label: 'Todas' },
+    { key: 'approved', label: 'Aprovadas' },
+    { key: 'rejected', label: 'Rejeitadas' },
+] as const;
+
 type MainTabKey = typeof MAIN_TABS[number]['key'];
 type StatusKey = typeof STATUS_TABS[number]['key'];
+type NewsFilterKey = typeof NEWS_FILTER_TABS[number]['key'];
 
 const TYPE_LABEL = { professional: 'Profissional', institution: 'Instituição' };
 const TYPE_COLOR = { professional: '#3b82f6', institution: '#22c55e' };
@@ -42,6 +51,8 @@ export default function AdminScreen({ navigation }: Props) {
     const [places, setPlaces] = useState<Place[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [campaigns, setCampaigns] = useState<DonationCampaign[]>([]);
+    const [newsArticles, setNewsArticles] = useState<NewsItem[]>([]);
+    const [newsFilter, setNewsFilter] = useState<NewsFilterKey>('all');
     const [loading, setLoading] = useState(true);
     const [pendingCount, setPendingCount] = useState(0);
 
@@ -93,6 +104,18 @@ export default function AdminScreen({ navigation }: Props) {
         }
     }, []);
 
+    const fetchAdminNews = useCallback(async () => {
+        try {
+            setLoading(true);
+            const data = await apiService.getAdminNews();
+            setNewsArticles(data ?? []);
+        } catch (e) {
+            showAlert({ title: 'Erro', message: 'Não foi possível carregar as notícias.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     const fetchPendingCount = async () => {
         try {
             const { count } = await apiService.getPendingPlacesCount();
@@ -110,7 +133,8 @@ export default function AdminScreen({ navigation }: Props) {
         if (mainTab === 'places') fetchPlaces();
         else if (mainTab === 'users') fetchUsers();
         else if (mainTab === 'campaigns') fetchCampaigns();
-    }, [mainTab, fetchPlaces, fetchUsers, fetchCampaigns]);
+        else if (mainTab === 'news') fetchAdminNews();
+    }, [mainTab, fetchPlaces, fetchUsers, fetchCampaigns, fetchAdminNews]);
 
     const updatePlaceStatus = async (id: string, newStatus: string) => {
         try {
@@ -233,6 +257,72 @@ export default function AdminScreen({ navigation }: Props) {
         } catch (e: any) {
             showAlert({ title: 'Erro', message: e.message, icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
         }
+    };
+
+    const moderateNewsItem = (id: string, approved: boolean, currentApproved?: boolean) => {
+        if (currentApproved === approved) return;
+        const verb = approved ? 'aprovar' : 'rejeitar';
+        showAlert({
+            title: `Confirmar ${verb}`,
+            message: `Queres ${verb} esta notícia?`,
+            icon: approved ? 'checkmark-circle' : 'close-circle',
+            iconColor: approved ? '#22c55e' : '#ef4444',
+            primaryButton: {
+                text: approved ? 'Aprovar' : 'Rejeitar',
+                onPress: async () => {
+                    try {
+                        await apiService.moderateNews(id, approved);
+                        setNewsArticles(prev => prev.map(a => a.id === id ? { ...a, approved } : a));
+                    } catch (e: any) {
+                        showAlert({ title: 'Erro', message: e.message || 'Não foi possível moderar a notícia.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
+                    }
+                },
+                destructive: !approved,
+            },
+            secondaryButton: { text: 'Cancelar', onPress: () => {} },
+        });
+    };
+
+    const renderNewsItem = ({ item }: { item: NewsItem }) => {
+        const isApproved = item.approved !== false;
+        const date = item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('pt-PT') : '';
+        return (
+            <View style={tw`bg-[#1a1a1a] rounded-2xl border border-[#058c42]/20 p-4 mb-3`}>
+                {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={tw`w-full h-32 rounded-xl mb-3`} resizeMode="cover" />
+                ) : null}
+                <View style={tw`flex-row items-center justify-between mb-2`}>
+                    <View style={tw`bg-[#058c42]/20 px-2 py-0.5 rounded-full`}>
+                        <Text style={tw`text-[#058c42] text-xs font-semibold`}>{item.category || 'Geral'}</Text>
+                    </View>
+                    <Text style={tw`text-gray-500 text-xs`}>{date}</Text>
+                </View>
+                <Text style={tw`text-white font-bold text-sm mb-1`} numberOfLines={2}>{item.title}</Text>
+                {item.sourceName ? <Text style={tw`text-gray-500 text-xs mb-3`}>{item.sourceName}</Text> : null}
+                <View style={tw`flex-row gap-2`}>
+                    <Pressable
+                        onPress={() => moderateNewsItem(item.id, true, item.approved)}
+                        style={[
+                            tw`flex-1 rounded-xl py-2 items-center flex-row justify-center border`,
+                            isApproved ? tw`bg-green-600/30 border-green-600` : tw`bg-[#111] border-[#333]`,
+                        ]}
+                    >
+                        <Ionicons name="checkmark-circle" size={14} color={isApproved ? '#22c55e' : '#6b7280'} />
+                        <Text style={[tw`font-semibold ml-1.5 text-xs`, { color: isApproved ? '#22c55e' : '#6b7280' }]}>Aprovar</Text>
+                    </Pressable>
+                    <Pressable
+                        onPress={() => moderateNewsItem(item.id, false, item.approved)}
+                        style={[
+                            tw`flex-1 rounded-xl py-2 items-center flex-row justify-center border`,
+                            !isApproved ? tw`bg-red-600/30 border-red-600` : tw`bg-[#111] border-[#333]`,
+                        ]}
+                    >
+                        <Ionicons name="close-circle" size={14} color={!isApproved ? '#ef4444' : '#6b7280'} />
+                        <Text style={[tw`font-semibold ml-1.5 text-xs`, { color: !isApproved ? '#ef4444' : '#6b7280' }]}>Rejeitar</Text>
+                    </Pressable>
+                </View>
+            </View>
+        );
     };
 
     const renderPlace = ({ item }: { item: Place }) => {
@@ -386,15 +476,23 @@ export default function AdminScreen({ navigation }: Props) {
         );
     };
 
+    const getFilteredNews = () => {
+        if (newsFilter === 'approved') return newsArticles.filter(a => a.approved !== false);
+        if (newsFilter === 'rejected') return newsArticles.filter(a => a.approved === false);
+        return newsArticles;
+    };
+
     const getCurrentData = () => {
         if (mainTab === 'places') return places;
         if (mainTab === 'users') return users;
+        if (mainTab === 'news') return getFilteredNews();
         return campaigns;
     };
 
     const getCurrentRender = () => {
         if (mainTab === 'places') return renderPlace as any;
         if (mainTab === 'users') return renderUser as any;
+        if (mainTab === 'news') return renderNewsItem as any;
         return renderCampaign as any;
     };
 
@@ -414,7 +512,8 @@ export default function AdminScreen({ navigation }: Props) {
                 <Pressable onPress={() => {
                     if (mainTab === 'places') fetchPlaces();
                     else if (mainTab === 'users') fetchUsers();
-                    else fetchCampaigns();
+                    else if (mainTab === 'campaigns') fetchCampaigns();
+                    else fetchAdminNews();
                 }} style={tw`p-2`}>
                     <Ionicons name="refresh" size={22} color="#9ca3af" />
                 </Pressable>
@@ -465,6 +564,26 @@ export default function AdminScreen({ navigation }: Props) {
                 </View>
             )}
 
+            {/* Sub-tabs for News */}
+            {mainTab === 'news' && (
+                <View style={tw`flex-row px-5 mb-4`}>
+                    {NEWS_FILTER_TABS.map((t) => (
+                        <Pressable
+                            key={t.key}
+                            onPress={() => setNewsFilter(t.key)}
+                            style={[
+                                tw`flex-1 items-center py-2 rounded-xl mr-2`,
+                                newsFilter === t.key ? tw`bg-[#058c42]/30 border border-[#058c42]` : tw`bg-[#111] border border-[#333]`,
+                            ]}
+                        >
+                            <Text style={[tw`font-semibold text-xs`, newsFilter === t.key ? tw`text-green-400` : tw`text-gray-500`]}>
+                                {t.label}
+                            </Text>
+                        </Pressable>
+                    ))}
+                </View>
+            )}
+
             {/* List */}
             {loading ? (
                 <View style={tw`flex-1 items-center justify-center`}>
@@ -484,6 +603,7 @@ export default function AdminScreen({ navigation }: Props) {
                             <Text style={tw`text-gray-500 mt-3 text-base`}>
                                 {mainTab === 'places' ? `Nenhum local ${STATUS_TABS.find((t) => t.key === statusTab)?.label.toLowerCase()}`
                                     : mainTab === 'users' ? 'Nenhum utilizador encontrado'
+                                    : mainTab === 'news' ? 'Nenhuma notícia encontrada'
                                     : 'Nenhuma campanha criada'}
                             </Text>
                         </View>
