@@ -9,7 +9,6 @@ import {
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator,
-    Alert,
     Modal,
     TouchableOpacity,
     Image,
@@ -26,6 +25,7 @@ import { notificationService } from '../services/notificationService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import Clipboard from '@react-native-clipboard/clipboard';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CommunityChat'>;
 
@@ -86,6 +86,9 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
 
     const accentColor = communityColor || colors.primary;
     const flatListRef = useRef<FlatList>(null);
+    const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any, secondaryButton: undefined as any });
+    const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+    const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
 
     const knownMessageIdsRef = useRef<Set<string>>(new Set());
     const isInitialLoadRef = useRef(true);
@@ -173,38 +176,48 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
     };
 
     const handleDelete = async (msg: CommunityMessage) => {
-        Alert.alert('Apagar mensagem', 'Tens a certeza que queres apagar esta mensagem?', [
-            { text: 'Cancelar', style: 'cancel' },
-            {
-                text: 'Apagar', style: 'destructive',
+        showAlert({
+            title: 'Apagar mensagem',
+            message: 'Tens a certeza que queres apagar esta mensagem?',
+            icon: 'trash',
+            iconColor: '#ef4444',
+            primaryButton: {
+                text: 'Apagar',
                 onPress: async () => {
                     try {
                         await apiService.deleteCommunityMessage(communityId, msg.id);
                         setMessages(prev => prev.filter(m => m.id !== msg.id));
                         setContextMsg(null);
                     } catch (e: any) {
-                        Alert.alert('Erro', e.message || 'Não foi possível apagar.');
+                        showAlert({ title: 'Erro', message: e.message || 'Não foi possível apagar.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
                     }
                 },
+                destructive: true,
             },
-        ]);
+            secondaryButton: { text: 'Cancelar', onPress: () => {} },
+        });
     };
 
     const handleLeave = () => {
-        Alert.alert('Sair da Comunidade', 'Tens a certeza que queres sair desta comunidade?', [
-            { text: 'Cancelar', style: 'cancel' },
-            {
-                text: 'Sair', style: 'destructive',
+        showAlert({
+            title: 'Sair da Comunidade',
+            message: 'Tens a certeza que queres sair desta comunidade?',
+            icon: 'people',
+            iconColor: '#ef4444',
+            primaryButton: {
+                text: 'Sair',
                 onPress: async () => {
                     try {
                         await apiService.leaveCommunity(communityId);
                         navigation.goBack();
                     } catch (error: any) {
-                        Alert.alert('Erro', error?.message || 'Não foi possível sair.');
+                        showAlert({ title: 'Erro', message: error?.message || 'Não foi possível sair.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
                     }
                 },
+                destructive: true,
             },
-        ]);
+            secondaryButton: { text: 'Cancelar', onPress: () => {} },
+        });
     };
 
     // Emoji select handler
@@ -331,7 +344,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                     {parsed.type === 'document' && (
                         <View style={styles.richDocContainer}>
                             <Pressable 
-                                onPress={() => Alert.alert('Download', `A descarregar o ficheiro "${parsed.name}"...`)}
+                                onPress={() => showAlert({ title: 'Download', message: `A descarregar o ficheiro "${parsed.name}"...`, icon: 'download', iconColor: '#3b82f6', primaryButton: undefined, secondaryButton: undefined })}
                                 style={[styles.docCard, { backgroundColor: isDark ? '#1C2C34' : '#F0F2F5' }]}
                             >
                                 <Ionicons name="document" size={30} color="#8b5cf6" />
@@ -526,7 +539,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                         </Pressable>
 
                         {/* Audio */}
-                        <Pressable onPress={() => { setShowAttachmentMenu(false); Alert.alert('Áudio', 'Enviar notas de voz temporariamente indisponível.'); }} style={styles.attachItem}>
+                        <Pressable onPress={() => { setShowAttachmentMenu(false); showAlert({ title: 'Áudio', message: 'Enviar notas de voz temporariamente indisponível.', icon: 'musical-notes', iconColor: '#f59e0b', primaryButton: undefined, secondaryButton: undefined }); }} style={styles.attachItem}>
                             <View style={[styles.attachCircle, { backgroundColor: '#FF8A00' }]}>
                                 <Ionicons name="musical-notes" size={22} color="#FFF" />
                             </View>
@@ -731,6 +744,17 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                     </View>
                 </Pressable>
             </Modal>
+
+            <CustomAlertModal
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                icon={alertState.icon}
+                iconColor={alertState.iconColor}
+                primaryButton={alertState.primaryButton}
+                secondaryButton={alertState.secondaryButton}
+                onClose={closeAlert}
+            />
         </KeyboardAvoidingView>
     );
 }

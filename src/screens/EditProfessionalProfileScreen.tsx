@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TextInput,
-    Pressable, ActivityIndicator, Alert,
+    Pressable, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EditProfessionalProfile'>;
 
@@ -24,6 +25,9 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
     const [hours, setHours] = useState(profile?.hours || '');
     const [experience, setExperience] = useState(profile?.experience || '');
     const [saving, setSaving] = useState(false);
+    const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any });
+    const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+    const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
 
     const accountType = profile?.account_type;
     const verified = profile?.verified === true;
@@ -43,10 +47,9 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
                 experience: experience.trim() || undefined,
             });
             await refreshProfile();
-            Alert.alert('Guardado', 'O teu perfil foi atualizado.');
-            navigation.goBack();
+            showAlert({ title: 'Guardado', message: 'O teu perfil foi atualizado.', icon: 'checkmark-circle', iconColor: '#22c55e', primaryButton: { text: 'OK', onPress: () => navigation.goBack() } });
         } catch (e: any) {
-            Alert.alert('Erro', e.message || 'Não foi possível guardar as alterações.');
+            showAlert({ title: 'Erro', message: e.message || 'Não foi possível guardar as alterações.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
         } finally {
             setSaving(false);
         }
@@ -229,6 +232,16 @@ export default function EditProfessionalProfileScreen({ navigation }: Props) {
                     }
                 </Pressable>
             </ScrollView>
+
+            <CustomAlertModal
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                icon={alertState.icon}
+                iconColor={alertState.iconColor}
+                primaryButton={alertState.primaryButton}
+                onClose={closeAlert}
+            />
         </SafeAreaView>
     );
 }

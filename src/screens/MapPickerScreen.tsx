@@ -5,7 +5,6 @@ import {
     Pressable,
     StyleSheet,
     ActivityIndicator,
-    Alert,
     Platform,
 } from 'react-native';
 import { Map, Camera, UserLocation, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
@@ -16,6 +15,7 @@ import tw from 'twrnc';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { apiService } from '../services/apiService';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MapPicker'>;
 
@@ -23,6 +23,9 @@ export default function MapPickerScreen({ navigation, route }: Props) {
     const [mapboxToken, setMapboxToken] = useState<string | null>(null);
     const [styleJSON, setStyleJSON] = useState<any>(null);
     const initial = route.params?.initialCoords ?? null;
+    const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any });
+    const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+    const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
 
     const [marker, setMarker] = useState<{ latitude: number; longitude: number } | null>(
         initial ? { latitude: initial.lat, longitude: initial.lng } : null
@@ -93,7 +96,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
             setLocLoading(true);
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('Permissão negada', 'Precisamos de acesso à localização.');
+                showAlert({ title: 'Permissão negada', message: 'Precisamos de acesso à localização para te centrar no mapa.', icon: 'location', iconColor: '#f59e0b', primaryButton: undefined });
                 return;
             }
             const loc = await Location.getCurrentPositionAsync({});
@@ -103,7 +106,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 duration: 500,
             });
         } catch (e) {
-            Alert.alert('Erro', 'Não foi possível obter a localização.');
+            showAlert({ title: 'Erro', message: 'Não foi possível obter a localização.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
         } finally {
             setLocLoading(false);
         }
@@ -111,7 +114,7 @@ export default function MapPickerScreen({ navigation, route }: Props) {
 
     const handleConfirm = () => {
         if (!marker) {
-            Alert.alert('Nenhum ponto selecionado', 'Toca no mapa para escolher a localização.');
+            showAlert({ title: 'Nenhum ponto selecionado', message: 'Toca no mapa para escolher a localização.', icon: 'map', iconColor: '#f59e0b', primaryButton: undefined });
             return;
         }
         (navigation as any).navigate('Main', {
@@ -212,6 +215,16 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                     </View>
                 </Pressable>
             </View>
+
+            <CustomAlertModal
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                icon={alertState.icon}
+                iconColor={alertState.iconColor}
+                primaryButton={alertState.primaryButton}
+                onClose={closeAlert}
+            />
         </View>
     );
 }

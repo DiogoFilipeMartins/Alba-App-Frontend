@@ -5,7 +5,6 @@ import {
     Pressable,
     FlatList,
     ActivityIndicator,
-    Alert,
     Modal,
     TextInput,
     ScrollView,
@@ -15,6 +14,7 @@ import tw from 'twrnc';
 import { apiService, Place, DonationCampaign } from '../services/apiService';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Admin'>;
 
@@ -45,6 +45,10 @@ export default function AdminScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(true);
     const [pendingCount, setPendingCount] = useState(0);
 
+    const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any, secondaryButton: undefined as any });
+    const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+    const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
+
     // Campaign form modal
     const [campaignModal, setCampaignModal] = useState(false);
     const [editingCampaign, setEditingCampaign] = useState<DonationCampaign | null>(null);
@@ -59,7 +63,7 @@ export default function AdminScreen({ navigation }: Props) {
             const data = await apiService.getPlaces({ status: statusTab });
             setPlaces(data ?? []);
         } catch (e) {
-            Alert.alert('Erro', 'Não foi possível carregar os locais.');
+            showAlert({ title: 'Erro', message: 'Não foi possível carregar os locais.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
         } finally {
             setLoading(false);
         }
@@ -71,7 +75,7 @@ export default function AdminScreen({ navigation }: Props) {
             const data = await apiService.getAdminUsers();
             setUsers(data ?? []);
         } catch (e) {
-            Alert.alert('Erro', 'Não foi possível carregar os utilizadores.');
+            showAlert({ title: 'Erro', message: 'Não foi possível carregar os utilizadores.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
         } finally {
             setLoading(false);
         }
@@ -83,7 +87,7 @@ export default function AdminScreen({ navigation }: Props) {
             const data = await apiService.getAdminCampaigns();
             setCampaigns(data ?? []);
         } catch (e) {
-            Alert.alert('Erro', 'Não foi possível carregar as campanhas.');
+            showAlert({ title: 'Erro', message: 'Não foi possível carregar as campanhas.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
         } finally {
             setLoading(false);
         }
@@ -114,58 +118,66 @@ export default function AdminScreen({ navigation }: Props) {
             setPlaces((prev) => prev.filter((p) => p.id !== id));
             if (statusTab === 'pending') setPendingCount((c) => Math.max(0, c - 1));
         } catch (e: any) {
-            Alert.alert('Erro', e.message || 'Não foi possível atualizar o estado.');
+            showAlert({ title: 'Erro', message: e.message || 'Não foi possível atualizar o estado.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
         }
     };
 
     const confirmPlaceAction = (id: string, newStatus: string, name: string) => {
         const verb = newStatus === 'approved' ? 'aprovar' : 'rejeitar';
-        Alert.alert(`Confirmar ${verb}`, `Tens a certeza que queres ${verb} "${name}"?`, [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: newStatus === 'approved' ? 'Aprovar' : 'Rejeitar', onPress: () => updatePlaceStatus(id, newStatus) },
-        ]);
+        showAlert({
+            title: `Confirmar ${verb}`,
+            message: `Tens a certeza que queres ${verb} "${name}"?`,
+            icon: newStatus === 'approved' ? 'checkmark-circle' : 'close-circle',
+            iconColor: newStatus === 'approved' ? '#22c55e' : '#ef4444',
+            primaryButton: { text: newStatus === 'approved' ? 'Aprovar' : 'Rejeitar', onPress: () => updatePlaceStatus(id, newStatus), destructive: newStatus === 'rejected' },
+            secondaryButton: { text: 'Cancelar', onPress: () => {} },
+        });
     };
 
     const toggleUserRole = (user: any) => {
         const newRole = user.role === 'admin' ? 'user' : 'admin';
-        const action = newRole === 'admin' ? 'promover a Admin' : 'remover de Admin';
-        Alert.alert(`${action}`, `Queres ${action} "${user.full_name || user.email}"?`, [
-            { text: 'Cancelar', style: 'cancel' },
-            {
+        const action = newRole === 'admin' ? 'Promover a Admin' : 'Remover de Admin';
+        showAlert({
+            title: action,
+            message: `Queres ${action.toLowerCase()} "${user.full_name || user.email}"?`,
+            icon: 'person',
+            iconColor: '#f59e0b',
+            primaryButton: {
                 text: 'Confirmar',
                 onPress: async () => {
                     try {
                         const updated = await apiService.updateUserRole(user.id, newRole);
                         setUsers(prev => prev.map(u => u.id === user.id ? updated : u));
                     } catch (e: any) {
-                        Alert.alert('Erro', e.message || 'Não foi possível alterar o role.');
+                        showAlert({ title: 'Erro', message: e.message || 'Não foi possível alterar o role.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
                     }
-                }
+                },
             },
-        ]);
+            secondaryButton: { text: 'Cancelar', onPress: () => {} },
+        });
     };
 
     const toggleUserVerification = (user: any) => {
         const nextStatus = !user.verified;
         const action = nextStatus ? 'verificar' : 'remover verificação de';
-        Alert.alert(
-            nextStatus ? 'Verificar Conta' : 'Remover Verificação',
-            `Queres ${action} o perfil de "${user.full_name || user.email}"?`,
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Confirmar',
-                    onPress: async () => {
-                        try {
-                            const updated = await apiService.updateUserVerification(user.id, nextStatus);
-                            setUsers(prev => prev.map(u => u.id === user.id ? updated : u));
-                        } catch (e: any) {
-                            Alert.alert('Erro', e.message || 'Não foi possível alterar a verificação.');
-                        }
+        showAlert({
+            title: nextStatus ? 'Verificar Conta' : 'Remover Verificação',
+            message: `Queres ${action} o perfil de "${user.full_name || user.email}"?`,
+            icon: nextStatus ? 'shield-checkmark' : 'shield-outline',
+            iconColor: nextStatus ? '#22c55e' : '#f59e0b',
+            primaryButton: {
+                text: 'Confirmar',
+                onPress: async () => {
+                    try {
+                        const updated = await apiService.updateUserVerification(user.id, nextStatus);
+                        setUsers(prev => prev.map(u => u.id === user.id ? updated : u));
+                    } catch (e: any) {
+                        showAlert({ title: 'Erro', message: e.message || 'Não foi possível alterar a verificação.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
                     }
-                }
-            ]
-        );
+                },
+            },
+            secondaryButton: { text: 'Cancelar', onPress: () => {} },
+        });
     };
 
     const openNewCampaign = () => {
@@ -186,7 +198,7 @@ export default function AdminScreen({ navigation }: Props) {
 
     const saveCampaign = async () => {
         if (!campTitle.trim() || !campGoal) {
-            Alert.alert('Campos obrigatórios', 'Título e objetivo são obrigatórios.');
+            showAlert({ title: 'Campos obrigatórios', message: 'Título e objetivo são obrigatórios.', icon: 'alert-circle', iconColor: '#f59e0b', primaryButton: undefined, secondaryButton: undefined });
             return;
         }
         try {
@@ -208,7 +220,7 @@ export default function AdminScreen({ navigation }: Props) {
             }
             setCampaignModal(false);
         } catch (e: any) {
-            Alert.alert('Erro', e.message || 'Não foi possível guardar a campanha.');
+            showAlert({ title: 'Erro', message: e.message || 'Não foi possível guardar a campanha.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
         } finally {
             setCampSaving(false);
         }
@@ -219,7 +231,7 @@ export default function AdminScreen({ navigation }: Props) {
             const updated = await apiService.updateAdminCampaign(c.id, { is_active: !c.is_active });
             setCampaigns(prev => prev.map(item => item.id === c.id ? updated : item));
         } catch (e: any) {
-            Alert.alert('Erro', e.message);
+            showAlert({ title: 'Erro', message: e.message, icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
         }
     };
 
@@ -478,6 +490,17 @@ export default function AdminScreen({ navigation }: Props) {
                     }
                 />
             )}
+
+            <CustomAlertModal
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                icon={alertState.icon}
+                iconColor={alertState.iconColor}
+                primaryButton={alertState.primaryButton}
+                secondaryButton={alertState.secondaryButton}
+                onClose={closeAlert}
+            />
 
             {/* Campaign Modal */}
             <Modal visible={campaignModal} transparent animationType="slide" onRequestClose={() => setCampaignModal(false)}>

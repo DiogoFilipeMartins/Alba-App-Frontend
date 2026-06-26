@@ -5,7 +5,6 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    Alert,
     ActivityIndicator,
     ScrollView,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiService } from '../services/apiService';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EditProfile'>;
 
@@ -26,10 +26,13 @@ export default function EditProfileScreen({ navigation }: Props) {
     const [fullName, setFullName] = useState(profile?.full_name || '');
     const [phone, setPhone] = useState(profile?.phone || '');
     const [saving, setSaving] = useState(false);
+    const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any });
+    const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+    const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
 
     const handleSave = async () => {
         if (!fullName.trim()) {
-            Alert.alert('Aviso', 'O nome não pode estar vazio.');
+            showAlert({ title: 'Aviso', message: 'O nome não pode estar vazio.', icon: 'alert-circle', iconColor: '#f59e0b', primaryButton: undefined });
             return;
         }
 
@@ -40,11 +43,9 @@ export default function EditProfileScreen({ navigation }: Props) {
                 phone: phone.trim() || undefined,
             });
             await refreshProfile();
-            Alert.alert('Sucesso', 'O teu perfil foi atualizado.', [
-                { text: 'OK', onPress: () => navigation.goBack() },
-            ]);
+            showAlert({ title: 'Sucesso', message: 'O teu perfil foi atualizado.', icon: 'checkmark-circle', iconColor: '#22c55e', primaryButton: { text: 'OK', onPress: () => navigation.goBack() } });
         } catch (error: any) {
-            Alert.alert('Erro', error?.message || 'Não foi possível atualizar o perfil.');
+            showAlert({ title: 'Erro', message: error?.message || 'Não foi possível atualizar o perfil.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
         } finally {
             setSaving(false);
         }
@@ -143,6 +144,16 @@ export default function EditProfileScreen({ navigation }: Props) {
                     }
                 </TouchableOpacity>
             </ScrollView>
+
+            <CustomAlertModal
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                icon={alertState.icon}
+                iconColor={alertState.iconColor}
+                primaryButton={alertState.primaryButton}
+                onClose={closeAlert}
+            />
         </SafeAreaView>
     );
 }

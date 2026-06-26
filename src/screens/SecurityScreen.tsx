@@ -5,7 +5,6 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    Alert,
     ActivityIndicator,
     ScrollView,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiService } from '../services/apiService';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Security'>;
 
@@ -26,28 +26,27 @@ export default function SecurityScreen({ navigation }: Props) {
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any });
+    const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+    const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
 
     const handleChangePassword = async () => {
         if (!newPassword || newPassword.length < 6) {
-            Alert.alert('Password inválida', 'A nova password deve ter pelo menos 6 caracteres.');
+            showAlert({ title: 'Password inválida', message: 'A nova password deve ter pelo menos 6 caracteres.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            Alert.alert('As passwords não coincidem', 'Confirma que as duas passwords são iguais.');
+            showAlert({ title: 'As passwords não coincidem', message: 'Confirma que as duas passwords são iguais.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
             return;
         }
 
         try {
             setSaving(true);
             await apiService.changePassword(newPassword);
-            Alert.alert(
-                'Password alterada ✓',
-                'A tua password foi atualizada com sucesso.',
-                [{ text: 'OK', onPress: () => navigation.goBack() }]
-            );
+            showAlert({ title: 'Password alterada', message: 'A tua password foi atualizada com sucesso.', icon: 'checkmark-circle', iconColor: '#22c55e', primaryButton: { text: 'OK', onPress: () => navigation.goBack() } });
         } catch (error: any) {
-            Alert.alert('Erro', error?.message || 'Não foi possível alterar a password.');
+            showAlert({ title: 'Erro', message: error?.message || 'Não foi possível alterar a password.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
         } finally {
             setSaving(false);
         }
@@ -187,6 +186,16 @@ export default function SecurityScreen({ navigation }: Props) {
                     }
                 </TouchableOpacity>
             </ScrollView>
+
+            <CustomAlertModal
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                icon={alertState.icon}
+                iconColor={alertState.iconColor}
+                primaryButton={alertState.primaryButton}
+                onClose={closeAlert}
+            />
         </SafeAreaView>
     );
 }

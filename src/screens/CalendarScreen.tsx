@@ -5,7 +5,6 @@ import {
   Pressable,
   Modal,
   TextInput,
-  Alert,
   ActivityIndicator,
   Switch,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import CustomAlertModal from '../components/CustomAlertModal';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -357,6 +357,9 @@ export default function CalendarScreen({ navigation }: Props) {
     title: '', description: '', startTime: '', endTime: '', allDay: false, colorIdx: 0,
   });
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any, secondaryButton: undefined as any });
+  const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+  const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
 
   const touchX = useRef(0);
 
@@ -425,8 +428,8 @@ export default function CalendarScreen({ navigation }: Props) {
   const closeForm = () => { setShowForm(false); setEditingEvent(null); resetForm(); };
 
   const handleSave = async () => {
-    if (!form.title.trim()) { Alert.alert('Título obrigatório'); return; }
-    if (!userId) { Alert.alert('Erro', 'Faz login novamente.'); return; }
+    if (!form.title.trim()) { showAlert({ title: 'Título obrigatório', message: 'Escreve um título para o evento.', icon: 'alert-circle', iconColor: '#f59e0b', primaryButton: undefined, secondaryButton: undefined }); return; }
+    if (!userId) { showAlert({ title: 'Erro', message: 'Faz login novamente.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined }); return; }
     setSaving(true);
     try {
       const starts = form.allDay ? buildTS(formDate, '00:00') : buildTS(formDate, form.startTime);
@@ -452,19 +455,27 @@ export default function CalendarScreen({ navigation }: Props) {
       }
       closeForm();
       await fetchEvents();
-    } catch (e: any) { Alert.alert('Erro', e.message); }
+    } catch (e: any) { showAlert({ title: 'Erro', message: e.message, icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined }); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
-    Alert.alert('Eliminar evento', 'Tens a certeza?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => {
-        await apiService.deleteCalendarEvent(id);
-        await notificationService.cancelEventReminder(id);
-        setEvents(p => p.filter(e => e.id !== id));
-      }},
-    ]);
+    showAlert({
+      title: 'Eliminar evento',
+      message: 'Tens a certeza que queres eliminar este evento?',
+      icon: 'trash',
+      iconColor: '#ef4444',
+      primaryButton: {
+        text: 'Eliminar',
+        onPress: async () => {
+          await apiService.deleteCalendarEvent(id);
+          await notificationService.cancelEventReminder(id);
+          setEvents(p => p.filter(e => e.id !== id));
+        },
+        destructive: true,
+      },
+      secondaryButton: { text: 'Cancelar', onPress: () => {} },
+    });
   };
 
   // ── Theme ─────────────────────────────────────────────────────────────────
@@ -738,6 +749,16 @@ export default function CalendarScreen({ navigation }: Props) {
         </View>
       </Modal>
 
+      <CustomAlertModal
+        visible={alertState.visible}
+        title={alertState.title}
+        message={alertState.message}
+        icon={alertState.icon}
+        iconColor={alertState.iconColor}
+        primaryButton={alertState.primaryButton}
+        secondaryButton={alertState.secondaryButton}
+        onClose={closeAlert}
+      />
     </SafeAreaView>
   );
 }

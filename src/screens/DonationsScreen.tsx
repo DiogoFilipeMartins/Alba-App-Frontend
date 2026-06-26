@@ -8,7 +8,6 @@ import {
     ActivityIndicator,
     Modal,
     TextInput,
-    Alert,
     ScrollView,
     Linking,
     Dimensions,
@@ -16,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import CustomAlertModal from '../components/CustomAlertModal';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -77,6 +77,9 @@ export default function DonationsScreen({}: Props) {
     const [amount, setAmount] = useState('10');
     const [donorName, setDonorName] = useState('');
     const [note, setNote] = useState('');
+    const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any });
+    const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
+    const showAlert = (config: Omit<typeof alertState, 'visible'>) => setAlertState({ ...config, visible: true });
 
     const fetchData = async (isRefresh = false) => {
         try {
@@ -117,7 +120,7 @@ export default function DonationsScreen({}: Props) {
 
         const numericAmount = Number(amount.replace(',', '.'));
         if (!numericAmount || numericAmount <= 0) {
-            Alert.alert('Valor inválido', 'Indica um montante superior a 0 EUR.');
+            showAlert({ title: 'Valor inválido', message: 'Indica um montante superior a 0 EUR.', icon: 'alert-circle', iconColor: '#f59e0b', primaryButton: undefined });
             return;
         }
 
@@ -131,9 +134,9 @@ export default function DonationsScreen({}: Props) {
             });
             closeModal();
             await fetchData();
-            Alert.alert('Doação registada! 🎉', 'Obrigado pelo teu contributo incrivelmente valioso.');
+            showAlert({ title: 'Doação registada!', message: 'Obrigado pelo teu contributo incrivelmente valioso.', icon: 'heart', iconColor: '#ef4444', primaryButton: undefined });
         } catch (error: any) {
-            Alert.alert('Erro', error?.message || 'Não foi possível registar a doação.');
+            showAlert({ title: 'Erro', message: error?.message || 'Não foi possível registar a doação.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined });
         } finally {
             setSaving(false);
         }
@@ -292,6 +295,16 @@ export default function DonationsScreen({}: Props) {
                     </View>
                 </View>
             </Modal>
+
+            <CustomAlertModal
+                visible={alertState.visible}
+                title={alertState.title}
+                message={alertState.message}
+                icon={alertState.icon}
+                iconColor={alertState.iconColor}
+                primaryButton={alertState.primaryButton}
+                onClose={closeAlert}
+            />
         </SafeAreaView>
     );
 }
