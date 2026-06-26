@@ -22,6 +22,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { apiService, CommunityMessage, CommunityMember } from '../services/apiService';
+import { notificationService } from '../services/notificationService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -86,16 +87,40 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
     const accentColor = communityColor || colors.primary;
     const flatListRef = useRef<FlatList>(null);
 
+    const knownMessageIdsRef = useRef<Set<string>>(new Set());
+    const isInitialLoadRef = useRef(true);
+
     const fetchMessages = useCallback(async () => {
         try {
             const data = await apiService.getCommunityMessages(communityId);
+            
+            // On polling (not initial load), detect new messages from others
+            if (!isInitialLoadRef.current) {
+                for (const msg of data) {
+                    if (!knownMessageIdsRef.current.has(msg.id) && msg.user_id !== user?.id) {
+                        // New message from someone else — trigger local notification
+                        const senderName = msg.profiles?.full_name || 'Alguém';
+                        notificationService.showLocalMessageNotification(
+                            communityName,
+                            senderName,
+                            msg.content.slice(0, 100),
+                            communityId,
+                        );
+                    }
+                }
+            }
+
+            // Update known IDs
+            knownMessageIdsRef.current = new Set(data.map(m => m.id));
+            isInitialLoadRef.current = false;
+
             setMessages(data);
         } catch (error) {
             console.error('Erro ao carregar mensagens', error);
         } finally {
             setLoading(false);
         }
-    }, [communityId]);
+    }, [communityId, communityName, user?.id]);
 
     const fetchMembers = useCallback(async () => {
         try {

@@ -362,6 +362,23 @@ export const apiService = {
         }
     },
 
+    // Push Notifications
+    async registerPushToken(token: string): Promise<void> {
+        await apiFetch('/push-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+        });
+    },
+
+    async unregisterPushToken(token: string): Promise<void> {
+        await apiFetch('/push-token', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+        });
+    },
+
     async getMapboxToken(): Promise<{ token: string }> {
         return apiFetch('/mapbox-token', {}, false);
     },

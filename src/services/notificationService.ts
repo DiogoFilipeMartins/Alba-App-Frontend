@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
 // Configure how notifications appear when the app is in foreground
@@ -6,7 +7,7 @@ Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
         shouldPlaySound: true,
-        shouldSetBadge: false,
+        shouldSetBadge: true,
         shouldShowBanner: true,
         shouldShowList: true,
     }),
@@ -25,6 +26,72 @@ export const notificationService = {
 
         const { status } = await Notifications.requestPermissionsAsync();
         return status === 'granted';
+    },
+
+    /**
+     * Get the Expo push token for this device.
+     * Returns the token string or null if unavailable.
+     */
+    async getExpoPushToken(): Promise<string | null> {
+        try {
+            if (Platform.OS === 'web') return null;
+            if (!Device.isDevice) {
+                console.warn('[Notifications] Push tokens apenas funcionam em dispositivos reais.');
+                return null;
+            }
+
+            const granted = await this.requestPermissions();
+            if (!granted) return null;
+
+            if (Platform.OS === 'android') {
+                await Notifications.setNotificationChannelAsync('messages', {
+                    name: 'Mensagens',
+                    importance: Notifications.AndroidImportance.MAX,
+                    vibrationPattern: [0, 250, 250, 250],
+                    lightColor: '#6366f1',
+                    sound: 'default',
+                });
+                await Notifications.setNotificationChannelAsync('default', {
+                    name: 'Geral',
+                    importance: Notifications.AndroidImportance.DEFAULT,
+                });
+            }
+
+            const tokenData = await Notifications.getExpoPushTokenAsync();
+            return tokenData.data;
+        } catch (error) {
+            console.warn('[Notifications] Erro ao obter push token:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Show a local notification for an incoming community message.
+     * Use this when the app is in the foreground to alert the user.
+     */
+    async showLocalMessageNotification(
+        communityName: string,
+        senderName: string,
+        messageContent: string,
+        communityId: string,
+    ): Promise<void> {
+        try {
+            const granted = await this.requestPermissions();
+            if (!granted) return;
+
+            await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: `💬 ${communityName}`,
+                    body: `${senderName}: ${messageContent}`,
+                    data: { type: 'community_message', communityId },
+                    sound: true,
+                    ...(Platform.OS === 'android' ? { channelId: 'messages' } : {}),
+                },
+                trigger: null, // immediate
+            });
+        } catch (error) {
+            console.warn('[Notifications] Erro ao mostrar notificação local:', error);
+        }
     },
 
     /**

@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { apiService } from '../services/apiService';
+import { notificationService } from '../services/notificationService';
 import { User } from '@supabase/supabase-js';
 import { useDispatch } from 'react-redux';
 import { setAuth, clearAuth, setLoading as setReduxLoading } from '../store/slices/authSlice';
@@ -26,6 +27,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const dispatch = useDispatch();
+  const pushTokenRef = useRef<string | null>(null);
+
+  // Register push token for this device when user logs in
+  const registerPushTokenForUser = async () => {
+    try {
+      const token = await notificationService.getExpoPushToken();
+      if (token) {
+        pushTokenRef.current = token;
+        await apiService.registerPushToken(token);
+        console.log('[Auth] Push token registado:', token.slice(-10));
+      }
+    } catch (err) {
+      console.warn('[Auth] Erro ao registar push token:', err);
+    }
+  };
+
+  // Unregister push token on logout
+  const unregisterPushToken = async () => {
+    try {
+      if (pushTokenRef.current) {
+        await apiService.unregisterPushToken(pushTokenRef.current);
+        pushTokenRef.current = null;
+      }
+    } catch (err) {
+      console.warn('[Auth] Erro ao remover push token:', err);
+    }
+  };
 
   // Fetch profile from public.profiles
   const fetchProfile = async (userId: string | undefined) => {
@@ -57,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (sessionUser) {
             const p = await fetchProfile(sessionUser.id);
             dispatch(setAuth({ user: sessionUser, profile: p }));
+            registerPushTokenForUser();
           } else {
             dispatch(clearAuth());
           }
@@ -78,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sessionUser) {
           const p = await fetchProfile(sessionUser.id);
           dispatch(setAuth({ user: sessionUser, profile: p }));
+          registerPushTokenForUser();
         } else {
           setProfile(null);
           dispatch(clearAuth());
@@ -120,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    await unregisterPushToken();
     const { error } = await supabase.auth.signOut();
     dispatch(clearAuth());
     if (error) throw error;
