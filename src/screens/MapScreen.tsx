@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Modal, Pressable, Linking } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, TextInput, Platform, Pressable, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import CustomAlertModal from '../components/CustomAlertModal';
 import { Map, Camera, UserLocation, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
@@ -570,10 +570,29 @@ export default function MapScreen({ navigation, route }: Props) {
             <MaterialCommunityIcons name="creation" size={20} color={colors.accent} />
           </TouchableOpacity>
           <View style={{ width: 1, height: 24, backgroundColor: colors.border, marginHorizontal: 10 }} />
-          <TouchableOpacity onPress={() => setShowFilterModal(true)} style={styles.filterBtn}>
+          <TouchableOpacity onPress={() => setShowFilterModal(v => !v)} style={styles.filterBtn}>
              <Ionicons name="options" size={20} color={activeFilter !== 'Todos' ? colors.accent : colors.textSecondary} />
           </TouchableOpacity>
         </View>
+
+        {/* Filter dropdown */}
+        {showFilterModal && (
+          <>
+            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowFilterModal(false)} />
+            <View style={[styles.filterDropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {FILTERS.map(f => (
+                <TouchableOpacity
+                  key={f}
+                  onPress={() => { setActiveFilter(f); setShowFilterModal(false); }}
+                  style={[styles.filterDropdownItem, activeFilter === f && { backgroundColor: colors.accent + '18' }]}
+                >
+                  <Text style={[styles.filterDropdownText, { color: activeFilter === f ? colors.accent : colors.textPrimary }]}>{f}</Text>
+                  {activeFilter === f && <Ionicons name="checkmark" size={16} color={colors.accent} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
         
         {/* Indicador de carregamento em background discreto */}
         {(placesLoading || locationLoading) && (
@@ -596,41 +615,6 @@ export default function MapScreen({ navigation, route }: Props) {
         )}
       </View>
 
-      {/* Filter Modal */}
-      <Modal
-        visible={showFilterModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowFilterModal(false)}
-      >
-        <Pressable 
-          style={styles.modalOverlay} 
-          onPress={() => setShowFilterModal(false)}
-        >
-          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Filtrar por tipo</Text>
-            {FILTERS.map(f => (
-              <TouchableOpacity 
-                key={f} 
-                onPress={() => {
-                  setActiveFilter(f);
-                  setShowFilterModal(false);
-                }}
-                style={[
-                  styles.filterOption,
-                  activeFilter === f && { backgroundColor: colors.background }
-                ]}
-              >
-                <Text style={[
-                  styles.filterOptionText, 
-                  { color: activeFilter === f ? colors.accent : colors.textPrimary }
-                ]}>{f}</Text>
-                {activeFilter === f && <Ionicons name="checkmark" size={20} color={colors.accent} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
 
       {/* Side Actions */}
       <View style={styles.sideActions}>
@@ -802,39 +786,33 @@ const styles = StyleSheet.create({
     padding: 10,
     marginLeft: 5,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    borderRadius: 24,
-    padding: 20,
+  filterDropdown: {
+    position: 'absolute',
+    top: 65,
+    right: 20,
+    borderRadius: 16,
     borderWidth: 1,
+    paddingVertical: 6,
+    minWidth: 180,
+    zIndex: 100,
     elevation: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
   },
-  modalTitle: {
-    fontSize: FontSize.xl,
-    fontFamily: FontFamily.poppinsBold,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  filterOption: {
+  filterDropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginBottom: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginHorizontal: 6,
+    marginVertical: 1,
   },
-  filterOptionText: {
-    fontSize: FontSize.l,
+  filterDropdownText: {
+    fontSize: FontSize.m,
     fontFamily: FontFamily.poppinsSemiBold,
   },
   suggestContainer: {

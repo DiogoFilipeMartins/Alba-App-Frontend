@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Modal, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
@@ -28,6 +28,10 @@ export default function ProfileScreen({ navigation }: Props) {
     const [pendingInvites, setPendingInvites] = useState<CommunityInvite[]>([]);
     const [respondingInvite, setRespondingInvite] = useState<string | null>(null);
     const [dmConversations, setDmConversations] = useState<DMConversation[]>([]);
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [deleteCountdown, setDeleteCountdown] = useState(10);
+    const [deletingAccount, setDeletingAccount] = useState(false);
+    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const isSpecialAccount = isProfessional || isInstitution;
     const accountColor = isProfessional ? '#0ebd5f' : isInstitution ? '#7c3aed' : colors.primary;
@@ -68,6 +72,24 @@ export default function ProfileScreen({ navigation }: Props) {
             secondaryButton,
         });
     };
+
+    useEffect(() => {
+        if (deleteModalVisible) {
+            setDeleteCountdown(10);
+            countdownRef.current = setInterval(() => {
+                setDeleteCountdown(prev => {
+                    if (prev <= 1) {
+                        clearInterval(countdownRef.current!);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            if (countdownRef.current) clearInterval(countdownRef.current);
+        }
+        return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+    }, [deleteModalVisible]);
 
     useEffect(() => {
         const loadFavorites = async () => {
@@ -161,29 +183,20 @@ export default function ProfileScreen({ navigation }: Props) {
         );
     };
 
-    const handleDeleteAccount = async () => {
-        showAlert(
-            'Eliminar Conta',
-            'Esta ação é definitiva e removerá o teu perfil e todos os teus dados permanentemente. Tens a certeza?',
-            'trash-outline',
-            '#ef4444',
-            {
-                text: 'Eliminar',
-                destructive: true,
-                onPress: async () => {
-                    try {
-                        await apiService.deleteMyAccount();
-                        await signOut();
-                    } catch (error: any) {
-                        showAlert('Erro', error?.message || 'Não foi possível eliminar a conta.', 'alert-circle-outline', '#ef4444');
-                    }
-                }
-            },
-            {
-                text: 'Cancelar',
-                onPress: () => {}
-            }
-        );
+    const handleDeleteAccount = () => {
+        setDeleteModalVisible(true);
+    };
+
+    const confirmDeleteAccount = async () => {
+        try {
+            setDeletingAccount(true);
+            await apiService.deleteMyAccount();
+            await signOut();
+        } catch (error: any) {
+            setDeletingAccount(false);
+            setDeleteModalVisible(false);
+            showAlert('Erro', error?.message || 'Não foi possível eliminar a conta.', 'alert-circle-outline', '#ef4444');
+        }
     };
 
     const handleSuggestPlace = () => {
@@ -240,14 +253,11 @@ export default function ProfileScreen({ navigation }: Props) {
                         <View style={[s.accountBadge, { backgroundColor: accountColor + '18', borderColor: accountColor + '40' }]}>
                             <Ionicons name={accountIcon} size={13} color={accountColor} />
                             <Text style={[s.accountBadgeText, { color: accountColor }]}>
-                                {accountLabel}{profile?.verified ? ' · Verificado' : ' · Pendente'}
+                                {accountLabel}
+                                {profile?.specialty ? ` · ${profile.specialty}` : ''}
+                                {!profile?.verified ? ' · Pendente' : ''}
                             </Text>
                         </View>
-                    )}
-
-                    {/* Specialty line */}
-                    {isSpecialAccount && !!profile?.specialty && (
-                        <Text style={[s.specialty, { color: colors.textSecondary }]}>{profile.specialty}</Text>
                     )}
 
                     {isAdmin && !isSpecialAccount && (
@@ -417,6 +427,48 @@ export default function ProfileScreen({ navigation }: Props) {
                 secondaryButton={alertConfig.secondaryButton}
                 onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
             />
+
+            {/* Delete account countdown modal */}
+            <Modal visible={deleteModalVisible} transparent animationType="fade" onRequestClose={() => !deletingAccount && setDeleteModalVisible(false)}>
+                <View style={s.deleteOverlay}>
+                    <View style={[s.deleteCard, { backgroundColor: colors.card, borderColor: '#b91c1c40' }]}>
+                        <View style={s.deleteIconWrap}>
+                            <Ionicons name="trash" size={32} color="#ef4444" />
+                        </View>
+                        <Text style={[s.deleteCardTitle, { color: colors.textPrimary }]}>Eliminar Conta</Text>
+                        <Text style={[s.deleteCardMsg, { color: colors.textSecondary }]}>
+                            Esta ação é permanente e irá remover o teu perfil e todos os teus dados. Não é possível reverter.
+                        </Text>
+
+                        {deleteCountdown > 0 ? (
+                            <View style={s.countdownWrap}>
+                                <Text style={[s.countdownText, { color: colors.textMuted }]}>
+                                    Podes eliminar em <Text style={{ color: '#ef4444', fontWeight: '800' }}>{deleteCountdown}s</Text>
+                                </Text>
+                            </View>
+                        ) : null}
+
+                        <TouchableOpacity
+                            onPress={confirmDeleteAccount}
+                            disabled={deleteCountdown > 0 || deletingAccount}
+                            style={[s.deleteConfirmBtn, { opacity: deleteCountdown > 0 ? 0.4 : 1 }]}
+                        >
+                            {deletingAccount
+                                ? <ActivityIndicator color="#fff" />
+                                : <Text style={s.deleteConfirmTxt}>Eliminar permanentemente</Text>
+                            }
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => setDeleteModalVisible(false)}
+                            disabled={deletingAccount}
+                            style={[s.deleteCancelBtn, { borderColor: colors.border }]}
+                        >
+                            <Text style={[s.deleteCancelTxt, { color: colors.textSecondary }]}>Cancelar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -449,4 +501,15 @@ const s = StyleSheet.create({
     logoutTxt: { fontSize: 16, fontWeight: '800', color: '#ef4444' },
     deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginHorizontal: 24, marginTop: 14, padding: 18, borderRadius: 20, borderWidth: 1 },
     deleteTxt: { fontSize: 15, fontWeight: '800', color: '#b91c1c' },
+    deleteOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', paddingHorizontal: 24 },
+    deleteCard: { borderRadius: 24, padding: 24, borderWidth: 1.5, alignItems: 'center' },
+    deleteIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#ef444420', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+    deleteCardTitle: { fontSize: 20, fontWeight: '900', marginBottom: 10 },
+    deleteCardMsg: { fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 20 },
+    countdownWrap: { marginBottom: 16 },
+    countdownText: { fontSize: 14, fontWeight: '600' },
+    deleteConfirmBtn: { width: '100%', backgroundColor: '#ef4444', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginBottom: 10 },
+    deleteConfirmTxt: { color: '#fff', fontSize: 15, fontWeight: '800' },
+    deleteCancelBtn: { width: '100%', borderRadius: 16, borderWidth: 1, paddingVertical: 14, alignItems: 'center' },
+    deleteCancelTxt: { fontSize: 15, fontWeight: '700' },
 });
