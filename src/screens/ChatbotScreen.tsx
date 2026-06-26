@@ -320,8 +320,8 @@ export default function ChatbotScreen({ navigation, route }: Props) {
         if (item.role === 'bot-typing') {
             return (
                 <View style={styles.botRow}>
-                    <View style={[styles.botAvatar, { backgroundColor: colors.primary }]}>
-                        <Image source={require('../../assets/AlbaAppLogoSemFundo.png')} style={styles.botAvatarImg} resizeMode="contain" />
+                    <View style={styles.botAvatar}>
+                        <Image source={require('../../assets/AlbaAppLogo.png')} style={styles.botAvatarImg} resizeMode="cover" />
                     </View>
                     <View style={[styles.botBubble, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <TypingIndicator color={colors.accent} />
@@ -343,8 +343,8 @@ export default function ChatbotScreen({ navigation, route }: Props) {
         // bot or bot-results
         return (
             <View style={styles.botRow}>
-                <View style={[styles.botAvatar, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.botAvatarText}>A</Text>
+                <View style={styles.botAvatar}>
+                    <Image source={require('../../assets/AlbaAppLogo.png')} style={styles.botAvatarImg} resizeMode="cover" />
                 </View>
                 <View style={styles.botContent}>
                     <View style={[styles.botBubble, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -366,8 +366,8 @@ export default function ChatbotScreen({ navigation, route }: Props) {
         <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <View style={[styles.headerAvatar, { backgroundColor: colors.primary }]}>
-                    <Image source={require('../../assets/AlbaAppLogoSemFundo.png')} style={styles.headerAvatarImg} resizeMode="contain" />
+                <View style={styles.headerAvatar}>
+                    <Image source={require('../../assets/AlbaAppLogo.png')} style={styles.headerAvatarImg} resizeMode="cover" />
                     <View style={styles.onlineDot} />
                 </View>
                 <View style={styles.headerInfo}>
@@ -466,11 +466,10 @@ const styles = StyleSheet.create({
         width: 42,
         height: 42,
         borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
+        overflow: 'hidden',
         position: 'relative',
     },
-    headerAvatarImg: { width: 28, height: 28 },
+    headerAvatarImg: { width: 42, height: 42 },
     onlineDot: {
         position: 'absolute',
         bottom: 1,
@@ -513,12 +512,11 @@ const styles = StyleSheet.create({
         width: 34,
         height: 34,
         borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
+        overflow: 'hidden',
         flexShrink: 0,
         marginTop: 2,
     },
-    botAvatarImg: { width: 22, height: 22 },
+    botAvatarImg: { width: 34, height: 34 },
     botContent: { flex: 1 },
     botBubble: {
         borderRadius: 20,
