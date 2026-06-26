@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,64 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
+// ─── Search utilities ─────────────────────────────────────────────────────────
+
+const norm = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+const TYPE_ALIASES: Record<string, string> = {
+  profissional: 'professional',
+  profissionais: 'professional',
+  instituição: 'institution',
+  instituicao: 'institution',
+  instituições: 'institution',
+  instituicoes: 'institution',
+};
+
+function scorePlace(place: Place, tokens: string[]): number {
+  if (tokens.length === 0) return 1;
+  const claimer = (place as any).profiles?.[0];
+  const fields = {
+    name:        norm(place.name),
+    specialty:   norm(claimer?.specialty ?? ''),
+    type:        place.type === 'professional' ? 'profissional' : 'instituicao',
+    city:        norm(place.city ?? ''),
+    description: norm(place.description ?? ''),
+    bio:         norm(claimer?.bio ?? ''),
+    email:       norm(claimer?.email ?? place.email ?? ''),
+    website:     norm(claimer?.website ?? place.website ?? ''),
+  };
+
+  let total = 0;
+  for (const token of tokens) {
+    // Resolve type alias
+    const resolvedToken = TYPE_ALIASES[token] ? (TYPE_ALIASES[token] === place.type ? fields.type : '__nomatch__') : token;
+    const t = resolvedToken === '__nomatch__' ? token : resolvedToken;
+
+    const nameScore =
+      fields.name === t ? 100 :
+      fields.name.startsWith(t) ? 80 :
+      fields.name.includes(t) ? 50 : 0;
+
+    const specialtyScore =
+      fields.specialty === t ? 90 :
+      fields.specialty.startsWith(t) ? 70 :
+      fields.specialty.includes(t) ? 45 : 0;
+
+    const typeScore = fields.type.includes(t) || place.type.includes(t) ? 30 : 0;
+    const cityScore = fields.city.includes(t) ? 20 : 0;
+    const descScore = fields.description.includes(t) || fields.bio.includes(t) ? 10 : 0;
+    const contactScore = fields.email.includes(t) || fields.website.includes(t) ? 5 : 0;
+
+    const tokenBest = Math.max(nameScore, specialtyScore, typeScore, cityScore, descScore, contactScore);
+    if (tokenBest === 0) return -1; // all tokens must match
+    total += tokenBest;
+  }
+  return total;
+}
+
+// ─── Screen ────────────────────────────────────────────────────────────────────
+
 export default function DirectoryScreen({ navigation }: Props) {
   const { colors, isDark } = useTheme();
   const [places, setPlaces] = useState<Place[]>([]);
@@ -32,6 +90,8 @@ export default function DirectoryScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeFilter, setActiveFilter] = useState<'All' | 'Professional' | 'Institution' | 'Favorites'>('All');
 
   const fetchPlaces = async (showLoadingIndicator = true) => {
@@ -112,6 +172,12 @@ export default function DirectoryScreen({ navigation }: Props) {
     fetchPlaces(false);
   };
 
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(text), 250);
+  };
+
   const handleToggleFavorite = async (place: Place) => {
     try {
       const isFav = await favoritesService.toggle(place);
@@ -122,28 +188,35 @@ export default function DirectoryScreen({ navigation }: Props) {
     }
   };
 
-  const filteredPlaces = places.filter(place => {
-    // Search query match
-    const query = searchQuery.toLowerCase().trim();
-    const claimer = (place as any).profiles?.[0];
-    const specialtyMatch = (claimer?.specialty?.toLowerCase().includes(query) ?? false);
-    
-    const matchesSearch =
-      place.name.toLowerCase().includes(query) ||
-      (place.description?.toLowerCase().includes(query) ?? false) ||
-      (place.city?.toLowerCase().includes(query) ?? false) ||
-      specialtyMatch;
+  const filteredPlaces = (() => {
+    const tokens = debouncedQuery.trim().split(/\s+/).filter(Boolean).map(norm);
 
-    // Active filter match
-    const isFavorite = favoriteIds.includes(place.id);
-    const matchesFilter =
-      activeFilter === 'All' ||
-      (activeFilter === 'Professional' && place.type === 'professional') ||
-      (activeFilter === 'Institution' && place.type === 'institution') ||
-      (activeFilter === 'Favorites' && isFavorite);
+    const scored = places
+      .map(place => {
+        const isFavorite = favoriteIds.includes(place.id);
+        const matchesFilter =
+          activeFilter === 'All' ||
+          (activeFilter === 'Professional' && place.type === 'professional') ||
+          (activeFilter === 'Institution' && place.type === 'institution') ||
+          (activeFilter === 'Favorites' && isFavorite);
 
-    return matchesSearch && matchesFilter;
-  });
+        if (!matchesFilter) return null;
+
+        const score = scorePlace(place, tokens);
+        if (score < 0) return null;
+        return { place, score };
+      })
+      .filter((x): x is { place: Place; score: number } => x !== null);
+
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const av = (a.place as any).profiles?.[0]?.verified ? 1 : 0;
+      const bv = (b.place as any).profiles?.[0]?.verified ? 1 : 0;
+      return bv - av;
+    });
+
+    return scored.map(x => x.place);
+  })();
 
   const renderPlaceItem = ({ item }: { item: Place }) => {
     const isFavorite = favoriteIds.includes(item.id);
@@ -195,6 +268,11 @@ export default function DirectoryScreen({ navigation }: Props) {
                 </>
               ) : null}
             </View>
+            {claimer?.specialty ? (
+              <Text style={[styles.specialty, { color: colors.textMuted }]} numberOfLines={1}>
+                {claimer.specialty}
+              </Text>
+            ) : null}
             {isClaimedAndVerified && (
               <View style={styles.verifiedBadge}>
                 <Ionicons name="shield-checkmark" size={12} color="#16a34a" />
@@ -250,10 +328,10 @@ export default function DirectoryScreen({ navigation }: Props) {
         <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={[styles.searchInput, { color: colors.textPrimary }]}
-          placeholder="Pesquisar por nome, cidade ou tipo..."
+          placeholder="Nome, especialidade, cidade, tipo..."
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={handleSearchChange}
         />
         {searchQuery.length > 0 ? (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -449,6 +527,11 @@ const styles = StyleSheet.create({
   city: {
     fontSize: 12,
     fontFamily: 'Poppins_400Regular',
+  },
+  specialty: {
+    fontSize: 12,
+    fontFamily: 'Poppins_400Regular',
+    marginTop: 2,
   },
   verifiedBadge: {
     flexDirection: 'row',
