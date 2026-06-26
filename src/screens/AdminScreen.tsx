@@ -33,7 +33,7 @@ const STATUS_TABS = [
 ] as const;
 
 const NEWS_FILTER_TABS = [
-    { key: 'all', label: 'Todas' },
+    { key: 'pending', label: 'Pendentes' },
     { key: 'approved', label: 'Aprovadas' },
     { key: 'rejected', label: 'Rejeitadas' },
 ] as const;
@@ -52,7 +52,7 @@ export default function AdminScreen({ navigation }: Props) {
     const [users, setUsers] = useState<any[]>([]);
     const [campaigns, setCampaigns] = useState<DonationCampaign[]>([]);
     const [newsArticles, setNewsArticles] = useState<NewsItem[]>([]);
-    const [newsFilter, setNewsFilter] = useState<NewsFilterKey>('all');
+    const [newsFilter, setNewsFilter] = useState<NewsFilterKey>('pending');
     const [loading, setLoading] = useState(true);
     const [pendingCount, setPendingCount] = useState(0);
 
@@ -259,67 +259,76 @@ export default function AdminScreen({ navigation }: Props) {
         }
     };
 
-    const moderateNewsItem = (id: string, approved: boolean, currentApproved?: boolean) => {
-        if (currentApproved === approved) return;
-        const verb = approved ? 'aprovar' : 'rejeitar';
-        showAlert({
-            title: `Confirmar ${verb}`,
-            message: `Queres ${verb} esta notícia?`,
-            icon: approved ? 'checkmark-circle' : 'close-circle',
-            iconColor: approved ? '#22c55e' : '#ef4444',
-            primaryButton: {
-                text: approved ? 'Aprovar' : 'Rejeitar',
-                onPress: async () => {
-                    try {
-                        await apiService.moderateNews(id, approved);
-                        setNewsArticles(prev => prev.map(a => a.id === id ? { ...a, approved } : a));
-                    } catch (e: any) {
-                        showAlert({ title: 'Erro', message: e.message || 'Não foi possível moderar a notícia.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
-                    }
-                },
-                destructive: !approved,
-            },
-            secondaryButton: { text: 'Cancelar', onPress: () => {} },
-        });
+    const moderateNewsItem = async (id: string, approved: boolean | null) => {
+        try {
+            await apiService.moderateNews(id, approved);
+            setNewsArticles(prev => prev.map(a => a.id === id ? { ...a, approved } : a));
+        } catch (e: any) {
+            showAlert({ title: 'Erro', message: e.message || 'Não foi possível moderar a notícia.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
+        }
     };
 
     const renderNewsItem = ({ item }: { item: NewsItem }) => {
-        const isApproved = item.approved !== false;
+        const isPending = item.approved == null;
+        const isApproved = item.approved === true;
+        const isRejected = item.approved === false;
         const date = item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('pt-PT') : '';
         return (
-            <View style={tw`bg-[#1a1a1a] rounded-2xl border border-[#058c42]/20 p-4 mb-3`}>
+            <View style={tw`bg-[#141414] rounded-2xl border border-[#2a2a2a] mb-3 overflow-hidden`}>
                 {item.imageUrl ? (
-                    <Image source={{ uri: item.imageUrl }} style={tw`w-full h-32 rounded-xl mb-3`} resizeMode="cover" />
+                    <Image source={{ uri: item.imageUrl }} style={tw`w-full h-36`} resizeMode="cover" />
                 ) : null}
-                <View style={tw`flex-row items-center justify-between mb-2`}>
-                    <View style={tw`bg-[#058c42]/20 px-2 py-0.5 rounded-full`}>
-                        <Text style={tw`text-[#058c42] text-xs font-semibold`}>{item.category || 'Geral'}</Text>
+                <View style={tw`p-4`}>
+                    <View style={tw`flex-row items-center justify-between mb-2`}>
+                        <View style={tw`bg-[#058c42]/20 px-2.5 py-1 rounded-lg`}>
+                            <Text style={tw`text-[#058c42] text-xs font-bold`}>{item.category || 'Geral'}</Text>
+                        </View>
+                        <View style={tw`flex-row items-center gap-2`}>
+                            {isPending && (
+                                <View style={tw`bg-amber-500/20 px-2 py-0.5 rounded-full`}>
+                                    <Text style={tw`text-amber-400 text-[10px] font-bold`}>PENDENTE</Text>
+                                </View>
+                            )}
+                            <Text style={tw`text-gray-500 text-xs`}>{date}</Text>
+                        </View>
                     </View>
-                    <Text style={tw`text-gray-500 text-xs`}>{date}</Text>
-                </View>
-                <Text style={tw`text-white font-bold text-sm mb-1`} numberOfLines={2}>{item.title}</Text>
-                {item.sourceName ? <Text style={tw`text-gray-500 text-xs mb-3`}>{item.sourceName}</Text> : null}
-                <View style={tw`flex-row gap-2`}>
-                    <Pressable
-                        onPress={() => moderateNewsItem(item.id, true, item.approved)}
-                        style={[
-                            tw`flex-1 rounded-xl py-2 items-center flex-row justify-center border`,
-                            isApproved ? tw`bg-green-600/30 border-green-600` : tw`bg-[#111] border-[#333]`,
-                        ]}
-                    >
-                        <Ionicons name="checkmark-circle" size={14} color={isApproved ? '#22c55e' : '#6b7280'} />
-                        <Text style={[tw`font-semibold ml-1.5 text-xs`, { color: isApproved ? '#22c55e' : '#6b7280' }]}>Aprovar</Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={() => moderateNewsItem(item.id, false, item.approved)}
-                        style={[
-                            tw`flex-1 rounded-xl py-2 items-center flex-row justify-center border`,
-                            !isApproved ? tw`bg-red-600/30 border-red-600` : tw`bg-[#111] border-[#333]`,
-                        ]}
-                    >
-                        <Ionicons name="close-circle" size={14} color={!isApproved ? '#ef4444' : '#6b7280'} />
-                        <Text style={[tw`font-semibold ml-1.5 text-xs`, { color: !isApproved ? '#ef4444' : '#6b7280' }]}>Rejeitar</Text>
-                    </Pressable>
+                    <Text style={tw`text-white font-bold text-sm leading-5 mb-1`} numberOfLines={2}>{item.title}</Text>
+                    {item.description ? (
+                        <Text style={tw`text-gray-400 text-xs leading-4 mb-3`} numberOfLines={2}>{item.description}</Text>
+                    ) : null}
+                    {item.sourceName ? <Text style={tw`text-gray-600 text-xs mb-3`}>Fonte: {item.sourceName}</Text> : null}
+                    <View style={tw`flex-row gap-2`}>
+                        <Pressable
+                            onPress={() => moderateNewsItem(item.id, true)}
+                            style={[
+                                tw`flex-1 rounded-xl py-2.5 items-center flex-row justify-center gap-1.5`,
+                                isApproved
+                                    ? tw`bg-green-600 border border-green-600`
+                                    : tw`bg-green-600/10 border border-green-600/40`,
+                            ]}
+                        >
+                            <Ionicons name="checkmark-circle" size={15} color={isApproved ? '#fff' : '#22c55e'} />
+                            <Text style={[tw`font-bold text-xs`, { color: isApproved ? '#fff' : '#22c55e' }]}>Aprovar</Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => moderateNewsItem(item.id, null)}
+                            style={tw`px-3 rounded-xl py-2.5 items-center justify-center bg-amber-500/10 border border-amber-500/40`}
+                        >
+                            <Ionicons name="time-outline" size={15} color="#f59e0b" />
+                        </Pressable>
+                        <Pressable
+                            onPress={() => moderateNewsItem(item.id, false)}
+                            style={[
+                                tw`flex-1 rounded-xl py-2.5 items-center flex-row justify-center gap-1.5`,
+                                isRejected
+                                    ? tw`bg-red-600 border border-red-600`
+                                    : tw`bg-red-600/10 border border-red-600/40`,
+                            ]}
+                        >
+                            <Ionicons name="close-circle" size={15} color={isRejected ? '#fff' : '#ef4444'} />
+                            <Text style={[tw`font-bold text-xs`, { color: isRejected ? '#fff' : '#ef4444' }]}>Rejeitar</Text>
+                        </Pressable>
+                    </View>
                 </View>
             </View>
         );
@@ -477,9 +486,9 @@ export default function AdminScreen({ navigation }: Props) {
     };
 
     const getFilteredNews = () => {
-        if (newsFilter === 'approved') return newsArticles.filter(a => a.approved !== false);
-        if (newsFilter === 'rejected') return newsArticles.filter(a => a.approved === false);
-        return newsArticles;
+        if (newsFilter === 'pending') return newsArticles.filter(a => a.approved == null);
+        if (newsFilter === 'approved') return newsArticles.filter(a => a.approved === true);
+        return newsArticles.filter(a => a.approved === false);
     };
 
     const getCurrentData = () => {
@@ -539,6 +548,13 @@ export default function AdminScreen({ navigation }: Props) {
                                     <Text style={tw`text-white text-xs font-bold`}>{pendingCount}</Text>
                                 </View>
                             )}
+                            {t.key === 'news' && newsArticles.filter(a => a.approved == null).length > 0 && (
+                                <View style={tw`ml-1.5 bg-amber-500 rounded-full w-5 h-5 items-center justify-center`}>
+                                    <Text style={tw`text-white text-xs font-bold`}>
+                                        {newsArticles.filter(a => a.approved == null).length > 9 ? '9+' : newsArticles.filter(a => a.approved == null).length}
+                                    </Text>
+                                </View>
+                            )}
                         </View>
                     </Pressable>
                 ))}
@@ -567,20 +583,36 @@ export default function AdminScreen({ navigation }: Props) {
             {/* Sub-tabs for News */}
             {mainTab === 'news' && (
                 <View style={tw`flex-row px-5 mb-4`}>
-                    {NEWS_FILTER_TABS.map((t) => (
-                        <Pressable
-                            key={t.key}
-                            onPress={() => setNewsFilter(t.key)}
-                            style={[
-                                tw`flex-1 items-center py-2 rounded-xl mr-2`,
-                                newsFilter === t.key ? tw`bg-[#058c42]/30 border border-[#058c42]` : tw`bg-[#111] border border-[#333]`,
-                            ]}
-                        >
-                            <Text style={[tw`font-semibold text-xs`, newsFilter === t.key ? tw`text-green-400` : tw`text-gray-500`]}>
-                                {t.label}
-                            </Text>
-                        </Pressable>
-                    ))}
+                    {NEWS_FILTER_TABS.map((t) => {
+                        const count = t.key === 'pending'
+                            ? newsArticles.filter(a => a.approved == null).length
+                            : t.key === 'approved'
+                            ? newsArticles.filter(a => a.approved === true).length
+                            : newsArticles.filter(a => a.approved === false).length;
+                        const tabColor = t.key === 'approved' ? '#22c55e' : t.key === 'rejected' ? '#ef4444' : '#f59e0b';
+                        const isActive = newsFilter === t.key;
+                        return (
+                            <Pressable
+                                key={t.key}
+                                onPress={() => setNewsFilter(t.key)}
+                                style={[
+                                    tw`flex-1 items-center py-2 rounded-xl mr-2 flex-row justify-center gap-1.5`,
+                                    isActive
+                                        ? { backgroundColor: tabColor + '25', borderWidth: 1, borderColor: tabColor }
+                                        : tw`bg-[#111] border border-[#333]`,
+                                ]}
+                            >
+                                <Text style={[tw`font-bold text-xs`, { color: isActive ? tabColor : '#6b7280' }]}>
+                                    {t.label}
+                                </Text>
+                                {count > 0 && (
+                                    <View style={[tw`rounded-full w-4 h-4 items-center justify-center`, { backgroundColor: isActive ? tabColor : '#374151' }]}>
+                                        <Text style={tw`text-white text-[9px] font-bold`}>{count > 9 ? '9+' : count}</Text>
+                                    </View>
+                                )}
+                            </Pressable>
+                        );
+                    })}
                 </View>
             )}
 
@@ -603,7 +635,7 @@ export default function AdminScreen({ navigation }: Props) {
                             <Text style={tw`text-gray-500 mt-3 text-base`}>
                                 {mainTab === 'places' ? `Nenhum local ${STATUS_TABS.find((t) => t.key === statusTab)?.label.toLowerCase()}`
                                     : mainTab === 'users' ? 'Nenhum utilizador encontrado'
-                                    : mainTab === 'news' ? 'Nenhuma notícia encontrada'
+                                    : mainTab === 'news' ? `Nenhuma notícia ${newsFilter === 'pending' ? 'pendente' : newsFilter === 'approved' ? 'aprovada' : 'rejeitada'}`
                                     : 'Nenhuma campanha criada'}
                             </Text>
                         </View>

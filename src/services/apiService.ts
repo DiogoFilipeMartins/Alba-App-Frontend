@@ -179,7 +179,7 @@ export interface NewsItem {
     description: string;
     content: string;
     category: string;
-    approved?: boolean;
+    approved?: boolean | null;
     imageUrl?: string;
     sourceName: string;
     sourceUrl?: string;
@@ -567,7 +567,7 @@ export const apiService = {
         return apiFetch('/admin/news');
     },
 
-    async moderateNews(id: string, approved: boolean): Promise<NewsItem> {
+    async moderateNews(id: string, approved: boolean | null): Promise<NewsItem> {
         return apiFetch(`/admin/news/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
