@@ -292,7 +292,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
                             <View style={tw`flex-row mb-4 gap-3`}>
                                 {/* Professional Card */}
                                 <TouchableOpacity
-                                    activeOpacity={0.75}
+                                    activeOpacity={1}
                                     onPress={() => setForm(f => ({ ...f, type: 'professional' }))}
                                     style={[
                                         styles.typeCard,
@@ -309,7 +309,7 @@ export default function SuggestPlaceScreen({ navigation, route }: Props) {
 
                                 {/* Institution Card */}
                                 <TouchableOpacity
-                                    activeOpacity={0.75}
+                                    activeOpacity={1}
                                     onPress={() => setForm(f => ({ ...f, type: 'institution' }))}
                                     style={[
                                         styles.typeCard,
