@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // Configure how notifications appear when the app is in foreground
@@ -57,7 +58,16 @@ export const notificationService = {
                 });
             }
 
-            const tokenData = await Notifications.getExpoPushTokenAsync();
+            // Em builds EAS o projectId tem de ser resolvido para o token Expo Push.
+            // Sem projectId configurado (app.json > extra.eas.projectId) cai para o
+            // comportamento antigo (funciona em Expo Go, falha em produção).
+            const projectId =
+                Constants?.expoConfig?.extra?.eas?.projectId ??
+                (Constants as any)?.easConfig?.projectId;
+
+            const tokenData = await Notifications.getExpoPushTokenAsync(
+                projectId ? { projectId } : undefined
+            );
             return tokenData.data;
         } catch (error: any) {
             // Firebase not configured (Android dev build without google-services.json) — silent fail

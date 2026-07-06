@@ -24,7 +24,12 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({ org }) => {
     return (
         <Pressable
             style={[styles.orgCard, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}
-            onPress={() => Linking.openURL(org.url)}
+            onPress={() => {
+                if (!org.url) return;
+                Linking.openURL(org.url).catch(err =>
+                    console.warn('[OrganizationCard] Não foi possível abrir o URL:', err)
+                );
+            }}
         >
             <View style={[styles.orgIconWrap, { backgroundColor: org.color + '15' }]}>
                 <Ionicons name="business" size={24} color={org.color} />

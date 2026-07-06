@@ -83,6 +83,7 @@ export default function OnboardingModal({ visible, onDone }: Props) {
                     scrollEnabled={false}
                     showsHorizontalScrollIndicator={false}
                     keyExtractor={(_, i) => String(i)}
+                    getItemLayout={(_, index) => ({ length: SCREEN_W, offset: SCREEN_W * index, index })}
                     renderItem={({ item }) => (
                         <View style={[s.slide, { width: SCREEN_W }]}>
                             <View style={[s.iconCircle, { backgroundColor: item.color + '20', borderColor: item.color + '40' }]}>
