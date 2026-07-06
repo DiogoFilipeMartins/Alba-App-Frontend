@@ -45,6 +45,7 @@ const PlaceMarker = memo(({ place, colors, onPress }: { place: any, colors: any,
 export default function MapScreen({ navigation, route }: Props) {
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [styleJSON, setStyleJSON] = useState<any>(null);
+  const [styleReloadKey, setStyleReloadKey] = useState(0);
   const { colors, isDark } = useTheme();
   const { profile, isInstitution } = useAuth();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -225,12 +226,14 @@ export default function MapScreen({ navigation, route }: Props) {
         .then(res => res.json())
         .then(json => {
           setStyleJSON(resolveMapboxStyle(json, mapboxToken));
+          setErrorMsg(null);
         })
         .catch(err => {
           console.error('[MapScreen] Erro ao buscar style JSON:', err);
+          setErrorMsg('Não foi possível carregar o mapa. Verifica a ligação à internet e tenta novamente.');
         });
     }
-  }, [mapboxToken, isDark]);
+  }, [mapboxToken, isDark, styleReloadKey]);
 
   // Efeito para focar num local específico quando navegado a partir do Perfil
   useEffect(() => {
@@ -357,19 +360,27 @@ export default function MapScreen({ navigation, route }: Props) {
     }
   };
 
+  // Erro tem de vir antes do gate de loading: sem style o gate abaixo ficava preso
+  // em spinner eterno quando o fetch do style Mapbox falhava.
+  if (errorMsg && !styleJSON) {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
+        <Text style={styles.errorText}>{errorMsg}</Text>
+        <TouchableOpacity
+          onPress={() => { setErrorMsg(null); setStyleReloadKey(k => k + 1); }}
+          style={{ marginTop: 16, paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8, backgroundColor: colors.accent }}
+        >
+          <Text style={{ color: '#FFF', fontWeight: '600' }}>Tentar novamente</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (!mapboxToken || loading || !styleJSON) {
     return (
       <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.accent} />
         <Text style={[styles.loadingText, { color: colors.accent }]}>A carregar o mapa...</Text>
-      </View>
-    );
-  }
-
-  if (errorMsg) {
-    return (
-      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
-        <Text style={styles.errorText}>{errorMsg}</Text>
       </View>
     );
   }

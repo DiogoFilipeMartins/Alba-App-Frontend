@@ -296,7 +296,7 @@ export default function ChatbotScreen({ navigation, route }: Props) {
         } finally {
             setLoading(false);
         }
-    }, [loading, history]);
+    }, [loading, history, userLocation]);
 
     const renderBotText = (text: string, textColor: string) => {
         // Simple bold (**text**) and italic (*text*) rendering

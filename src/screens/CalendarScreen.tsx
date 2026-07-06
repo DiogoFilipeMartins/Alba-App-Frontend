@@ -141,9 +141,10 @@ function DayTimeline({ events, date, ios, onEdit, onDelete, onAdd, isDark, onBac
 
   useEffect(() => {
     const targetHour = isToday ? Math.max(now.getHours() - 1, 0) : 8;
-    setTimeout(() => {
+    const t = setTimeout(() => {
       scrollRef.current?.scrollTo({ y: targetHour * HOUR_H, animated: true });
     }, 300);
+    return () => clearTimeout(t);
   }, [date]);
 
   const allDayEvents = events.filter(e => e.all_day);

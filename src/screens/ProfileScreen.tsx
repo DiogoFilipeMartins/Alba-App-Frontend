@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Modal, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Modal, ActivityIndicator, Linking } from 'react-native';
 import { Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import tw from 'twrnc';
@@ -147,6 +147,19 @@ export default function ProfileScreen({ navigation }: Props) {
     };
 
     const handleToggleNotifications = async () => {
+        // O SO não permite revogar a permissão a partir da app. Quando já está
+        // concedida, um novo requestPermissions devolvia sempre true e o Switch
+        // voltava a ligar — dando a ilusão de alternância. Encaminhar para as Definições.
+        if (notificationsGranted) {
+            showAlert(
+                'Gerir notificações',
+                'Para desativar as notificações, abre as Definições do telemóvel > Alba App > Notificações.',
+                'notifications-off-outline',
+                colors.textMuted,
+                { text: 'Abrir Definições', onPress: () => Linking.openSettings() }
+            );
+            return;
+        }
         const granted = await notificationService.requestPermissions();
         setNotificationsGranted(granted);
         if (!granted) {

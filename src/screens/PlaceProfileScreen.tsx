@@ -204,10 +204,26 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
     }
   }, [place]);
 
-  if (loading || !place) {
+  if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <Text style={{ color: colors.textSecondary }}>A carregar dados...</Text>
+      </View>
+    );
+  }
+
+  // Sem objeto place (ex.: aberto só com placeId por deep-link/notificação).
+  // Não existe getPlaceById no apiService, por isso mostramos um estado de erro
+  // em vez de ficar preso no spinner "A carregar dados..." para sempre.
+  if (!place) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 16 }}>
+          Não foi possível carregar os dados deste local.
+        </Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8, backgroundColor: colors.accent }}>
+          <Text style={{ color: '#FFF', fontWeight: '600' }}>Voltar</Text>
+        </TouchableOpacity>
       </View>
     );
   }

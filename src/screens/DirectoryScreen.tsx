@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -156,16 +156,16 @@ export default function DirectoryScreen({ navigation }: Props) {
     }
   };
 
-  // Reload favorites and places when the screen gets focused
+  // Reload favorites and places when the screen gets focused.
+  // Spinner só na primeira carga; focos seguintes recarregam em silêncio.
+  // (Antes havia também um useEffect de mount que duplicava o fetch no arranque.)
+  const hasLoadedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      fetchPlaces(false);
+      fetchPlaces(!hasLoadedRef.current);
+      hasLoadedRef.current = true;
     }, [])
   );
-
-  useEffect(() => {
-    fetchPlaces(true);
-  }, []);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -334,7 +334,11 @@ export default function DirectoryScreen({ navigation }: Props) {
           onChangeText={handleSearchChange}
         />
         {searchQuery.length > 0 ? (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            setSearchQuery('');
+            setDebouncedQuery('');
+          }}>
             <Ionicons name="close-circle" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         ) : null}

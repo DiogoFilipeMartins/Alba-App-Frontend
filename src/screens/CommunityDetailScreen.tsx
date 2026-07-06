@@ -448,12 +448,12 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
 
                             {/* WhatsApp Actions Row */}
                             <View style={styles.actionsRow}>
-                                <View style={styles.actionBtnContainer}>
+                                <Pressable onPress={() => setSearchVisible(true)} style={styles.actionBtnContainer}>
                                     <View style={[styles.actionIconCircle, { borderColor: borderCol }]}>
                                         <Ionicons name="search-outline" size={20} color={accentGreen} />
                                     </View>
                                     <Text style={[styles.actionLabel, { color: textPrimary }]}>Pesquisar</Text>
-                                </View>
+                                </Pressable>
                                 <Pressable onPress={handleLeave} style={styles.actionBtnContainer}>
                                     <View style={[styles.actionIconCircle, { borderColor: borderCol }]}>
                                         <Ionicons name="log-out-outline" size={20} color="#ef4444" />
@@ -540,7 +540,7 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
 
                     <View style={[styles.separator, { backgroundColor: containerBg }]} />
 
-                    {/* Block 5.5: Community Campaigns (hidden from non-members in private communities) */}
+                    {/* Block 5.5: Community Campaigns (hidden from non-members in private communities). Criação restrita a admins via botão "Nova". */}
                     {(!isPrivate || isMember) && <View style={[styles.sectionBlock, { backgroundColor: cardBg }]}>
                         <View style={styles.campaignsHeader}>
                             <Text style={[styles.participantsTitle, { color: textPrimary }]}>

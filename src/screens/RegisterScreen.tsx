@@ -112,7 +112,7 @@ export default function RegisterScreen({ navigation }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [username, email, password, confirmPassword, accountType, specialty, bio, website, navigation, signUp]);
+  }, [username, email, password, confirmPassword, phone, accountType, specialty, bio, website, navigation, signUp]);
 
   // --- Step 1: Account type selection ---
   if (step === 1) {

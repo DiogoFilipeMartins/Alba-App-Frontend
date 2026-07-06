@@ -22,6 +22,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'MapPicker'>;
 export default function MapPickerScreen({ navigation, route }: Props) {
     const [mapboxToken, setMapboxToken] = useState<string | null>(null);
     const [styleJSON, setStyleJSON] = useState<any>(null);
+    const [styleError, setStyleError] = useState(false);
+    const [styleReloadKey, setStyleReloadKey] = useState(0);
     const initial = route.params?.initialCoords ?? null;
     const [alertState, setAlertState] = useState({ visible: false, title: '', message: '', icon: undefined as any, iconColor: undefined as any, primaryButton: undefined as any });
     const closeAlert = () => setAlertState(s => ({ ...s, visible: false }));
@@ -59,12 +61,14 @@ export default function MapPickerScreen({ navigation, route }: Props) {
                 .then(res => res.json())
                 .then(json => {
                     setStyleJSON(resolveMapboxStyle(json, mapboxToken));
+                    setStyleError(false);
                 })
                 .catch(err => {
                     console.error('[MapPicker] Erro ao buscar style JSON:', err);
+                    setStyleError(true);
                 });
         }
-    }, [mapboxToken]);
+    }, [mapboxToken, styleReloadKey]);
 
     useEffect(() => {
         if (initial) return;
@@ -113,13 +117,28 @@ export default function MapPickerScreen({ navigation, route }: Props) {
             showAlert({ title: 'Nenhum ponto selecionado', message: 'Toca no mapa para escolher a localização.', icon: 'map', iconColor: '#f59e0b', primaryButton: undefined });
             return;
         }
-        (navigation as any).navigate('Main', {
-            screen: 'SuggestPlace',
-            params: {
-                pickedCoords: { lat: marker.latitude, lng: marker.longitude },
-            }
+        // SuggestPlace é um ecrã do Stack raiz, não um tab do Main. Navegar para
+        // 'Main' > 'SuggestPlace' procurava um tab inexistente e as coordenadas
+        // nunca chegavam ao SuggestPlaceScreen. Navegar diretamente reencaminha o
+        // ecrã (que já está no stack por baixo) com os params e dispara o efeito.
+        navigation.navigate('SuggestPlace', {
+            pickedCoords: { lat: marker.latitude, lng: marker.longitude },
         });
     };
+
+    if (styleError && !styleJSON) {
+        return (
+            <View style={tw`flex-1 items-center justify-center bg-gray-900 px-8`}>
+                <Text style={tw`text-white font-medium text-center`}>Não foi possível carregar o mapa. Verifica a ligação à internet.</Text>
+                <Pressable
+                    onPress={() => { setStyleError(false); setStyleReloadKey(k => k + 1); }}
+                    style={tw`mt-4 bg-[#16db65] py-3 px-6 rounded-lg`}
+                >
+                    <Text style={tw`text-white font-semibold`}>Tentar novamente</Text>
+                </Pressable>
+            </View>
+        );
+    }
 
     if (!mapboxToken || !styleJSON) {
         return (
