@@ -110,17 +110,16 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     (async () => {
-      const FALLBACK_TOKEN = 'pk.eyJ1IjoiZGlvZ29hb20iLCJhIjoiY21xc2NxNG5hMDZrYzMyczZhdXk3MWNjdiJ9.r5JNit1Q11FrpwaONflZTQ';
+      // Token servido pelo backend — sem fallback embebido no bundle.
       try {
         const res = await apiService.getMapboxToken();
         if (res && res.token && !res.token.startsWith('pk.mock_')) {
           setMapboxToken(res.token);
         } else {
-          setMapboxToken(FALLBACK_TOKEN);
+          console.warn('[Mapbox] Backend não devolveu token válido.');
         }
       } catch (err) {
-        console.error('[PlaceProfileDebug] Erro ao buscar token do Mapbox. A usar fallback...', err);
-        setMapboxToken(FALLBACK_TOKEN);
+        console.error('[Mapbox] Erro ao obter token do backend.', err);
       }
     })();
   }, []);

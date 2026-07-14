@@ -377,7 +377,7 @@ export const apiService = {
         try {
             const response = await fetch(`${API_URL}/chat`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ messages, location: location ?? null }),
                 signal: controller.signal,
             });
@@ -411,7 +411,7 @@ export const apiService = {
     },
 
     async getMapboxToken(): Promise<{ token: string }> {
-        return apiFetch('/mapbox-token', {}, false);
+        return apiFetch('/mapbox-token', {});
     },
 
     // Profile management

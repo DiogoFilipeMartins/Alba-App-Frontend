@@ -148,17 +148,16 @@ export default function MapScreen({ navigation, route }: Props) {
   };
 
   const loadMapboxToken = async () => {
-    const FALLBACK_TOKEN = 'pk.eyJ1IjoiZGlvZ29hb20iLCJhIjoiY21xc2NxNG5hMDZrYzMyczZhdXk3MWNjdiJ9.r5JNit1Q11FrpwaONflZTQ';
+    // O token vem SEMPRE do backend (não embeber tokens no bundle da app).
     try {
       const res = await apiService.getMapboxToken();
       if (res && res.token && !res.token.startsWith('pk.mock_')) {
         setMapboxToken(res.token);
       } else {
-        setMapboxToken(FALLBACK_TOKEN);
+        console.warn('[Mapbox] Backend não devolveu token válido.');
       }
     } catch (error) {
-      console.error('[MapboxDebug] Erro ao obter token do Mapbox. A usar fallback...', error);
-      setMapboxToken(FALLBACK_TOKEN);
+      console.error('[Mapbox] Erro ao obter token do backend.', error);
     }
   };
 

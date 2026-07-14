@@ -15,6 +15,7 @@ import {
     Linking,
     Keyboard,
     ScrollView,
+    AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { apiService, CommunityMessage, CommunityMember } from '../services/apiService';
 import { notificationService } from '../services/notificationService';
+import { communityChatCache } from '../services/communityChatCache';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -96,16 +98,23 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
 
     const knownMessageIdsRef = useRef<Set<string>>(new Set());
     const isInitialLoadRef = useRef(true);
+    const isMountedRef = useRef(true);
+    const serverLoadedRef = useRef(false);
+    const deletedIdsRef = useRef<Set<string>>(new Set());
 
     const fetchMessages = useCallback(async () => {
         try {
-            const data = await apiService.getCommunityMessages(communityId);
-            
-            // On polling (not initial load), detect new messages from others
-            if (!isInitialLoadRef.current) {
+            const raw = await apiService.getCommunityMessages(communityId);
+            if (!isMountedRef.current) return;
+            // Remove mensagens já apagadas localmente que o servidor ainda possa devolver
+            const data = deletedIdsRef.current.size
+                ? raw.filter(m => !deletedIdsRef.current.has(m.id))
+                : raw;
+
+            // Notificar mensagens de terceiros — só quando a app NÃO está em foco
+            if (!isInitialLoadRef.current && AppState.currentState !== 'active') {
                 for (const msg of data) {
                     if (!knownMessageIdsRef.current.has(msg.id) && msg.user_id !== user?.id) {
-                        // New message from someone else — trigger local notification
                         const senderName = msg.profiles?.full_name || 'Alguém';
                         notificationService.showLocalMessageNotification(
                             communityName,
@@ -117,32 +126,49 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                 }
             }
 
-            // Update known IDs
             knownMessageIdsRef.current = new Set(data.map(m => m.id));
             isInitialLoadRef.current = false;
+            serverLoadedRef.current = true;
 
             setMessages(data);
+            // Atualiza a cache local com as mensagens frescas do servidor
+            communityChatCache.set(communityId, data);
         } catch (error) {
+            // Sem rede: mantém as mensagens em cache já apresentadas
             console.error('Erro ao carregar mensagens', error);
         } finally {
-            setLoading(false);
+            if (isMountedRef.current) setLoading(false);
         }
     }, [communityId, communityName, user?.id]);
 
     const fetchMembers = useCallback(async () => {
         try {
             const data = await apiService.getCommunityMembers(communityId);
-            setMembers(data);
+            if (isMountedRef.current) setMembers(data);
         } catch (error) {
             console.error('Erro ao carregar membros', error);
         }
     }, [communityId]);
 
     useEffect(() => {
+        isMountedRef.current = true;
+        serverLoadedRef.current = false;
+        isInitialLoadRef.current = true;
+        deletedIdsRef.current = new Set();
+        // 1) Cache — só se o servidor ainda não respondeu (evita sobrepor mensagens frescas)
+        (async () => {
+            const cached = await communityChatCache.get(communityId);
+            if (isMountedRef.current && !serverLoadedRef.current && cached.length > 0) {
+                knownMessageIdsRef.current = new Set(cached.map(m => m.id));
+                setMessages(cached);
+                setLoading(false);
+            }
+        })();
+        // 2) Servidor (fonte de verdade) + polling
         fetchMessages();
         fetchMembers();
         const interval = setInterval(fetchMessages, 5000);
-        return () => clearInterval(interval);
+        return () => { isMountedRef.current = false; clearInterval(interval); };
     }, [communityId]);
 
     const messagesWithSeparators = React.useMemo<MessageWithSeparator[]>(() => {
@@ -164,16 +190,20 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
         const contentToSend = forcedText !== undefined ? forcedText : text;
         if (!contentToSend.trim() || sending) return;
         
-        if (forcedText === undefined) {
-            setText('');
-        }
         setSending(true);
         try {
             const newMsg = await apiService.sendCommunityMessage(communityId, contentToSend.trim());
-            setMessages(prev => [...prev, newMsg]);
+            if (forcedText === undefined) setText(''); // limpa só após sucesso
+            setMessages(prev => {
+                const next = [...prev, newMsg];
+                knownMessageIdsRef.current.add(newMsg.id);
+                communityChatCache.set(communityId, next);
+                return next;
+            });
             setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         } catch (error) {
             console.error('Erro ao enviar', error);
+            showAlert({ title: 'Não foi possível enviar', message: 'Verifica a tua ligação e tenta novamente.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
         } finally {
             setSending(false);
         }
@@ -190,7 +220,13 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                 onPress: async () => {
                     try {
                         await apiService.deleteCommunityMessage(communityId, msg.id);
-                        setMessages(prev => prev.filter(m => m.id !== msg.id));
+                        deletedIdsRef.current.add(msg.id); // evita reaparecer no próximo poll
+                        setMessages(prev => {
+                            const next = prev.filter(m => m.id !== msg.id);
+                            knownMessageIdsRef.current.delete(msg.id);
+                            communityChatCache.set(communityId, next);
+                            return next;
+                        });
                         setContextMsg(null);
                     } catch (e: any) {
                         showAlert({ title: 'Erro', message: e.message || 'Não foi possível apagar.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
