@@ -116,11 +116,19 @@ export default function MapPickerScreen({ navigation, route }: Props) {
             showAlert({ title: 'Nenhum ponto selecionado', message: 'Toca no mapa para escolher a localização.', icon: 'map', iconColor: '#f59e0b', primaryButton: undefined });
             return;
         }
-        // O ecrã de destino já está no stack por baixo; navegar diretamente
-        // reencaminha-o com os params e dispara o efeito que lê pickedCoords.
+        // O ecrã de destino já está no stack por baixo. Usar popTo() (React
+        // Navigation v7) volta à instância EXISTENTE — preserva o estado do
+        // formulário, não empilha um duplicado e remove o MapPicker do stack.
+        // (navigate() empilhava um novo ecrã: voltava ao passo 1 e o goBack final
+        // caía outra vez no mapa.)
         const coords = { lat: marker.latitude, lng: marker.longitude };
         const returnTo = route.params?.returnTo ?? 'SuggestPlace';
-        navigation.navigate(returnTo as any, { pickedCoords: coords });
+        const nav = navigation as any;
+        if (typeof nav.popTo === 'function') {
+            nav.popTo(returnTo, { pickedCoords: coords });
+        } else {
+            navigation.navigate(returnTo as any, { pickedCoords: coords });
+        }
     };
 
     if (styleError && !styleJSON) {
