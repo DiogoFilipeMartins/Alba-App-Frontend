@@ -433,9 +433,47 @@ export const apiService = {
         });
     },
 
-    async claimPlace(placeId: string): Promise<any> {
-        return apiFetch(`/places/${placeId}/claim`, {
+    // ─── Associação Profissional ↔ Instituição ───────────────────────────────
+    // Lista pública de instituições (usada no registo, sem sessão).
+    async getInstitutions(): Promise<Array<{ id: string; full_name: string; specialty: string | null; verified: boolean; city: string | null }>> {
+        return apiFetch('/institutions', {}, false);
+    },
+
+    async getInstitutionProfessionals(institutionId: string): Promise<any[]> {
+        return apiFetch(`/institutions/${institutionId}/professionals`);
+    },
+
+    async requestAssociation(institutionId: string): Promise<any> {
+        return apiFetch(`/institutions/${institutionId}/association-request`, { method: 'POST' });
+    },
+
+    async getAssociationRequests(status?: 'pending' | 'accepted' | 'rejected'): Promise<any[]> {
+        const qs = status ? `?status=${status}` : '';
+        return apiFetch(`/association-requests${qs}`);
+    },
+
+    async respondAssociationRequest(requestId: string, action: 'accept' | 'reject'): Promise<any> {
+        return apiFetch(`/association-requests/${requestId}/respond`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action }),
+        });
+    },
+
+    async cancelAssociationRequest(requestId: string): Promise<void> {
+        await apiFetch(`/association-requests/${requestId}`, { method: 'DELETE' });
+    },
+
+    async leaveInstitution(): Promise<{ success: boolean }> {
+        return apiFetch('/professional/leave-institution', { method: 'POST' });
+    },
+
+    // Define/atualiza o próprio local (instituição ou profissional independente).
+    async setOwnPlace(data: { name?: string; city?: string; address_line?: string; description?: string; latitude: number; longitude: number; accessibility?: { wheelchair_accessible?: boolean; low_noise?: boolean; soft_lighting?: boolean } }): Promise<Place> {
+        return apiFetch('/profile/place', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
         });
     },
 

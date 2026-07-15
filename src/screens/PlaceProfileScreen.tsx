@@ -139,49 +139,51 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
     }
   }, [mapboxToken, isDark]);
 
-  const { profile, isProfessional, isInstitution, refreshProfile } = useAuth();
+  const { profile, isProfessional, refreshProfile } = useAuth();
 
   const claimers = (place as any)?.profiles || [];
   const claimer = claimers[0];
   const hasClaimer = !!claimer;
   const isClaimerVerified = claimer?.verified === true;
 
-  const handleClaimPlace = async () => {
-    if (!place) return;
-    if (isInstitution && profile?.verified !== true) {
-      showAlert(
-        'Acesso Restrito',
-        'O seu perfil de Instituição ainda está pendente de aprovação por um administrador. Não pode reivindicar locais até que a sua conta seja aprovada.',
-        'lock-closed-outline',
-        '#f59e0b'
-      );
-      return;
+  // O local pertence a uma instituição? (é a essa instituição que o profissional se associa)
+  const ownerIsInstitution = place?.type === 'institution' || claimer?.account_type === 'institution';
+  const institutionId = claimer?.id;
+  const alreadyAffiliatedHere = isProfessional && profile?.institution_id && profile.institution_id === institutionId;
+
+  const [assocPros, setAssocPros] = useState<any[]>([]);
+
+  // Profissionais associados a esta instituição (para mostrar no perfil).
+  useEffect(() => {
+    if (ownerIsInstitution && institutionId) {
+      apiService.getInstitutionProfessionals(institutionId)
+        .then(list => setAssocPros(list || []))
+        .catch(() => setAssocPros([]));
+    } else {
+      setAssocPros([]);
     }
+  }, [ownerIsInstitution, institutionId]);
+
+  const handleRequestAssociation = async () => {
+    if (!place || !institutionId) return;
     showAlert(
-      'Reivindicar Local',
-      `Tens a certeza que queres associar a tua conta a "${place.name}" como local de atendimento oficial?`,
+      'Associar-me a esta instituição',
+      `Queres enviar um pedido de associação a "${claimer?.full_name || place.name}"? A instituição terá de o aceitar.`,
       'business-outline',
       colors.primary,
       {
-        text: 'Confirmar',
+        text: 'Enviar pedido',
         onPress: async () => {
           try {
-            const res = await apiService.claimPlace(place.id);
-            showAlert('Sucesso', 'Reivindicação efetuada com sucesso! O teu perfil agora está associado a este local.', 'checkmark-circle-outline', colors.primary);
+            await apiService.requestAssociation(institutionId);
             await refreshProfile();
-            setPlace(prev => prev ? {
-              ...prev,
-              profiles: [res.profile || { id: profile?.id, verified: false, account_type: profile?.account_type }]
-            } : null);
+            showAlert('Pedido enviado', 'O teu pedido de associação foi enviado. Aguarda a aprovação da instituição.', 'checkmark-circle-outline', colors.primary);
           } catch (error: any) {
-            showAlert('Erro', error.message || 'Não foi possível reivindicar o local.', 'alert-circle-outline', '#ef4444');
+            showAlert('Não foi possível', error.message || 'Não foi possível enviar o pedido.', 'alert-circle-outline', '#ef4444');
           }
         }
       },
-      {
-        text: 'Cancelar',
-        onPress: () => {}
-      }
+      { text: 'Cancelar', onPress: () => {} }
     );
   };
 
@@ -270,10 +272,15 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
   };
 
   const handleShowOnMainMap = () => {
-    // Navigate to Main Tab Navigator -> Map tab, and pass focusPlaceId parameter
+    if (!place) return;
+    // Passa também as coordenadas: o foco por id falha para perfis (instituições)
+    // cujo place não está na lista carregada do mapa.
+    const lat = Number(place.latitude);
+    const lng = Number(place.longitude);
+    const focusCoords = !isNaN(lat) && !isNaN(lng) ? { lat, lng } : undefined;
     navigation.navigate('Main', {
       screen: 'Map',
-      params: { focusPlaceId: place.id }
+      params: { focusPlaceId: place.id, focusCoords },
     } as any);
   };
 
@@ -400,21 +407,35 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
                   : 'A reivindicação deste local está pendente de aprovação.'}
               </Text>
             </View>
-          ) : (
-            (isProfessional || isInstitution) && (
-              <View style={[styles.claimContainer, { borderTopColor: colors.border }]}>
-                <TouchableOpacity
-                  onPress={handleClaimPlace}
-                  style={[styles.claimBtn, { backgroundColor: place.type === 'professional' ? colors.primary : '#3b82f6' }]}
-                >
-                  <Ionicons name="shield-outline" size={16} color="#fff" />
-                  <Text style={styles.claimBtnText}>Reivindicar este Local</Text>
-                </TouchableOpacity>
+          ) : null}
+
+          {/* Associação: só profissionais, e só a locais de instituições */}
+          {isProfessional && ownerIsInstitution && institutionId !== profile?.id && (
+            <View style={[styles.claimContainer, { borderTopColor: colors.border }]}>
+              {alreadyAffiliatedHere ? (
+                <View style={[styles.claimBadge, { backgroundColor: '#22c55e12', borderColor: '#22c55e25', alignSelf: 'flex-start' }]}>
+                  <Ionicons name="checkmark-circle" size={15} color="#22c55e" />
+                  <Text style={[styles.claimBadgeText, { color: '#22c55e' }]}>Estás associado a esta instituição</Text>
+                </View>
+              ) : profile?.institution_id ? (
                 <Text style={[styles.claimInfoText, { color: colors.textSecondary }]}>
-                  Se este é o teu local de atendimento oficial, podes reivindicá-lo para associá-lo ao teu perfil.
+                  Já pertences a outra instituição. Sai dela no teu perfil para te associares a esta.
                 </Text>
-              </View>
-            )
+              ) : (
+                <>
+                  <TouchableOpacity
+                    onPress={handleRequestAssociation}
+                    style={[styles.claimBtn, { backgroundColor: '#3b82f6' }]}
+                  >
+                    <Ionicons name="business-outline" size={16} color="#fff" />
+                    <Text style={styles.claimBtnText}>Associar-me a esta instituição</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.claimInfoText, { color: colors.textSecondary }]}>
+                    Se exerces nesta instituição, envia um pedido de associação. Após aprovação, a tua localização passa a ser a desta instituição.
+                  </Text>
+                </>
+              )}
+            </View>
           )}
         </View>
 
@@ -483,6 +504,36 @@ export default function PlaceProfileScreen({ route, navigation }: Props) {
                 </View>
               </View>
             )}
+          </View>
+        )}
+
+        {/* Profissionais associados (perfil de instituição) */}
+        {ownerIsInstitution && assocPros.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              Profissionais associados ({assocPros.length})
+            </Text>
+            <View style={{ gap: 10, marginTop: 8 }}>
+              {assocPros.map(pro => (
+                <View
+                  key={pro.id}
+                  style={[styles.detailsContainer, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 }]}
+                >
+                  <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.primary + '18', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="medical" size={20} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: 15, fontFamily: 'Poppins_600SemiBold', color: colors.textPrimary }} numberOfLines={1}>{pro.full_name}</Text>
+                      {pro.verified && <Ionicons name="shield-checkmark" size={14} color="#22c55e" />}
+                    </View>
+                    {pro.specialty ? (
+                      <Text style={{ fontSize: 12.5, fontFamily: 'Poppins_400Regular', color: colors.textSecondary }} numberOfLines={1}>{pro.specialty}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 

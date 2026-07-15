@@ -1,15 +1,19 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, Pressable,
-  ActivityIndicator, ScrollView, StyleSheet, Animated,
+  ActivityIndicator, ScrollView, StyleSheet, Animated, Modal, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/apiService';
 import CustomAlertModal from '../components/CustomAlertModal';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
+
+type Institution = { id: string; full_name: string; specialty: string | null; verified: boolean; city: string | null };
+type ProfessionalKind = 'independent' | 'affiliated';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SignUp'>;
 type AccountType = 'user' | 'professional' | 'institution';
@@ -62,8 +66,31 @@ export default function RegisterScreen({ navigation }: Props) {
   const [bio, setBio] = useState('');
   const [website, setWebsite] = useState('');
 
+  // Professional-only: pertença a instituição
+  const [professionalKind, setProfessionalKind] = useState<ProfessionalKind>('independent');
+  const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [institutionsLoading, setInstitutionsLoading] = useState(false);
+  const [institutionModal, setInstitutionModal] = useState(false);
+  const [institutionSearch, setInstitutionSearch] = useState('');
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Carrega instituições quando o profissional escolhe "pertenço a instituição".
+  useEffect(() => {
+    if (accountType === 'professional' && professionalKind === 'affiliated' && institutions.length === 0 && !institutionsLoading) {
+      setInstitutionsLoading(true);
+      apiService.getInstitutions()
+        .then(list => setInstitutions(list || []))
+        .catch(() => setInstitutions([]))
+        .finally(() => setInstitutionsLoading(false));
+    }
+  }, [accountType, professionalKind]);
+
+  const filteredInstitutions = institutions.filter(i =>
+    i.full_name.toLowerCase().includes(institutionSearch.toLowerCase().trim())
+  );
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -93,6 +120,10 @@ export default function RegisterScreen({ navigation }: Props) {
       setError('As palavras-passe não coincidem.');
       return;
     }
+    if (accountType === 'professional' && professionalKind === 'affiliated' && !selectedInstitution) {
+      setError('Seleciona a instituição a que pertences ou escolhe "Por conta própria".');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -105,6 +136,8 @@ export default function RegisterScreen({ navigation }: Props) {
         specialty: specialty.trim() || undefined,
         bio: bio.trim() || undefined,
         website: website.trim() || undefined,
+        professional_kind: accountType === 'professional' ? professionalKind : undefined,
+        institution_id: accountType === 'professional' && professionalKind === 'affiliated' ? selectedInstitution?.id : undefined,
       });
       setSuccessModal(true);
     } catch (e: any) {
@@ -112,7 +145,7 @@ export default function RegisterScreen({ navigation }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [username, email, password, confirmPassword, phone, accountType, specialty, bio, website, navigation, signUp]);
+  }, [username, email, password, confirmPassword, phone, accountType, specialty, bio, website, professionalKind, selectedInstitution, navigation, signUp]);
 
   // --- Step 1: Account type selection ---
   if (step === 1) {
@@ -347,6 +380,54 @@ export default function RegisterScreen({ navigation }: Props) {
             </>
           )}
 
+          {/* Pertença a instituição — apenas para profissionais */}
+          {accountType === 'professional' && (
+            <>
+              <View style={[styles.sectionDivider, { borderColor: colors.border }]}>
+                <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+                  Exerces onde?
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={() => { setProfessionalKind('independent'); setSelectedInstitution(null); }}
+                style={[styles.kindCard, { backgroundColor: colors.card, borderColor: professionalKind === 'independent' ? selectedType.color : colors.border, borderWidth: professionalKind === 'independent' ? 2 : 1 }]}
+              >
+                <Ionicons name="person-circle-outline" size={22} color={selectedType.color} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.kindTitle, { color: colors.textPrimary }]}>Por conta própria</Text>
+                  <Text style={[styles.kindDesc, { color: colors.textSecondary }]}>Defines a tua localização no perfil depois de entrares (opcional).</Text>
+                </View>
+                {professionalKind === 'independent' && <Ionicons name="checkmark-circle" size={20} color={selectedType.color} />}
+              </Pressable>
+
+              <Pressable
+                onPress={() => setProfessionalKind('affiliated')}
+                style={[styles.kindCard, { backgroundColor: colors.card, borderColor: professionalKind === 'affiliated' ? selectedType.color : colors.border, borderWidth: professionalKind === 'affiliated' ? 2 : 1 }]}
+              >
+                <Ionicons name="business-outline" size={22} color={selectedType.color} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.kindTitle, { color: colors.textPrimary }]}>Pertenço a uma instituição</Text>
+                  <Text style={[styles.kindDesc, { color: colors.textSecondary }]}>Envia um pedido de associação. A instituição tem de o aceitar.</Text>
+                </View>
+                {professionalKind === 'affiliated' && <Ionicons name="checkmark-circle" size={20} color={selectedType.color} />}
+              </Pressable>
+
+              {professionalKind === 'affiliated' && (
+                <Pressable
+                  onPress={() => setInstitutionModal(true)}
+                  style={[styles.inputRow, { backgroundColor: colors.card }]}
+                >
+                  <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                  <Text style={[styles.input, { color: selectedInstitution ? colors.textPrimary : colors.textMuted }]} numberOfLines={1}>
+                    {selectedInstitution ? selectedInstitution.full_name : 'Selecionar instituição'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </Pressable>
+              )}
+            </>
+          )}
+
           {error ? (
             <View style={[styles.errorBox, { backgroundColor: '#ef444415', borderColor: '#ef444430' }]}>
               <Ionicons name="alert-circle" size={16} color="#ef4444" />
@@ -381,7 +462,9 @@ export default function RegisterScreen({ navigation }: Props) {
         title="Conta Criada!"
         message={accountType === 'user'
           ? "A tua conta foi criada com sucesso. Verifica o teu email para confirmar o registo."
-          : "A tua conta foi criada com sucesso e está a aguardar aprovação pela nossa equipa. Por favor, verifica o teu email para confirmar o registo."}
+          : accountType === 'professional' && professionalKind === 'affiliated'
+            ? "Conta criada e a aguardar aprovação da nossa equipa. O pedido de associação à instituição foi registado — será enviado assim que confirmares o email e entrares. Verifica o teu email."
+            : "A tua conta foi criada com sucesso e está a aguardar aprovação pela nossa equipa. Por favor, verifica o teu email para confirmar o registo."}
         icon="checkmark-circle-outline"
         iconColor={selectedType.color}
         primaryButton={{
@@ -396,6 +479,67 @@ export default function RegisterScreen({ navigation }: Props) {
         }}
         onClose={() => setSuccessModal(false)}
       />
+
+      {/* Modal de seleção de instituição */}
+      <Modal visible={institutionModal} animationType="slide" transparent onRequestClose={() => setInstitutionModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Escolher instituição</Text>
+              <Pressable onPress={() => setInstitutionModal(false)} style={styles.modalClose}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <View style={[styles.inputRow, { backgroundColor: colors.card, marginBottom: 12 }]}>
+              <Ionicons name="search" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                value={institutionSearch}
+                onChangeText={setInstitutionSearch}
+                placeholder="Procurar por nome..."
+                placeholderTextColor={colors.textMuted}
+                style={[styles.input, { color: colors.textPrimary }]}
+                autoFocus
+              />
+            </View>
+
+            {institutionsLoading ? (
+              <ActivityIndicator color={selectedType.color} style={{ marginTop: 24 }} />
+            ) : (
+              <FlatList
+                data={filteredInstitutions}
+                keyExtractor={item => item.id}
+                keyboardShouldPersistTaps="handled"
+                ListEmptyComponent={
+                  <Text style={[styles.modalEmpty, { color: colors.textMuted }]}>
+                    {institutions.length === 0 ? 'Ainda não há instituições registadas.' : 'Nenhuma instituição encontrada.'}
+                  </Text>
+                }
+                renderItem={({ item }) => (
+                  <Pressable
+                    onPress={() => { setSelectedInstitution(item); setInstitutionModal(false); setInstitutionSearch(''); }}
+                    style={[styles.instRow, { borderBottomColor: colors.border }]}
+                  >
+                    <View style={[styles.instIcon, { backgroundColor: selectedType.color + '18' }]}>
+                      <Ionicons name="business" size={18} color={selectedType.color} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.instNameRow}>
+                        <Text style={[styles.instName, { color: colors.textPrimary }]} numberOfLines={1}>{item.full_name}</Text>
+                        {item.verified && <Ionicons name="shield-checkmark" size={13} color="#22c55e" />}
+                      </View>
+                      <Text style={[styles.instMeta, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {[item.specialty, item.city].filter(Boolean).join(' · ') || 'Instituição'}
+                      </Text>
+                    </View>
+                    {selectedInstitution?.id === item.id && <Ionicons name="checkmark-circle" size={20} color={selectedType.color} />}
+                  </Pressable>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -445,4 +589,20 @@ const styles = StyleSheet.create({
 
   loginLink: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   loginLinkText: { fontSize: 14, fontFamily: 'Poppins_500Medium' },
+
+  kindCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 14 },
+  kindTitle: { fontSize: 15, fontFamily: 'Poppins_600SemiBold' },
+  kindDesc: { fontSize: 12, fontFamily: 'Poppins_400Regular', lineHeight: 17, marginTop: 2 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalSheet: { maxHeight: '80%', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold' },
+  modalClose: { padding: 4 },
+  modalEmpty: { textAlign: 'center', marginTop: 32, fontSize: 14, fontFamily: 'Poppins_400Regular' },
+  instRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: 1 },
+  instIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  instNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  instName: { fontSize: 15, fontFamily: 'Poppins_600SemiBold', flexShrink: 1 },
+  instMeta: { fontSize: 12, fontFamily: 'Poppins_400Regular', marginTop: 1 },
 });

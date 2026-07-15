@@ -232,7 +232,9 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
@@ -246,5 +248,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 14,
+    textAlign: 'center',
   },
 });

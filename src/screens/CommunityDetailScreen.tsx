@@ -139,6 +139,17 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
     const myMemberRecord = members.find(m => m.user_id === user?.id);
     const isMeAdmin = myMemberRecord?.role === 'admin';
 
+    // Menu de ações de um membro (aberto pelos 3 pontinhos)
+    const [memberMenu, setMemberMenu] = useState<CommunityMember | null>(null);
+
+    const openDirectMessage = (targetMember: CommunityMember) => {
+        setMemberMenu(null);
+        navigation.navigate('DirectMessage', {
+            userId: targetMember.user_id,
+            userName: targetMember.profiles?.full_name || 'Utilizador',
+        });
+    };
+
     const handlePromoteMember = (targetMember: CommunityMember) => {
         const memberName = targetMember.profiles?.full_name || 'Utilizador';
         
@@ -525,21 +536,6 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
 
                     <View style={[styles.separator, { backgroundColor: containerBg }]} />
 
-                    {/* Block 5: Encryption Card */}
-                    <View style={[styles.sectionBlock, { backgroundColor: cardBg }]}>
-                        <Pressable style={styles.rowItemMultiLine}>
-                            <Ionicons name="lock-closed-outline" size={22} color={accentGreen} style={styles.rowIconTop} />
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.rowText, { color: textPrimary }]}>Encriptação</Text>
-                                <Text style={[styles.rowSubtitle, { color: textSecondary }]}>
-                                    As mensagens estão encriptadas de ponta a ponta. Toque para verificar.
-                                </Text>
-                            </View>
-                        </Pressable>
-                    </View>
-
-                    <View style={[styles.separator, { backgroundColor: containerBg }]} />
-
                     {/* Block 5.5: Community Campaigns (hidden from non-members in private communities). Criação restrita a admins via botão "Nova". */}
                     {(!isPrivate || isMember) && <View style={[styles.sectionBlock, { backgroundColor: cardBg }]}>
                         <View style={styles.campaignsHeader}>
@@ -692,18 +688,8 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                                     {idx > 0 && <View style={[styles.innerDivider, { backgroundColor: borderCol }]} />}
                                     <Pressable
                                         style={styles.memberRow}
-                                        onLongPress={() => {
-                                            if (isMeAdmin && !isMe && m.role !== 'admin') {
-                                                showAlert(
-                                                    name,
-                                                    'O que pretendes fazer com este membro?',
-                                                    'person-outline',
-                                                    accentGreen,
-                                                    { text: 'Remover do grupo', onPress: () => handleRemoveMember(m), destructive: true },
-                                                    { text: 'Promover a admin', onPress: () => handlePromoteMember(m) }
-                                                );
-                                            }
-                                        }}
+                                        onPress={() => { if (!isMe) setMemberMenu(m); }}
+                                        onLongPress={() => { if (!isMe) setMemberMenu(m); }}
                                     >
                                         <View style={[styles.memberAvatar, { backgroundColor: avatarCol }]}>
                                             <Text style={styles.memberAvatarText}>{name.charAt(0).toUpperCase()}</Text>
@@ -713,14 +699,13 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                                                 {name} {isMe && <Text style={{ color: textSecondary, fontFamily: 'Poppins_400Regular' }}>(tu)</Text>}
                                             </Text>
                                         </View>
-                                        {m.role === 'admin' ? (
+                                        {m.role === 'admin' && (
                                             <View style={[styles.adminPill, { borderColor: accentGreen }]}>
                                                 <Text style={[styles.adminPillText, { color: accentGreen }]}>Admin do grupo</Text>
                                             </View>
-                                        ) : (
-                                            isMeAdmin && !isMe && (
-                                                <Ionicons name="ellipsis-vertical" size={16} color={textSecondary} />
-                                            )
+                                        )}
+                                        {!isMe && (
+                                            <Ionicons name="ellipsis-vertical" size={16} color={textSecondary} style={{ marginLeft: 8 }} />
                                         )}
                                     </Pressable>
                                 </View>
@@ -1148,6 +1133,47 @@ export default function CommunityDetailScreen({ route, navigation }: Props) {
                 secondaryButton={alertConfig.secondaryButton}
                 onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
             />
+
+            {/* Menu de ações de um membro (3 pontinhos) */}
+            <Modal visible={!!memberMenu} transparent animationType="slide" onRequestClose={() => setMemberMenu(null)}>
+                <Pressable style={styles.memberMenuOverlay} onPress={() => setMemberMenu(null)}>
+                    <Pressable style={[styles.memberMenuSheet, { backgroundColor: cardBg }]} onPress={() => {}}>
+                        <View style={[styles.memberMenuGrabber, { backgroundColor: borderCol }]} />
+                        <View style={styles.memberMenuHeader}>
+                            <View style={[styles.memberAvatar, { backgroundColor: getAvatarColor(memberMenu?.user_id || '') }]}>
+                                <Text style={styles.memberAvatarText}>{(memberMenu?.profiles?.full_name || 'U').charAt(0).toUpperCase()}</Text>
+                            </View>
+                            <Text style={[styles.memberMenuName, { color: textPrimary }]} numberOfLines={1}>
+                                {memberMenu?.profiles?.full_name || 'Utilizador'}
+                            </Text>
+                        </View>
+
+                        <Pressable style={styles.memberMenuRow} onPress={() => memberMenu && openDirectMessage(memberMenu)}>
+                            <Ionicons name="chatbubble-ellipses-outline" size={22} color={accentGreen} style={{ width: 28 }} />
+                            <Text style={[styles.memberMenuRowText, { color: textPrimary }]}>Enviar mensagem privada</Text>
+                        </Pressable>
+
+                        {isMeAdmin && memberMenu?.role !== 'admin' && (
+                            <>
+                                <View style={[styles.innerDivider, { backgroundColor: borderCol, marginLeft: 0 }]} />
+                                <Pressable style={styles.memberMenuRow} onPress={() => { const t = memberMenu; setMemberMenu(null); if (t) handlePromoteMember(t); }}>
+                                    <Ionicons name="shield-checkmark-outline" size={22} color={accentGreen} style={{ width: 28 }} />
+                                    <Text style={[styles.memberMenuRowText, { color: textPrimary }]}>Promover a admin do grupo</Text>
+                                </Pressable>
+                                <View style={[styles.innerDivider, { backgroundColor: borderCol, marginLeft: 0 }]} />
+                                <Pressable style={styles.memberMenuRow} onPress={() => { const t = memberMenu; setMemberMenu(null); if (t) handleRemoveMember(t); }}>
+                                    <Ionicons name="person-remove-outline" size={22} color="#ef4444" style={{ width: 28 }} />
+                                    <Text style={[styles.memberMenuRowText, { color: '#ef4444' }]}>Remover do grupo</Text>
+                                </Pressable>
+                            </>
+                        )}
+
+                        <Pressable style={[styles.memberMenuCancel, { borderColor: borderCol }]} onPress={() => setMemberMenu(null)}>
+                            <Text style={[styles.memberMenuRowText, { color: textSecondary, textAlign: 'center', width: '100%' }]}>Cancelar</Text>
+                        </Pressable>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -1553,5 +1579,52 @@ const styles = StyleSheet.create({
     modalBtnText: {
         fontSize: 13,
         fontFamily: 'Poppins_700Bold',
+    },
+    memberMenuOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    memberMenuSheet: {
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 16,
+        paddingTop: 10,
+        paddingBottom: 32,
+    },
+    memberMenuGrabber: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 16,
+    },
+    memberMenuHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingBottom: 12,
+    },
+    memberMenuName: {
+        flex: 1,
+        fontSize: 16,
+        fontFamily: 'Poppins_700Bold',
+    },
+    memberMenuRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 16,
+    },
+    memberMenuRowText: {
+        fontSize: 15,
+        fontFamily: 'Poppins_600SemiBold',
+    },
+    memberMenuCancel: {
+        marginTop: 12,
+        paddingVertical: 14,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        alignItems: 'center',
     },
 });

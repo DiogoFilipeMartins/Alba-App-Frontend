@@ -14,7 +14,7 @@ interface AuthContextType {
   isInstitution: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
-  signUp: (params: { email: string; password: string; username: string; phone?: string; account_type?: string; specialty?: string; bio?: string; website?: string }) => Promise<any>;
+  signUp: (params: { email: string; password: string; username: string; phone?: string; account_type?: string; specialty?: string; bio?: string; website?: string; professional_kind?: string; institution_id?: string }) => Promise<any>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -128,12 +128,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   };
 
-  const signUp = async ({ email, password, username, phone, account_type, specialty, bio, website }: { email: string; password: string; username: string; phone?: string; account_type?: string; specialty?: string; bio?: string; website?: string }) => {
+  const signUp = async ({ email, password, username, phone, account_type, specialty, bio, website, professional_kind, institution_id }: { email: string; password: string; username: string; phone?: string; account_type?: string; specialty?: string; bio?: string; website?: string; professional_kind?: string; institution_id?: string }) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { 
-        data: { 
+      options: {
+        data: {
           username,
           full_name: username,
           phone: phone || null,
@@ -141,7 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           specialty: specialty || null,
           bio: bio || null,
           website: website || null,
-        } 
+          professional_kind: professional_kind || null,
+          pending_institution_id: institution_id || null,
+        }
       },
     });
     if (error) throw error;

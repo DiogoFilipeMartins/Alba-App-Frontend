@@ -114,7 +114,9 @@ export default function DirectoryScreen({ navigation }: Props) {
       
       const virtualPlaces: Place[] = profsData
         .filter(prof => !prof.claimed_place_id || !placeIds.has(prof.claimed_place_id))
-        .map(prof => ({
+        .map(prof => {
+          const cp = prof.claimed_place; // local próprio ou herdado da instituição
+          return {
           id: prof.id,
           name: prof.full_name || 'Profissional/Instituição',
           type: prof.account_type as 'professional' | 'institution',
@@ -122,10 +124,10 @@ export default function DirectoryScreen({ navigation }: Props) {
           phone: prof.phone || undefined,
           email: prof.email || undefined,
           website: prof.website || undefined,
-          address_line: undefined,
-          city: (prof.claimed_place && prof.claimed_place.city) || undefined,
-          latitude: NaN,
-          longitude: NaN,
+          address_line: (cp && cp.address_line) || undefined,
+          city: (cp && cp.city) || undefined,
+          latitude: cp && cp.latitude != null ? Number(cp.latitude) : NaN,
+          longitude: cp && cp.longitude != null ? Number(cp.longitude) : NaN,
           status: 'approved' as const,
           created_at: prof.created_at || new Date().toISOString(),
           profiles: [
@@ -142,7 +144,8 @@ export default function DirectoryScreen({ navigation }: Props) {
               website: prof.website
             }
           ]
-        }));
+        };
+        });
 
       setPlaces([...placesData, ...virtualPlaces]);
 

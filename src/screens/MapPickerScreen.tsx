@@ -116,13 +116,11 @@ export default function MapPickerScreen({ navigation, route }: Props) {
             showAlert({ title: 'Nenhum ponto selecionado', message: 'Toca no mapa para escolher a localização.', icon: 'map', iconColor: '#f59e0b', primaryButton: undefined });
             return;
         }
-        // SuggestPlace é um ecrã do Stack raiz, não um tab do Main. Navegar para
-        // 'Main' > 'SuggestPlace' procurava um tab inexistente e as coordenadas
-        // nunca chegavam ao SuggestPlaceScreen. Navegar diretamente reencaminha o
-        // ecrã (que já está no stack por baixo) com os params e dispara o efeito.
-        navigation.navigate('SuggestPlace', {
-            pickedCoords: { lat: marker.latitude, lng: marker.longitude },
-        });
+        // O ecrã de destino já está no stack por baixo; navegar diretamente
+        // reencaminha-o com os params e dispara o efeito que lê pickedCoords.
+        const coords = { lat: marker.latitude, lng: marker.longitude };
+        const returnTo = route.params?.returnTo ?? 'SuggestPlace';
+        navigation.navigate(returnTo as any, { pickedCoords: coords });
     };
 
     if (styleError && !styleJSON) {

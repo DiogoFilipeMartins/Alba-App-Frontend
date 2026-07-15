@@ -258,6 +258,26 @@ export default function MapScreen({ navigation, route }: Props) {
     }
   }, [route.params?.focusPlaceId, places, navigation]);
 
+  // Foco por coordenadas — funciona mesmo que o local não esteja na lista
+  // carregada (ex.: perfil de instituição cujo place ainda não está no mapa).
+  useEffect(() => {
+    const coords = route.params?.focusCoords;
+    if (coords && cameraRef.current) {
+      const lat = Number(coords.lat);
+      const lng = Number(coords.lng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setTimeout(() => {
+          cameraRef.current?.easeTo({
+            center: [lng, lat],
+            zoom: 15,
+            duration: 800,
+          });
+        }, 250);
+        navigation.setParams({ focusCoords: undefined } as any);
+      }
+    }
+  }, [route.params?.focusCoords, navigation]);
+
 
 
   const handleToggleFavorite = async () => {
