@@ -22,7 +22,10 @@
       "supportsTablet": false,
       "icon": "./assets/AlbaAppLogoSemFundo.png",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "A Alba precisa da tua localização para mostrar profissionais de saúde próximos de ti."
+        "NSLocationWhenInUseUsageDescription": "A Alba precisa da tua localização para mostrar profissionais de saúde próximos de ti.",
+        "NSCameraUsageDescription": "A Alba precisa da câmara para tirares e enviares fotos nas comunidades.",
+        "NSPhotoLibraryUsageDescription": "A Alba precisa de acesso às tuas fotos para as enviares nas comunidades.",
+        "NSMicrophoneUsageDescription": "A Alba precisa do microfone para gravares notas de voz nas comunidades."
       }
     },
     "android": {
@@ -35,7 +38,9 @@
         "ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "package": "com.anonymous.albaapp",
       "googleServicesFile": "./google-services.json"
@@ -53,6 +58,19 @@
           "icon": "./assets/AlbaAppLogoSemFundo.png",
           "color": "#6366f1",
           "sounds": []
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "A Alba precisa de acesso às tuas fotos para as enviares nas comunidades.",
+          "cameraPermission": "A Alba precisa da câmara para tirares e enviares fotos nas comunidades."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "A Alba precisa do microfone para gravares notas de voz nas comunidades."
         }
       ],
       "@react-native-community/datetimepicker",

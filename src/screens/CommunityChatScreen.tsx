@@ -28,6 +28,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import Clipboard from '@react-native-clipboard/clipboard';
 import CustomAlertModal from '../components/CustomAlertModal';
+import AudioMessage from '../components/AudioMessage';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
+import { uploadToChatMedia } from '../services/uploadService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CommunityChat'>;
 
@@ -84,7 +89,12 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
     // Emojis & Attachment States
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
-    const [activeMockType, setActiveMockType] = useState<'gallery' | 'document' | 'location' | 'contact' | null>(null);
+    const [activeMockType, setActiveMockType] = useState<'location' | 'contact' | null>(null);
+
+    // Anexos reais (upload) + gravação de áudio
+    const [uploading, setUploading] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
     // Search
     const [searchMode, setSearchMode] = useState(false);
@@ -282,10 +292,90 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
         setShowAttachmentMenu(false);
     };
 
-    // Handle mock uploads
+    // Handle mock uploads (localização/contacto continuam simulados)
     const handleSelectMockItem = async (markup: string) => {
         setActiveMockType(null);
         await handleSend(markup);
+    };
+
+    const showUploadError = (e: any) => showAlert({ title: 'Não foi possível', message: e?.message || 'Erro ao processar o anexo.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined });
+
+    const uploadAndSendImage = async (uri: string, mimeType?: string, fileName?: string | null) => {
+        if (!user?.id) return;
+        setUploading(true);
+        try {
+            const url = await uploadToChatMedia({ uri, userId: user.id, contentType: mimeType, ext: fileName ? fileName.split('.').pop() || undefined : undefined });
+            await handleSend(`[IMAGEM: ${url}] `);
+        } catch (e: any) { showUploadError(e); } finally { setUploading(false); }
+    };
+
+    const pickFromGallery = async () => {
+        setShowAttachmentMenu(false);
+        try {
+            const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!perm.granted) { showAlert({ title: 'Permissão necessária', message: 'Concede acesso à galeria para enviar fotos.', icon: 'images', iconColor: '#f59e0b', primaryButton: undefined, secondaryButton: undefined }); return; }
+            const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+            if (res.canceled || !res.assets?.length) return;
+            const a = res.assets[0];
+            await uploadAndSendImage(a.uri, a.mimeType, a.fileName);
+        } catch (e: any) { showUploadError(e); }
+    };
+
+    const takePhoto = async () => {
+        setShowAttachmentMenu(false);
+        try {
+            const perm = await ImagePicker.requestCameraPermissionsAsync();
+            if (!perm.granted) { showAlert({ title: 'Permissão necessária', message: 'Concede acesso à câmara para tirar fotos.', icon: 'camera', iconColor: '#f59e0b', primaryButton: undefined, secondaryButton: undefined }); return; }
+            const res = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+            if (res.canceled || !res.assets?.length) return;
+            const a = res.assets[0];
+            await uploadAndSendImage(a.uri, a.mimeType, a.fileName);
+        } catch (e: any) { showUploadError(e); }
+    };
+
+    const pickDocument = async () => {
+        setShowAttachmentMenu(false);
+        try {
+            const res = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+            if (res.canceled || !res.assets?.length || !user?.id) return;
+            const a = res.assets[0];
+            setUploading(true);
+            try {
+                const url = await uploadToChatMedia({ uri: a.uri, userId: user.id, contentType: a.mimeType || undefined, ext: a.name ? a.name.split('.').pop() || undefined : undefined });
+                await handleSend(`[DOCUMENTO: ${(a.name || 'ficheiro').replace(/[\[\]|]/g, '')}|${url}]`);
+            } catch (e: any) { showUploadError(e); } finally { setUploading(false); }
+        } catch (e: any) { showUploadError(e); }
+    };
+
+    const startRecording = async () => {
+        setShowAttachmentMenu(false);
+        try {
+            const perm = await requestRecordingPermissionsAsync();
+            if (!perm.granted) { showAlert({ title: 'Permissão necessária', message: 'Concede acesso ao microfone para gravar notas de voz.', icon: 'mic', iconColor: '#f59e0b', primaryButton: undefined, secondaryButton: undefined }); return; }
+            await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+            await audioRecorder.prepareToRecordAsync();
+            audioRecorder.record();
+            setIsRecording(true);
+        } catch (e: any) { showUploadError(e); }
+    };
+
+    const stopRecordingAndSend = async () => {
+        try {
+            await audioRecorder.stop();
+            setIsRecording(false);
+            const uri = audioRecorder.uri;
+            if (!uri || !user?.id) return;
+            setUploading(true);
+            try {
+                const url = await uploadToChatMedia({ uri, userId: user.id, contentType: 'audio/mp4', ext: 'm4a' });
+                await handleSend(`[AUDIO: ${url}]`);
+            } catch (e: any) { showUploadError(e); } finally { setUploading(false); }
+        } catch (e: any) { setIsRecording(false); showUploadError(e); }
+    };
+
+    const cancelRecording = async () => {
+        try { await audioRecorder.stop(); } catch { /* ignora */ }
+        setIsRecording(false);
     };
 
     // Rich parsing parser
@@ -301,8 +391,18 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
         if (content.startsWith('[DOCUMENTO: ')) {
             const endIdx = content.indexOf(']');
             if (endIdx !== -1) {
-                const fileName = content.substring(12, endIdx);
-                return { type: 'document', name: fileName };
+                const inner = content.substring(12, endIdx);
+                const sep = inner.lastIndexOf('|');
+                const name = sep !== -1 ? inner.substring(0, sep) : inner;
+                const url = sep !== -1 ? inner.substring(sep + 1) : null;
+                return { type: 'document', name, url };
+            }
+        }
+        if (content.startsWith('[AUDIO: ')) {
+            const endIdx = content.indexOf(']');
+            if (endIdx !== -1) {
+                const url = content.substring(8, endIdx);
+                return { type: 'audio', url };
             }
         }
         if (content.startsWith('[LOCALIZAÇÃO: ')) {
@@ -383,8 +483,10 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                     {/* Document Bubble */}
                     {parsed.type === 'document' && (
                         <View style={styles.richDocContainer}>
-                            <Pressable 
-                                onPress={() => showAlert({ title: 'Download', message: `A descarregar o ficheiro "${parsed.name}"...`, icon: 'download', iconColor: '#3b82f6', primaryButton: undefined, secondaryButton: undefined })}
+                            <Pressable
+                                onPress={() => {
+                                    if (parsed.url) Linking.openURL(parsed.url).catch(() => showAlert({ title: 'Erro', message: 'Não foi possível abrir o ficheiro.', icon: 'alert-circle', iconColor: '#ef4444', primaryButton: undefined, secondaryButton: undefined }));
+                                }}
                                 style={[styles.docCard, { backgroundColor: isDark ? '#1C2C34' : '#F0F2F5' }]}
                             >
                                 <Ionicons name="document" size={30} color="#8b5cf6" />
@@ -393,11 +495,25 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                                         {parsed.name}
                                     </Text>
                                     <Text style={[styles.docSubtitle, { color: isDark ? '#8696A0' : '#667781' }]}>
-                                        1.4 MB · PDF
+                                        {(parsed.name.split('.').pop() || 'ficheiro').toUpperCase()}
                                     </Text>
                                 </View>
                                 <Ionicons name="arrow-down-circle" size={24} color="#13CF75" />
                             </Pressable>
+                            <Text style={[styles.msgTimeNormal, { color: isDark ? '#8696A0' : '#667781' }]}>
+                                {formatTime(msg.created_at)}
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Audio Bubble */}
+                    {parsed.type === 'audio' && parsed.url && (
+                        <View style={styles.richDocContainer}>
+                            <AudioMessage
+                                url={parsed.url}
+                                tint={accentColor}
+                                subColor={isDark ? '#8696A0' : '#667781'}
+                            />
                             <Text style={[styles.msgTimeNormal, { color: isDark ? '#8696A0' : '#667781' }]}>
                                 {formatTime(msg.created_at)}
                             </Text>
@@ -577,7 +693,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                 {showAttachmentMenu && (
                     <View style={[styles.attachmentPanel, { backgroundColor: isDark ? '#233138' : '#FFFFFF' }]}>
                         {/* Doc */}
-                        <Pressable onPress={() => { setShowAttachmentMenu(false); setActiveMockType('document'); }} style={styles.attachItem}>
+                        <Pressable onPress={pickDocument} style={styles.attachItem}>
                             <View style={[styles.attachCircle, { backgroundColor: '#7F66FF' }]}>
                                 <Ionicons name="document-text" size={22} color="#FFF" />
                             </View>
@@ -585,7 +701,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                         </Pressable>
 
                         {/* Camera */}
-                        <Pressable onPress={() => { setShowAttachmentMenu(false); handleSelectMockItem('[IMAGEM: https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=500] Foto da Clínica'); }} style={styles.attachItem}>
+                        <Pressable onPress={takePhoto} style={styles.attachItem}>
                             <View style={[styles.attachCircle, { backgroundColor: '#FF2E74' }]}>
                                 <Ionicons name="camera" size={22} color="#FFF" />
                             </View>
@@ -593,7 +709,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                         </Pressable>
 
                         {/* Gallery */}
-                        <Pressable onPress={() => { setShowAttachmentMenu(false); setActiveMockType('gallery'); }} style={styles.attachItem}>
+                        <Pressable onPress={pickFromGallery} style={styles.attachItem}>
                             <View style={[styles.attachCircle, { backgroundColor: '#C05CFF' }]}>
                                 <Ionicons name="image" size={22} color="#FFF" />
                             </View>
@@ -601,7 +717,7 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                         </Pressable>
 
                         {/* Audio */}
-                        <Pressable onPress={() => { setShowAttachmentMenu(false); showAlert({ title: 'Áudio', message: 'Enviar notas de voz temporariamente indisponível.', icon: 'musical-notes', iconColor: '#f59e0b', primaryButton: undefined, secondaryButton: undefined }); }} style={styles.attachItem}>
+                        <Pressable onPress={startRecording} style={styles.attachItem}>
                             <View style={[styles.attachCircle, { backgroundColor: '#FF8A00' }]}>
                                 <Ionicons name="musical-notes" size={22} color="#FFF" />
                             </View>
@@ -626,46 +742,71 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                     </View>
                 )}
 
-                <SafeAreaView style={[styles.inputContainer, { backgroundColor: chatBgColor }]} edges={['bottom']}>
-                    <View style={[styles.inputCapsule, { backgroundColor: isDark ? '#2A3942' : '#FFFFFF' }]}>
-                        <Pressable onPress={toggleEmojiPicker} style={styles.inputIcon}>
-                            <Ionicons 
-                                name={showEmojiPicker ? 'keypad-outline' : 'happy-outline'} 
-                                size={24} 
-                                color={isDark ? '#8696A0' : '#54656F'} 
-                            />
-                        </Pressable>
-                        <TextInput
-                            style={[styles.input, { color: isDark ? '#E9EDEF' : '#111B21' }]}
-                            placeholder="Mensagem"
-                            placeholderTextColor={isDark ? '#8696A0' : '#667781'}
-                            value={text}
-                            onChangeText={setText}
-                            multiline
-                            onFocus={handleFocusInput}
-                        />
-                        <Pressable onPress={() => setShowAttachmentMenu(!showAttachmentMenu)} style={styles.inputIcon}>
-                            <Ionicons name="attach-outline" size={24} color={isDark ? '#8696A0' : '#54656F'} />
-                        </Pressable>
+                {uploading && (
+                    <View style={[styles.uploadBar, { backgroundColor: isDark ? '#233138' : '#FFFFFF' }]}>
+                        <ActivityIndicator size="small" color={accentGreen} />
+                        <Text style={[styles.uploadBarText, { color: isDark ? '#E9EDEF' : '#54656F' }]}>A enviar anexo…</Text>
                     </View>
-                    
-                    <Pressable
-                        onPress={() => handleSend()}
-                        style={[
-                            styles.sendCircle, 
-                            { 
-                                backgroundColor: text.trim() ? accentGreen : (isDark ? '#8696A0' : '#54656F'), 
-                                opacity: text.trim() ? 1 : 0.6 
-                            }
-                        ]}
-                        disabled={!text.trim() || sending}
-                    >
-                        {sending ? (
-                            <ActivityIndicator color="#fff" size="small" />
-                        ) : (
+                )}
+
+                <SafeAreaView style={[styles.inputContainer, { backgroundColor: chatBgColor }]} edges={['bottom']}>
+                    {isRecording ? (
+                        <View style={[styles.inputCapsule, { backgroundColor: isDark ? '#2A3942' : '#FFFFFF', alignItems: 'center' }]}>
+                            <Pressable onPress={cancelRecording} style={styles.inputIcon}>
+                                <Ionicons name="trash" size={22} color="#ef4444" />
+                            </Pressable>
+                            <View style={styles.recordingCenter}>
+                                <View style={styles.recordingDot} />
+                                <Text style={[styles.recordingText, { color: isDark ? '#E9EDEF' : '#111B21' }]}>A gravar nota de voz…</Text>
+                            </View>
+                        </View>
+                    ) : (
+                        <View style={[styles.inputCapsule, { backgroundColor: isDark ? '#2A3942' : '#FFFFFF' }]}>
+                            <Pressable onPress={toggleEmojiPicker} style={styles.inputIcon}>
+                                <Ionicons
+                                    name={showEmojiPicker ? 'keypad-outline' : 'happy-outline'}
+                                    size={24}
+                                    color={isDark ? '#8696A0' : '#54656F'}
+                                />
+                            </Pressable>
+                            <TextInput
+                                style={[styles.input, { color: isDark ? '#E9EDEF' : '#111B21' }]}
+                                placeholder="Mensagem"
+                                placeholderTextColor={isDark ? '#8696A0' : '#667781'}
+                                value={text}
+                                onChangeText={setText}
+                                multiline
+                                onFocus={handleFocusInput}
+                            />
+                            <Pressable onPress={() => setShowAttachmentMenu(!showAttachmentMenu)} style={styles.inputIcon}>
+                                <Ionicons name="attach-outline" size={24} color={isDark ? '#8696A0' : '#54656F'} />
+                            </Pressable>
+                        </View>
+                    )}
+
+                    {isRecording ? (
+                        <Pressable onPress={stopRecordingAndSend} style={[styles.sendCircle, { backgroundColor: accentGreen }]}>
                             <Ionicons name="send" size={18} color="#fff" style={{ marginLeft: 2 }} />
-                        )}
-                    </Pressable>
+                        </Pressable>
+                    ) : (
+                        <Pressable
+                            onPress={() => handleSend()}
+                            style={[
+                                styles.sendCircle,
+                                {
+                                    backgroundColor: text.trim() ? accentGreen : (isDark ? '#8696A0' : '#54656F'),
+                                    opacity: text.trim() ? 1 : 0.6
+                                }
+                            ]}
+                            disabled={!text.trim() || sending}
+                        >
+                            {sending ? (
+                                <ActivityIndicator color="#fff" size="small" />
+                            ) : (
+                                <Ionicons name="send" size={18} color="#fff" style={{ marginLeft: 2 }} />
+                            )}
+                        </Pressable>
+                    )}
                 </SafeAreaView>
 
                 {/* Emoji Picker Drawer */}
@@ -726,44 +867,9 @@ export default function CommunityChatScreen({ route, navigation }: Props) {
                 <Pressable style={styles.mockOverlay} onPress={() => setActiveMockType(null)}>
                     <View style={[styles.mockContainer, { backgroundColor: isDark ? '#222E35' : '#FFFFFF' }]}>
                         <Text style={[styles.mockTitle, { color: isDark ? '#E9EDEF' : '#111B21' }]}>
-                            {activeMockType === 'gallery' && 'Selecionar da Galeria'}
-                            {activeMockType === 'document' && 'Selecionar Documento'}
                             {activeMockType === 'location' && 'Partilhar Localização'}
                             {activeMockType === 'contact' && 'Partilhar Contacto'}
                         </Text>
-
-                        {/* MOCK PHOTOS */}
-                        {activeMockType === 'gallery' && (
-                            <View style={styles.mockPhotosGrid}>
-                                {[
-                                    { uri: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=500', name: 'Consulta Médica' },
-                                    { uri: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=500', name: 'Clínica Acessível' },
-                                    { uri: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500', name: 'Sessão de Terapia' },
-                                    { uri: 'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=500', name: 'Consultório Alba' },
-                                ].map(p => (
-                                    <Pressable key={p.uri} onPress={() => handleSelectMockItem(`[IMAGEM: ${p.uri}] ${p.name}`)} style={styles.mockPhotoCard}>
-                                        <Image source={{ uri: p.uri }} style={styles.mockPhotoThumb} />
-                                        <Text style={[styles.mockPhotoLabel, { color: isDark ? '#E9EDEF' : '#111B21' }]} numberOfLines={1}>{p.name}</Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                        )}
-
-                        {/* MOCK DOCUMENTS */}
-                        {activeMockType === 'document' && (
-                            <View style={{ gap: 8 }}>
-                                {[
-                                    'Guia_Acessibilidade_Alba.pdf',
-                                    'Receita_Medica_Assinada.pdf',
-                                    'Relatorio_Sessao_Terapia.pdf',
-                                ].map(doc => (
-                                    <Pressable key={doc} onPress={() => handleSelectMockItem(`[DOCUMENTO: ${doc}]`)} style={[styles.mockRowItem, { borderBottomColor: colors.border }]}>
-                                        <Ionicons name="document-text" size={24} color="#8b5cf6" style={{ marginRight: 12 }} />
-                                        <Text style={[styles.mockRowText, { color: isDark ? '#E9EDEF' : '#111B21' }]}>{doc}</Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                        )}
 
                         {/* MOCK LOCATIONS */}
                         {activeMockType === 'location' && (
@@ -1157,4 +1263,18 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins_700Bold',
         fontSize: 14,
     },
+    uploadBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        marginHorizontal: 8,
+        marginBottom: 4,
+        borderRadius: 12,
+    },
+    uploadBarText: { fontSize: 13, fontFamily: 'Poppins_500Medium' },
+    recordingCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 4 },
+    recordingDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#ef4444' },
+    recordingText: { fontSize: 14, fontFamily: 'Poppins_500Medium' },
 });
